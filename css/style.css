@@ -1,0 +1,432 @@
+/* style.css - FIXED VERSION */
+
+:root {
+  /* Brand Colors */
+  --mint-green: #19BEBB;      /* Primary brand color */
+  --mint-dark: #0fa8a6;       /* Slightly darker for footer/header */
+  --mint-light: #e0f7f7;      /* Lighter for submenus */
+  --mint-very-light: #f0fcfc; /* Very light for hover states */
+  --mint-ultra-light: #f8fefe; /* Ultra light for nested submenus */
+  
+  /* Text Colors */
+  --text-dark: #333333;       /* Main text - not pure black */
+  --text-light: #ffffff;      /* White text */
+  --text-gray: #666666;       /* Secondary text */
+  --text-light-gray: #888888; /* Lighter gray text */
+  
+  /* Background Colors */
+  --bg-light: #f5f7fa;        /* Main background */
+  --bg-white: #ffffff;        /* White background */
+  --bg-card: #ffffff;         /* Card background */
+  
+  /* Border Colors */
+  --border-light: #e0e0e0;
+  --border-medium: #cccccc;
+  --border-mint: #19BEBB;
+  
+  /* Sidebar */
+  --sidebar-width: 260px;
+  --sidebar-bg: linear-gradient(180deg, var(--mint-green) 0%, var(--mint-dark) 100%);
+  
+  /* Shadows */
+  --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 5px 20px rgba(0, 0, 0, 0.1);
+  --shadow-mint: 0 5px 20px rgba(25, 190, 187, 0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ===== APP CONTAINER ===== */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ===== MOBILE MENU TOGGLE ===== */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1100;
+  background: var(--mint-green);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-menu-toggle:hover {
+  background: var(--mint-dark);
+}
+
+/* ===== SIDEBAR STYLES ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+/* ===== LOGO SECTION ===== */
+.logo-section {
+  padding: 30px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  /* REMOVED: background: rgba(0, 0, 0, 0.1); */
+  background: transparent; /* Transparent to match sidebar */
+}
+
+.logo-circle {
+  width: 50px;
+  height: 50px;
+  background: var(--text-light);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.logo-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-light);
+}
+
+.app-tagline {
+  font-size: 12px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tagline-line {
+  display: block;
+}
+
+.tagline-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.pro-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--text-light);
+  color: var(--mint-green);
+}
+
+/* ===== NAVIGATION MENU ===== */
+.nav-menu {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.nav-menu ul {
+  list-style: none;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.menu-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-light);
+  border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.menu-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-light);
+  border-left-color: var(--text-light);
+}
+
+.menu-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 16px;
+  color: currentColor;
+}
+
+.menu-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.3s;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.menu-item.active .menu-arrow {
+  transform: rotate(180deg);
+}
+
+/* ===== SUBMENU STYLES - UPDATED ===== */
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: var(--mint-light);
+    border-radius: 0 0 8px 8px;
+    margin: 0 15px 10px 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.menu-item.active .submenu {
+    max-height: 500px;
+}
+
+.submenu ul {
+    list-style: none;
+    padding: 8px 0;
+    margin: 0;
+}
+
+.submenu-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.submenu-link:hover {
+    background: var(--mint-very-light);
+    color: var(--mint-dark);
+    border-left-color: var(--mint-dark);
+    text-decoration: none; /* Remove underline */
+}
+
+.submenu-link.active {
+    background: var(--mint-very-light);
+    color: var(--mint-dark);
+    border-left-color: var(--mint-dark);
+    font-weight: 600;
+}
+
+.submenu-link .menu-icon {
+    width: 18px;
+    font-size: 14px;
+    color: var(--mint-dark);
+}
+
+.submenu-link.active .menu-icon {
+    color: var(--mint-dark);
+}
+
+/* Remove bullets from submenu */
+.submenu li {
+    list-style: none;
+}
+
+/* Improve nested submenu appearance */
+.nested-submenu {
+    background: var(--mint-ultra-light);
+    border-left: 2px solid rgba(25, 190, 187, 0.2);
+    margin: 5px 0 5px 15px;
+    border-radius: 0 0 6px 6px;
+}
+
+.nested-submenu .menu-link {
+    padding: 8px 20px 8px 35px;
+    font-size: 13px;
+    color: var(--text-gray);
+}
+
+.nested-submenu .menu-link:hover {
+    color: var(--mint-dark);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+/* ===== USER SECTION (FOOTER) ===== */
+.user-section {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--mint-dark);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mint-green);
+  font-size: 24px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: var(--text-light);
+}
+
+.user-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-light);
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.menu-open {
+  margin-left: var(--sidebar-width);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: block;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.active {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .main-content.menu-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  
+  /* Adjust submenu colors for mobile */
+  /* CHANGED: .submenu { background: rgba(0, 0, 0, 0.1); } */
+  .submenu {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .submenu-item .menu-link {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .submenu-item .menu-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Added for nested-submenu on mobile */
+  .nested-submenu {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  .nested-submenu .menu-link {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
