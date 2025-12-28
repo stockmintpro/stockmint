@@ -3,7 +3,7 @@
 
 const StockMintConfig = {
     // Base URLs
-    baseUrl: window.location.origin,
+    baseUrl: window.location.origin + '/stockmint',
     apiBaseUrl: 'https://api.stockmint.app',
     
     // Paths
