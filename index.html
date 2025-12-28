@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en"> <!-- Ganti ke English untuk konsistensi -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockMint - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="https://i.ibb.co.com/XxvfRDyV/logo-stockmint-png.png">
+    <style>
+        :root {
+            --mint-green: #19BEBB;
+            --mint-dark: #0fa8a6;
+            --text-light: #ffffff;
+            --text-dark: #333333;
+            --text-gray: #666666;
+            --bg-light: #f5f7fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e4edf5 100%);
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, var(--mint-green) 0%, var(--mint-dark) 100%);
+            color: white;
+            padding: 40px 30px 30px;
+            text-align: center;
+        }
+
+        .logo-login {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-login img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .login-header p {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .login-body {
+            padding: 40px 35px;
+        }
+
+        .login-method h3 {
+            color: var(--mint-dark);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .google-login-btn {
+            width: 100%;
+            padding: 16px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .google-login-btn:hover {
+            background: #f8f9fa;
+            border-color: #c3c3c3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #eee;
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        .demo-login {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+        }
+
+        .demo-btn {
+            padding: 14px 30px;
+            background: var(--mint-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .demo-btn:hover {
+            background: var(--mint-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(25, 190, 187, 0.2);
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 25px 35px;
+            background: #f8f9fa;
+            color: var(--text-gray);
+            font-size: 13px;
+            border-top: 1px solid #eee;
+        }
+
+        .login-footer a {
+            color: var(--mint-green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .requirements {
+            background: #f0f9ff;
+            border-left: 4px solid var(--mint-green);
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .requirements h4 {
+            color: var(--mint-dark);
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 480px) {
+            .login-container { max-width: 100%; }
+            .login-header { padding: 30px 20px 25px; }
+            .login-body { padding: 30px 25px; }
+            .logo-login { width: 70px; height: 70px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo-login">
+                <img src="https://i.ibb.co.com/XxvfRDyV/logo-stockmint-png.png" 
+                     alt="StockMint Logo"
+                     onerror="this.src='https://via.placeholder.com/70/19BEBB/FFFFFF?text=SM'">
+            </div>
+            <h1>StockMint</h1>
+            <p>Precision Inventory & Profit Tracking</p>
+        </div>
+
+        <div class="login-body">
+            <div class="login-method">
+                <h3>Login with Google Account</h3>
+                <button id="googleLoginBtn" class="google-login-btn">
+                    <div class="google-icon"></div>
+                    <span>Continue with Google</span>
+                </button>
+                
+                <div class="requirements">
+                    <h4>📋 System Requirements:</h4>
+                    <ul>
+                        <li>Google Account (Gmail or Google Workspace)</li>
+                        <li>Google Sheets for data storage</li>
+                        <li>Internet access</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-size: 13px;">
+                        <strong>Note:</strong> Data will be stored in your own Google Sheets.
+                    </p>
+                </div>
+            </div>
+
+            <div class="divider">
+                <span>Or</span>
+            </div>
+
+            <div class="demo-login">
+                <p style="color: var(--text-gray); margin-bottom: 15px; font-size: 14px;">
+                    <i class="fas fa-info-circle" style="color: var(--mint-green); margin-right: 8px;"></i>
+                    Try demo mode to see features without login
+                </p>
+                <button id="demoLoginBtn" class="demo-btn">
+                    <i class="fas fa-play-circle"></i> Try Demo
+                </button>
+            </div>
+        </div>
+
+        <div class="login-footer">
+            <p>© 2025 StockMint. All Rights Reserved.</p>
+            <p style="margin-top: 5px;">
+                By logging in, you agree to <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const CONFIG = {
+            clientId: '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com',
+            redirectUri: window.location.origin + '/auth/callback.html',
+            scopes: [
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/spreadsheets'
+            ].join(' ')
+        };
+
+        // ===== GOOGLE LOGIN =====
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+            const params = {
+                client_id: CONFIG.clientId,
+                redirect_uri: CONFIG.redirectUri,
+                response_type: 'token',
+                scope: CONFIG.scopes,
+                include_granted_scopes: 'true',
+                state: 'stockmint_' + Date.now(),
+                prompt: 'select_account'
+            };
+
+            Object.keys(params).forEach(key => 
+                authUrl.searchParams.append(key, params[key])
+            );
+
+            window.location.href = authUrl.toString();
+        });
+
+        // ===== DEMO LOGIN =====
+        document.getElementById('demoLoginBtn').addEventListener('click', () => {
+            const demoUser = {
+                name: 'Demo User',
+                email: 'demo@stockmint.app',
+                picture: '',
+                isDemo: true,
+                timestamp: Date.now(),
+                plan: 'pro' // or 'basic', 'advance' based on badge
+            };
+
+            localStorage.setItem('stockmint_user', JSON.stringify(demoUser));
+            localStorage.setItem('stockmint_token', 'demo_token_' + Date.now());
+            localStorage.setItem('stockmint_plan', 'pro');
+
+            // Redirect to SPA
+            window.location.href = 'app.html';
+        });
+
+        // ===== CHECK EXISTING LOGIN =====
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('stockmint_token');
+            if (token) {
+                window.location.href = 'app.html';
+            }
+        });
+    </script>
+</body>
+</html>

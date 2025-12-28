@@ -1,0 +1,47 @@
+{
+  "name": "stockmint",
+  "version": "1.0.0",
+  "description": "Precision Inventory & Profit Tracking",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ui": "jest --watchAll",
+    "lint": "eslint js/ tests/ --ext .js",
+    "lint:fix": "eslint js/ tests/ --ext .js --fix",
+    "format": "prettier --write \"js/**/*.js\" \"tests/**/*.js\" \"css/**/*.css\"",
+    "build": "npm run lint && npm run test",
+    "dev": "live-server --port=3000 --watch=js/,css/,index.html,app.html"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "eslint": "^8.56.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.2.4",
+    "live-server": "^1.2.2"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFiles": [
+      "./tests/setup.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "js/**/*.js",
+      "!js/vendor/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    }
+  }
+}
