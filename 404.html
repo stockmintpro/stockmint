@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <script>
+        // GitHub Pages 404 redirect untuk SPA
+        // Arahkan semua route ke index.html
+        const segmentCount = 0;
+        const l = window.location;
+        const base = l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/';
+        const r = l.pathname.substr(base.length).split('/').filter(Boolean);
+        const hash = l.hash;
+        
+        // Redirect ke index.html dengan hash yang sesuai
+        if (r.length > 0 || hash) {
+            const path = (r.length > 0 ? '/' + r.join('/') : '') + hash;
+            l.replace(base + 'index.html' + path);
+        }
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>
