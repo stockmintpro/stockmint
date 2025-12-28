@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting... - StockMint</title>
+    <style>body{font-family:sans-serif;text-align:center;padding-top:50px;}</style>
+</head>
+<body>
+    <h2>Authenticating...</h2>
+    <p>Please wait while we log you in.</p>
+    
+    <script>
+    // 1. Ambil token dari URL
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    const error = params.get('error');
+    
+    if (error) {
+        // Jika error dari Google
+        document.body.innerHTML = `<h3 style="color:red">Login Failed</h3>
+                                  <p>Error: ${error}</p>
+                                  <button onclick="window.location.href='../index.html'">Back to Login</button>`;
+    } else if (token) {
+        // 2. Ambil info user dari Google
+        fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(user => {
+            // 3. Simpan ke localStorage
+            localStorage.setItem('stockmint_user', JSON.stringify({
+                name: user.name,
+                email: user.email,
+                picture: user.picture,
+                token: token
+            }));
+            localStorage.setItem('stockmint_token', token);
+            
+            // 4. Redirect ke dashboard
+            window.location.href = '../dashboard.html';
+        })
+        .catch(err => {
+            console.error(err);
+            document.body.innerHTML = `<h3>Login Error</h3>
+                                      <p>Failed to get user info</p>
+                                      <button onclick="window.location.href='../index.html'">Retry</button>`;
+        });
+    } else {
+        // Jika tidak ada token, kembali ke login
+        window.location.href = '../index.html';
+    }
+    </script>
+</body>
+</html>
