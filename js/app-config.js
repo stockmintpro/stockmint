@@ -32,11 +32,12 @@ const StockMintConfig = {
         realTimeUpdates: false
     },
     
-    // Plan Badges
+     // Plan Badges (urut dari rendah ke tinggi)
     planBadges: {
-        basic: { text: 'BASIC', color: '#6c757d' },
-        pro: { text: 'PRO', color: '#19BEBB' },
-        advance: { text: 'ADVANCE', color: '#ff6b35' }
+        demo: { text: 'DEMO', color: '#ff6b35', order: 0 },
+        basic: { text: 'BASIC', color: '#6c757d', order: 1 },
+        pro: { text: 'PRO', color: '#19BEBB', order: 2 },
+        advance: { text: 'ADVANCE', color: '#8b5cf6', order: 3 }
     }
 };
 
