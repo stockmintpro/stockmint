@@ -430,3 +430,137 @@ body {
     color: rgba(255, 255, 255, 0.9);
   }
 }
+/* ===== PLAN BADGES ===== */
+.plan-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+}
+
+.plan-badge.demo {
+    background-color: #fff3cd;
+    color: #ff6b35;
+    border: 1px solid #ff6b35;
+}
+
+.plan-badge.basic {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+.plan-badge.pro {
+    background-color: #e0f7f7;
+    color: #19BEBB;
+    border: 1px solid #19BEBB;
+}
+
+.plan-badge.advance {
+    background-color: #f3f0ff;
+    color: #8b5cf6;
+    border: 1px solid #8b5cf6;
+}
+
+/* Badge in sidebar logo */
+.logo-section .plan-badge {
+    margin-left: 10px;
+    font-size: 10px;
+    padding: 2px 8px;
+}
+
+/* Badge in navbar */
+.user-info-desktop .plan-badge {
+    margin-top: 2px;
+    font-size: 9px;
+    padding: 1px 6px;
+}
+
+/* ===== MENU LOCK ICONS ===== */
+.menu-link .menu-lock,
+.submenu-link .menu-lock {
+    margin-left: auto;
+    font-size: 10px;
+    color: #ff6b35;
+    opacity: 0.7;
+}
+
+.menu-link.disabled,
+.submenu-link.disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.menu-link.disabled:hover,
+.submenu-link.disabled:hover {
+    background: rgba(255, 107, 53, 0.1) !important;
+    border-left-color: #ff6b35 !important;
+}
+
+.menu-link.disabled:hover::after,
+.submenu-link.disabled:hover::after {
+    content: "Upgrade to access";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ff6b35;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 15px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ===== FEATURE CARDS WITH PLAN INFO ===== */
+.feature-card .plan-required {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255, 107, 53, 0.1);
+    color: #ff6b35;
+    border: 1px solid #ff6b35;
+}
+
+.feature-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.feature-card.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: #e0e0e0 !important;
+}
+
+.feature-card.disabled .feature-icon {
+    position: relative;
+}
+
+.feature-card.disabled .feature-icon::after {
+    content: "🔒";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 14px;
+    background: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
