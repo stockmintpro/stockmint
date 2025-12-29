@@ -1,4 +1,4 @@
-// StockMint Sidebar Component - WORKING VERSION
+// StockMint Sidebar Component - UPDATED (Show all menus but disable some)
 
 class StockMintSidebar {
   constructor(config, menu) {
@@ -45,6 +45,20 @@ class StockMintSidebar {
           </ul>
         </nav>
 
+        <!-- Upgrade Banner for Demo Users -->
+        ${plan === 'demo' ? `
+          <div class="demo-upgrade-banner">
+            <i class="fas fa-crown"></i>
+            <div>
+              <strong>Upgrade to unlock all features</strong>
+              <small>Try BASIC, PRO, or ADVANCE plans</small>
+            </div>
+            <button class="btn-upgrade-small" onclick="StockMintApp.showUpgradeModal()">
+              <i class="fas fa-arrow-up"></i>
+            </button>
+          </div>
+        ` : ''}
+
         <!-- User Section -->
         <div class="user-section">
           <div class="user-avatar">
@@ -87,11 +101,74 @@ class StockMintSidebar {
           color: #19BEBB;
           font-weight: 600;
         }
+        
+        .demo-upgrade-banner {
+          background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+          color: white;
+          padding: 10px 15px;
+          margin: 15px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 12px;
+        }
+        
+        .demo-upgrade-banner i.fa-crown {
+          font-size: 16px;
+          color: #ffd700;
+        }
+        
+        .demo-upgrade-banner div {
+          flex: 1;
+        }
+        
+        .demo-upgrade-banner strong {
+          display: block;
+          font-size: 11px;
+        }
+        
+        .demo-upgrade-banner small {
+          opacity: 0.9;
+          font-size: 10px;
+        }
+        
+        .btn-upgrade-small {
+          background: white;
+          color: #f59e0b;
+          border: none;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+        }
+        
+        /* Lock icon for disabled menus */
+        .menu-lock {
+          margin-left: auto;
+          color: #ef4444;
+          font-size: 12px;
+          opacity: 0.7;
+        }
+        
+        .menu-item.disabled .menu-link,
+        .menu-item.disabled .submenu-link {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        
+        .menu-item.disabled .menu-lock {
+          opacity: 1;
+        }
       </style>
     `;
   }
 
-  // Render menu items (2 levels max) with plan restrictions
+  // Render menu items (2 levels max) - SEMUA menu ditampilkan
   renderMenuItems(items, level = 0) {
     if (!items || !Array.isArray(items)) {
       console.error('Invalid menu items:', items);
@@ -99,13 +176,10 @@ class StockMintSidebar {
     }
     
     return items.map(item => {
-      // Check if menu item is allowed for current plan
-      if (!this.isMenuItemAllowed(item)) {
-        return '';
-      }
-      
       const hasChildren = item.children && item.children.length > 0;
       const isActive = this.isItemActive(item);
+      const isEnabled = this.isMenuItemEnabled(item);
+      const isRestricted = !isEnabled;
       
       if (level > 1) {
         console.warn('Menu depth > 2 levels, skipping:', item.id);
@@ -113,12 +187,14 @@ class StockMintSidebar {
       }
       
       return `
-        <li class="menu-item ${hasChildren && level === 0 ? 'has-submenu' : ''} ${isActive ? 'active' : ''}">
-          <a href="${item.url || '#'}" 
+        <li class="menu-item ${hasChildren && level === 0 ? 'has-submenu' : ''} ${isActive ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}">
+          <a href="${isEnabled ? (item.url || '#') : '#'}" 
              class="${level === 0 ? 'menu-link' : 'submenu-link'} ${isActive ? 'active' : ''}"
              data-id="${item.id}"
+             data-enabled="${isEnabled}"
+             ${isRestricted ? 'data-restricted="true" data-feature-name="' + item.title + '"' : ''}
              ${hasChildren && level === 0 ? 'data-has-children="true"' : ''}
-             ${!item.url || item.url === '#' ? 'onclick="return false;"' : ''}>
+             ${!isEnabled ? 'style="cursor: not-allowed;"' : ''}>
             
             <span class="menu-icon">
               <i class="${item.icon || 'fas fa-circle'}"></i>
@@ -132,8 +208,8 @@ class StockMintSidebar {
               </span>
             ` : ''}
             
-            ${this.isMenuItemRestricted(item) ? `
-              <span class="menu-lock">
+            ${isRestricted ? `
+              <span class="menu-lock" title="Upgrade to unlock">
                 <i class="fas fa-lock"></i>
               </span>
             ` : ''}
@@ -151,13 +227,13 @@ class StockMintSidebar {
     }).join('');
   }
 
-  // Check if menu item is allowed for current plan
-  isMenuItemAllowed(item) {
+  // Check if menu item is enabled for current plan
+  isMenuItemEnabled(item) {
     const plan = this.plan;
     
-    // Demo restrictions
+    // For DEMO: Some menus are disabled but still visible
     if (plan === 'demo') {
-      const demoRestrictedItems = [
+      const demoRestrictedMenus = [
         'Data Migration',
         'Marketplace Fee',
         'Purchase Returns',
@@ -176,54 +252,41 @@ class StockMintSidebar {
         'API Integrations'
       ];
       
-      if (demoRestrictedItems.includes(item.title)) {
-        return false;
+      // Check if this item or any parent is restricted
+      const isRestricted = demoRestrictedMenus.includes(item.title);
+      
+      // Also check children recursively
+      if (item.children) {
+        const hasRestrictedChild = item.children.some(child => 
+          demoRestrictedMenus.includes(child.title)
+        );
+        return !isRestricted && !hasRestrictedChild;
       }
+      
+      return !isRestricted;
     }
     
-    // Basic restrictions (can't access pro features)
+    // For BASIC: Some PRO features are disabled
     if (plan === 'basic') {
-      const basicRestrictedItems = [
-        'Reports', // basic has basic reporting, but not advanced reports
+      const basicRestrictedMenus = [
+        'Reports', // advanced reports
         'Analytics'
       ];
       
-      if (basicRestrictedItems.includes(item.title)) {
-        return false;
-      }
-    }
-    
-    return true;
-  }
-
-  // Check if menu item is restricted (show lock icon)
-  isMenuItemRestricted(item) {
-    const plan = this.plan;
-    
-    if (plan === 'demo') {
-      const demoRestrictedItems = [
-        'Data Migration',
-        'Marketplace Fee',
-        'Purchase Returns',
-        'Purchase Deposits',
-        'Sales Returns',
-        'Refunds',
-        'Stock Adjustments',
-        'Stock Opname',
-        'Receipts',
-        'Journals',
-        'Reports',
-        'Analytics',
-        'User Management',
-        'Role & Permissions',
-        'Notification Settings',
-        'API Integrations'
-      ];
+      const isRestricted = basicRestrictedMenus.includes(item.title);
       
-      return demoRestrictedItems.includes(item.title);
+      if (item.children) {
+        const hasRestrictedChild = item.children.some(child => 
+          basicRestrictedMenus.includes(child.title)
+        );
+        return !isRestricted && !hasRestrictedChild;
+      }
+      
+      return !isRestricted;
     }
     
-    return false;
+    // PRO and ADVANCE have all menus enabled
+    return true;
   }
 
   // Check if item is active
@@ -290,8 +353,8 @@ class StockMintSidebar {
       }
     });
     
-    // Submenu toggle
-    document.querySelectorAll('.menu-item.has-submenu > .menu-link').forEach(link => {
+    // Submenu toggle (only for enabled items)
+    document.querySelectorAll('.menu-item.has-submenu:not(.disabled) > .menu-link').forEach(link => {
       link.addEventListener('click', function(e) {
         if (this.getAttribute('data-has-children') === 'true') {
           e.preventDefault();
@@ -301,15 +364,29 @@ class StockMintSidebar {
       });
     });
     
-    // Prevent clicking on restricted items
-    document.querySelectorAll('.menu-link, .submenu-link').forEach(link => {
-      if (link.querySelector('.menu-lock')) {
-        link.addEventListener('click', function(e) {
-          e.preventDefault();
-          const menuTitle = this.querySelector('.menu-title').textContent;
-          alert(`"${menuTitle}" is not available in your current plan. Please upgrade to access this feature.`);
-        });
-      }
+    // Handle clicks on disabled/restricted menu items
+    document.querySelectorAll('[data-restricted="true"]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const featureName = this.getAttribute('data-feature-name') || this.querySelector('.menu-title').textContent;
+        const plan = localStorage.getItem('stockmint_plan') || 'demo';
+        
+        let message = `"${featureName}" is not available in your current plan.`;
+        
+        if (plan === 'demo') {
+          message += '\n\nUpgrade to BASIC, PRO, or ADVANCE plan to unlock this feature.';
+        } else if (plan === 'basic') {
+          message += '\n\nUpgrade to PRO or ADVANCE plan to unlock this feature.';
+        }
+        
+        // Show upgrade modal instead of alert
+        if (window.StockMintApp && window.StockMintApp.showUpgradeModal) {
+          window.StockMintApp.showUpgradeModal();
+        } else {
+          alert(message);
+        }
+      });
     });
     
     // Logout button
