@@ -232,6 +232,9 @@
                     <p style="margin-top: 10px; font-size: 13px;">
                         <strong>Note:</strong> Data will be stored in your own Google Sheets.
                     </p>
+                    <p style="margin-top: 5px; font-size: 13px; color: #19BEBB; font-weight: 600;">
+                        <i class="fas fa-star"></i> Google login automatically activates BASIC plan with full features!
+                    </p>
                 </div>
             </div>
 
@@ -242,11 +245,14 @@
             <div class="demo-login">
                 <p style="color: var(--text-gray); margin-bottom: 15px; font-size: 14px;">
                     <i class="fas fa-info-circle" style="color: var(--mint-green); margin-right: 8px;"></i>
-                    Try demo mode to see features without login
+                    Try demo mode to see limited features without login
                 </p>
                 <button id="demoLoginBtn" class="demo-btn">
                     <i class="fas fa-play-circle"></i> Try Demo
                 </button>
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                    Demo has limited features. Upgrade to BASIC for full access.
+                </p>
             </div>
         </div>
 
@@ -298,7 +304,7 @@
                 picture: '',
                 isDemo: true,
                 timestamp: Date.now(),
-                plan: 'demo' // or 'basic', 'advance' based on badge
+                plan: 'demo'
             };
 
             localStorage.setItem('stockmint_user', JSON.stringify(demoUser));
