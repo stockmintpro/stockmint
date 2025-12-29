@@ -298,12 +298,12 @@
                 picture: '',
                 isDemo: true,
                 timestamp: Date.now(),
-                plan: 'pro' // or 'basic', 'advance' based on badge
+                plan: 'demo' // or 'basic', 'advance' based on badge
             };
 
             localStorage.setItem('stockmint_user', JSON.stringify(demoUser));
             localStorage.setItem('stockmint_token', 'demo_token_' + Date.now());
-            localStorage.setItem('stockmint_plan', 'pro');
+            localStorage.setItem('stockmint_plan', 'demo');
 
             // Redirect to SPA
             window.location.href = 'app.html';
