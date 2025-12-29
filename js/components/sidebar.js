@@ -62,54 +62,62 @@ class StockMintSidebar {
   }
 
   // Render menu items (2 levels max)
-  renderMenuItems(items, level = 0) {
-    if (!items || !Array.isArray(items)) {
-      console.error('Invalid menu items:', items);
-      return '';
-    }
+  // Di sidebar.js, ubah renderMenuItems:
+renderMenuItems(items) {
+    const currentPlan = localStorage.getItem('stockmint_plan') || 'demo';
+    const disabledMenus = window.StockMintConfig?.getDisabledMenus(currentPlan) || [];
     
     return items.map(item => {
-      const hasChildren = item.children && item.children.length > 0;
-      const isActive = this.isItemActive(item);
-      
-      if (level > 1) {
-        console.warn('Menu depth > 2 levels, skipping:', item.id);
-        return '';
-      }
-      
-      return `
-        <li class="menu-item ${hasChildren && level === 0 ? 'has-submenu' : ''} ${isActive ? 'active' : ''}">
-          <a href="${item.url || '#'}" 
-             class="${level === 0 ? 'menu-link' : 'submenu-link'} ${isActive ? 'active' : ''}"
-             data-id="${item.id}"
-             ${hasChildren && level === 0 ? 'data-has-children="true"' : ''}
-             ${!item.url || item.url === '#' ? 'onclick="return false;"' : ''}>
-            
-            <span class="menu-icon">
-              <i class="${item.icon || 'fas fa-circle'}"></i>
-            </span>
-            
-            <span class="menu-title">${item.title}</span>
-            
-            ${hasChildren && level === 0 ? `
-              <span class="menu-arrow">
-                <i class="fas fa-chevron-down"></i>
-              </span>
-            ` : ''}
-          </a>
-          
-          ${hasChildren && level === 0 ? `
-            <div class="submenu">
-              <ul>
-                ${this.renderMenuItems(item.children, level + 1)}
-              </ul>
-            </div>
-          ` : ''}
-        </li>
-      `;
+        const hasChildren = item.children && item.children.length > 0;
+        const isActive = window.location.hash === item.path || 
+                       window.location.hash.startsWith(item.id);
+        
+        // Check if main menu is disabled
+        const isMainDisabled = disabledMenus.includes(item.id);
+        
+        return `
+            <li class="menu-item ${isActive ? 'active' : ''} ${hasChildren ? 'has-submenu' : ''}">
+                <a href="${isMainDisabled ? 'javascript:void(0)' : item.path}" 
+                   class="menu-link ${isMainDisabled ? 'disabled' : ''}" 
+                   data-menu="${item.id}"
+                   ${isMainDisabled ? 'onclick="showUpgradeModal(\'' + item.title + '\')"' : ''}>
+                    <span class="menu-icon">${isMainDisabled ? 
+                        window.StockMintConfig?.getMenuIconWithLock(item.id, item.icon) : 
+                        item.icon
+                    }</span>
+                    <span class="menu-title">${item.title}</span>
+                    ${isMainDisabled ? '<span class="menu-lock"><i class="fas fa-lock"></i></span>' : ''}
+                    ${hasChildren ? '<span class="menu-arrow"><i class="fas fa-chevron-down"></i></span>' : ''}
+                </a>
+                ${hasChildren ? this.renderSubMenu(item.children, disabledMenus) : ''}
+            </li>
+        `;
     }).join('');
-  }
+}
 
+renderSubMenu(children, disabledMenus) {
+    return `
+        <div class="submenu">
+            <ul>
+                ${children.map(child => {
+                    const isChildDisabled = disabledMenus.includes(child.id);
+                    return `
+                        <li>
+                            <a href="${isChildDisabled ? 'javascript:void(0)' : child.path}" 
+                               class="submenu-link ${isChildDisabled ? 'disabled' : ''}" 
+                               data-submenu="${child.id}"
+                               ${isChildDisabled ? 'onclick="showUpgradeModal(\'' + child.title + '\')"' : ''}>
+                                <span class="menu-icon">${isChildDisabled ? '🔒' : '↳'}</span>
+                                <span>${child.title}</span>
+                                ${isChildDisabled ? '<span class="menu-lock"><i class="fas fa-lock"></i></span>' : ''}
+                            </a>
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
+        </div>
+    `;
+}
   // Check if item is active
   isItemActive(item) {
     const currentHash = window.location.hash.substring(1) || 'dashboard';
