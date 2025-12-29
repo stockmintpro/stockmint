@@ -1,4 +1,4 @@
-// StockMint Main Application - COMPLETE WORKING VERSION
+// StockMint Main Application - UPDATED VERSION
 
 class StockMintApp {
   constructor() {
@@ -8,6 +8,7 @@ class StockMintApp {
     this.user = null;
     this.initialized = false;
     this.currentPlan = 'basic'; // default
+    this.attemptedPage = null; // Untuk menyimpan halaman yang dicoba diakses
   }
   
   // Initialize application
@@ -163,8 +164,19 @@ class StockMintApp {
       
       // Check if feature is allowed for current plan
       if (!this.isPageAllowedForPlan(hash)) {
-        this.showNotification('This feature is not available in your current plan', 'warning');
-        // Redirect to dashboard if not allowed
+        // For DEMO users, show feature locked page
+        if (this.currentPlan === 'demo') {
+          this.attemptedPage = hash;
+          this.currentPage = 'feature-locked';
+          this.loadPage('feature-locked');
+          document.title = `StockMint - Feature Locked`;
+          return;
+        }
+        
+        // For BASIC users trying to access PRO features
+        this.showNotification('This feature requires PRO or ADVANCE plan', 'warning');
+        
+        // Redirect to dashboard if trying to access restricted page
         if (hash !== 'dashboard') {
           window.location.hash = '#dashboard';
           return;
@@ -299,8 +311,8 @@ class StockMintApp {
       'sales/orders': 'Sales Orders',
       'sales/returns': 'Sales Returns',
       'sales/refunds': 'Refunds',
-     'inventory': 'Inventory',
-     'inventory/transfers': 'Stock Transfers',
+      'inventory': 'Inventory',
+      'inventory/transfers': 'Stock Transfers',
       'inventory/adjustments': 'Stock Adjustments',
       'inventory/opname': 'Stock Opname',
       'transactions': 'Transactions',
@@ -352,6 +364,11 @@ class StockMintApp {
   
   // Get page content
   getPageContent(page) {
+    // Feature locked page for demo users
+    if (page === 'feature-locked') {
+      return this.getFeatureLockedContent();
+    }
+    
     // Dashboard content
     if (page === 'dashboard') {
       return this.getDashboardContent();
@@ -583,7 +600,7 @@ class StockMintApp {
         ${isDemo ? `
           <div class="demo-alert">
             <i class="fas fa-info-circle"></i>
-            <span>Demo mode: Some features are disabled. Upgrade to BASIC or higher to unlock all features.</span>
+            <span>Demo mode: All menus are visible but some features are disabled. Upgrade to BASIC or higher to unlock all features.</span>
           </div>
         ` : ''}
         
@@ -639,7 +656,7 @@ class StockMintApp {
           </div>
           
           <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'StockMintApp.showFeatureLocked(\'Data Migration\')'}">
+               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'feature-locked\''}">
             <div class="feature-icon" style="background: #3b82f6;">
               <i class="fas fa-database"></i>
             </div>
@@ -649,7 +666,7 @@ class StockMintApp {
           </div>
           
           <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'StockMintApp.showFeatureLocked(\'Marketplace Fee\')'}">
+               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'feature-locked\''}">
             <div class="feature-icon" style="background: #f97316;">
               <i class="fas fa-percentage"></i>
             </div>
@@ -696,75 +713,251 @@ class StockMintApp {
     `;
   }
   
-  // Default page content (for other pages) - NO DUPLICATE TITLE
-  getDefaultPageContent(page) {
-    const title = this.getPageTitle(page);
-    const isDemo = this.currentPlan === 'demo';
-    const demoRestricted = isDemo && [
-      'Data Migration',
-      'Marketplace Fee',
-      'Purchase Returns',
-      'Purchase Deposits',
-      'Sales Returns',
-      'Refunds',
-      'Stock Adjustments',
-      'Stock Opname',
-      'Receipts',
-      'Journals',
-      'Reports',
-      'Analytics',
-      'User Management',
-      'Role & Permissions',
-      'Notification Settings',
-      'API Integrations'
-    ].some(restrictedTitle => title.includes(restrictedTitle));
-    
-    if (demoRestricted) {
-      return `
-        <div class="page-content">
-          <div class="feature-locked-page">
-            <i class="fas fa-lock" style="font-size: 48px; color: #ef4444; margin-bottom: 20px;"></i>
-            <h2>Feature Locked</h2>
-            <p>The <strong>${title}</strong> feature is not available in DEMO mode.</p>
-            <p>Upgrade to BASIC, PRO, or ADVANCE plan to access this feature and many more.</p>
-            <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
-              <button onclick="window.location.hash='dashboard'" class="btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-              </button>
-              <button onclick="StockMintApp.showUpgradeModal()" class="btn-primary">
-                <i class="fas fa-rocket"></i> Upgrade Plan
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <style>
-          .feature-locked-page {
-            text-align: center;
-            padding: 50px 20px;
-            max-width: 600px;
-            margin: 0 auto;
-          }
-          
-          .feature-locked-page h2 {
-            color: #ef4444;
-            margin-bottom: 15px;
-          }
-          
-          .feature-locked-page p {
-            color: #666;
-            margin-bottom: 10px;
-            line-height: 1.6;
-          }
-        </style>
-      `;
-    }
+  // Feature locked content (for demo users)
+  getFeatureLockedContent() {
+    const attemptedPage = this.attemptedPage || 'dashboard';
+    const attemptedPageTitle = this.getPageTitle(attemptedPage);
     
     return `
       <div class="page-content">
-        <!-- HAPUS <h1> dan <p class="page-subtitle"> di sini -->
-        <!-- Judul sudah ada di Navbar, jadi tidak perlu diulang di konten -->
+        <div class="feature-locked-container">
+          <div class="feature-locked-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h2>Feature Locked</h2>
+          <p class="feature-name">${attemptedPageTitle}</p>
+          <p class="feature-description">
+            This feature is not available in <strong>DEMO</strong> mode.
+            Upgrade to BASIC, PRO, or ADVANCE plan to unlock all features.
+          </p>
+          
+          <div class="upgrade-options">
+            <div class="upgrade-card">
+              <div class="upgrade-card-header basic">
+                <h3>BASIC</h3>
+                <div class="price">$19<span>/month</span></div>
+              </div>
+              <ul class="upgrade-features">
+                <li><i class="fas fa-check"></i> All demo features enabled</li>
+                <li><i class="fas fa-check"></i> Multi-scenario marketplace fees</li>
+                <li><i class="fas fa-check"></i> Returned products management</li>
+                <li><i class="fas fa-check"></i> Data migration tools</li>
+              </ul>
+              <button class="upgrade-btn basic" onclick="StockMintApp.selectPlan('basic')">
+                Upgrade to BASIC
+              </button>
+            </div>
+            
+            <div class="upgrade-card recommended">
+              <div class="upgrade-card-badge">RECOMMENDED</div>
+              <div class="upgrade-card-header pro">
+                <h3>PRO</h3>
+                <div class="price">$49<span>/month</span></div>
+              </div>
+              <ul class="upgrade-features">
+                <li><i class="fas fa-check"></i> Everything in BASIC</li>
+                <li><i class="fas fa-check"></i> Multi-user (up to 3)</li>
+                <li><i class="fas fa-check"></i> Multi-warehouse (up to 3)</li>
+                <li><i class="fas fa-check"></i> Advanced reporting</li>
+                <li><i class="fas fa-check"></i> Auto-refresh every 5 minutes</li>
+              </ul>
+              <button class="upgrade-btn pro" onclick="StockMintApp.selectPlan('pro')">
+                Upgrade to PRO
+              </button>
+            </div>
+            
+            <div class="upgrade-card">
+              <div class="upgrade-card-header advance">
+                <h3>ADVANCE</h3>
+                <div class="price">$99<span>/month</span></div>
+              </div>
+              <ul class="upgrade-features">
+                <li><i class="fas fa-check"></i> Everything in PRO</li>
+                <li><i class="fas fa-check"></i> Full accounting integration</li>
+                <li><i class="fas fa-check"></i> Real-time updates</li>
+                <li><i class="fas fa-check"></i> Custom reporting</li>
+                <li><i class="fas fa-check"></i> Advanced analytics dashboard</li>
+              </ul>
+              <button class="upgrade-btn advance" onclick="StockMintApp.selectPlan('advance')">
+                Upgrade to ADVANCE
+              </button>
+            </div>
+          </div>
+          
+          <div class="back-to-dashboard">
+            <button onclick="window.location.hash='dashboard'" class="btn-secondary">
+              <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
       
+      <style>
+        .feature-locked-container {
+          text-align: center;
+          padding: 40px 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        
+        .feature-locked-icon {
+          font-size: 64px;
+          color: #ef4444;
+          margin-bottom: 20px;
+        }
+        
+        .feature-locked-container h2 {
+          color: #ef4444;
+          margin-bottom: 10px;
+        }
+        
+        .feature-name {
+          font-size: 24px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 20px;
+        }
+        
+        .feature-description {
+          color: #666;
+          max-width: 600px;
+          margin: 0 auto 40px auto;
+          line-height: 1.6;
+        }
+        
+        .upgrade-options {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 30px;
+          margin-bottom: 40px;
+        }
+        
+        .upgrade-card {
+          border: 1px solid #ddd;
+          border-radius: 12px;
+          padding: 25px;
+          position: relative;
+          transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .upgrade-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .upgrade-card.recommended {
+          border-color: #19BEBB;
+          transform: scale(1.05);
+          box-shadow: 0 10px 30px rgba(25, 190, 187, 0.2);
+        }
+        
+        .upgrade-card-badge {
+          position: absolute;
+          top: -12px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #19BEBB;
+          color: white;
+          padding: 6px 20px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        
+        .upgrade-card-header {
+          padding-bottom: 20px;
+          margin-bottom: 20px;
+          border-bottom: 1px solid #eee;
+        }
+        
+        .upgrade-card-header h3 {
+          margin: 0 0 10px 0;
+          font-size: 24px;
+        }
+        
+        .upgrade-card-header.basic h3 { color: #6c757d; }
+        .upgrade-card-header.pro h3 { color: #19BEBB; }
+        .upgrade-card-header.advance h3 { color: #800080; }
+        
+        .price {
+          font-size: 36px;
+          font-weight: 800;
+        }
+        
+        .price span {
+          font-size: 16px;
+          font-weight: normal;
+          color: #666;
+        }
+        
+        .upgrade-features {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 25px 0;
+          text-align: left;
+        }
+        
+        .upgrade-features li {
+          padding: 8px 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .upgrade-features li i {
+          color: #10b981;
+        }
+        
+        .upgrade-btn {
+          width: 100%;
+          padding: 14px;
+          border: none;
+          border-radius: 8px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.3s;
+        }
+        
+        .upgrade-btn.basic {
+          background: #6c757d;
+          color: white;
+        }
+        
+        .upgrade-btn.basic:hover {
+          background: #5a6268;
+        }
+        
+        .upgrade-btn.pro {
+          background: #19BEBB;
+          color: white;
+        }
+        
+        .upgrade-btn.pro:hover {
+          background: #0fa8a6;
+        }
+        
+        .upgrade-btn.advance {
+          background: #800080;
+          color: white;
+        }
+        
+        .upgrade-btn.advance:hover {
+          background: #660066;
+        }
+        
+        .back-to-dashboard {
+          margin-top: 30px;
+        }
+      </style>
+    `;
+  }
+  
+  // Default page content (for other pages)
+  getDefaultPageContent(page) {
+    const title = this.getPageTitle(page);
+    
+    return `
+      <div class="page-content">
         <div class="card" style="margin-top: 20px;">
           <div class="card-header">
             <h3><i class="fas fa-tools"></i> ${title} - Coming Soon</h3>
@@ -888,8 +1081,6 @@ class StockMintApp {
   
   // Show upgrade modal
   static showUpgradeModal() {
-    // In real implementation, this would show a modal
-    // For now, we'll show an alert with options
     const plans = [
       { name: 'BASIC', price: '$19/month', features: ['All demo features', 'Multi-scenario marketplace fees', 'Returned products management', 'Data migration'] },
       { name: 'PRO', price: '$49/month', features: ['All BASIC features', 'Multi-user (up to 3)', 'Multi-warehouse (up to 3)', 'Advanced reporting', 'Auto-refresh every 5 minutes'] },
