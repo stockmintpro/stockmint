@@ -29,10 +29,10 @@ const StockMintConfig = {
     
     // Plan Badges
     planBadges: {
-        demo: { text: 'DEMO', color: '#ffffff', bgColor: '#6c757d', textColor: '#ffffff' },
-        basic: { text: 'BASIC', color: '#f8f9fa', bgColor: '#6c757d', textColor: '#ffffff' },
-        pro: { text: 'PRO', color: '#ffd700', bgColor: '#19BEBB', textColor: '#ffffff' },
-        advance: { text: 'ADVANCE', color: '#e0b0ff', bgColor: '#800080', textColor: '#ffffff' }
+        demo: { text: 'DEMO', color: '#ffffff', bgColor: '#6c757d', textColor: '#ffffff', showLockedMenus: true },
+        basic: { text: 'BASIC', color: '#f8f9fa', bgColor: '#6c757d', textColor: '#ffffff', showLockedMenus: false },
+        pro: { text: 'PRO', color: '#ffd700', bgColor: '#19BEBB', textColor: '#ffffff', showLockedMenus: false },
+        advance: { text: 'ADVANCE', color: '#e0b0ff', bgColor: '#800080', textColor: '#ffffff', showLockedMenus: false }
     }
 };
 
@@ -166,6 +166,42 @@ const PlanFeatures = {
         autoRefresh: true,
         realTimeUpdates: true // with WebSocket
     }
+};
+
+// Function to check if menu should be visible but disabled
+StockMintConfig.isMenuVisible = function(menuTitle, plan) {
+    if (plan === 'demo') {
+        // In DEMO, show ALL menus but some will be disabled
+        return true;
+    }
+    // For other plans, use the existing restriction logic
+    return PlanFeatures[plan] !== undefined;
+};
+
+// Function to check if menu should be enabled
+StockMintConfig.isMenuEnabled = function(menuTitle, plan) {
+    if (plan === 'demo') {
+        const demoRestrictedMenus = [
+            'Data Migration',
+            'Marketplace Fee',
+            'Purchase Returns',
+            'Purchase Deposits',
+            'Sales Returns',
+            'Refunds',
+            'Stock Adjustments',
+            'Stock Opname',
+            'Receipts',
+            'Journals',
+            'Reports',
+            'Analytics',
+            'User Management',
+            'Role & Permissions',
+            'Notification Settings',
+            'API Integrations'
+        ];
+        return !demoRestrictedMenus.includes(menuTitle);
+    }
+    return true;
 };
 
 // Update features based on user's plan
