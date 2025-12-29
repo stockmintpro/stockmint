@@ -134,9 +134,11 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = StockMintMenu;
 }
 
+// Global
+window.StockMintMenu = StockMintMenu;
 // Pastikan tersedia secara global
-if (typeof window !== 'undefined') {
-  window.StockMintMenu = StockMintMenu;
-  console.log('StockMintMenu loaded with', StockMintMenu.items.length, 'items');
-}
+//if (typeof window !== 'undefined') {
+//  window.StockMintMenu = StockMintMenu;
+//  console.log('StockMintMenu loaded with', StockMintMenu.items.length, 'items');
+//}
 
