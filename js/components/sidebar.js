@@ -118,6 +118,27 @@ renderSubMenu(children, disabledMenus) {
         </div>
     `;
 }
+
+  // Fungsi global untuk show upgrade modal
+window.showUpgradeModal = function(featureName) {
+    if (typeof window.StockMintApp !== 'undefined' && 
+        typeof window.StockMintApp.showUpgradeModal === 'function') {
+        window.StockMintApp.showUpgradeModal(featureName);
+    } else {
+        // Fallback simple modal
+        const modalHTML = `
+            <div class="modal-overlay" style="...">
+                <div class="modal-content" style="...">
+                    <h3>🔒 Feature Locked</h3>
+                    <p>"${featureName}" requires upgrade.</p>
+                    <button onclick="window.location.hash='#upgrade'">Upgrade Now</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+};
+  
   // Check if item is active
   isItemActive(item) {
     const currentHash = window.location.hash.substring(1) || 'dashboard';
