@@ -1,189 +1,85 @@
-// Navbar Component untuk StockMint - Based on dashboard.html
+// navbar.js - Fixed version
 class StockMintNavbar {
     constructor(config) {
         this.config = config || {};
-        this.user = null;
-        this.currentPage = 'Dashboard';
-        this.currentSubtitle = 'Overview of your business performance';
     }
 
-    // Initialize navbar
-    init() {
-        this.loadUserData();
-        return this.render();
-    }
-
-    // Load user data from localStorage
-    loadUserData() {
-        try {
-            const userData = localStorage.getItem('stockmint_user');
-            if (userData) {
-                this.user = JSON.parse(userData);
-            }
-        } catch (error) {
-            console.error('Error loading user data:', error);
-        }
-    }
-
-    // Render navbar (based on dashboard.html)
     render() {
-    const user = this.user || { name: 'User', email: '', picture: '', isDemo: true };
-    
-    return `
-        <header class="main-header">
-            <div class="header-left">
-                <h1>${this.currentPage}</h1>
-                <p class="subtitle">${this.currentSubtitle}</p>
-            </div>
-            
-            <div class="header-right">
-                <div class="date-time">
-                    <span class="time" id="currentTime">${this.getCurrentTime()}</span>
-                    <span class="date" id="currentDate">${this.getCurrentDate()}</span>
+        const user = StockMintAuth.getUser() || { name: 'Demo User', email: 'demo@stockmint.app' };
+        const plan = localStorage.getItem('stockmint_plan') || 'basic';
+        const planBadge = this.config.planBadges?.[plan] || { text: 'BASIC', color: '#6c757d' };
+
+        return `
+            <header class="main-header">
+                <div class="header-left">
+                    <h1 id="pageTitle">Dashboard</h1>
+                    <p class="subtitle" id="pageSubtitle">Overview of your business performance</p>
                 </div>
                 
-                <!-- User info for desktop -->
-                <div class="user-info-desktop">
-                    <div class="user-avatar-sm">
-                        ${user.picture ? 
-                            `<img src="${user.picture}" alt="${user.name}">` : 
-                            `<i class="fas fa-user-circle"></i>`
-                        }
+                <div class="header-right">
+                    <div class="date-time">
+                        <div class="time" id="currentTime">00:00:00</div>
+                        <div class="date" id="currentDate">January 1, 2025</div>
                     </div>
-                    <div class="user-details">
-                        <div class="user-name-sm">${user.name}</div>
-                        <div class="user-role-sm">${user.isDemo ? 'Demo User' : 'Administrator'}</div>
+                    
+                    <div class="user-info-desktop">
+                        <div class="user-avatar-sm">
+                            ${user.picture ? 
+                                `<img src="${user.picture}" alt="${user.name}">` : 
+                                `<i class="fas fa-user"></i>`
+                            }
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name-sm">${user.name}</div>
+                            <div class="user-role-sm">${user.isDemo ? 'Demo User' : 'Administrator'}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
-    `;
+            </header>
+        `;
     }
 
-    // Bind events
     bindEvents() {
         // Update time every second
         this.updateDateTime();
-        setInterval(() => this.updateDateTime(), 60000); // Update every minute
-        
-        // Add CSS for user info desktop
-        this.addNavbarStyles();
+        setInterval(() => this.updateDateTime(), 1000);
+
+        // Logout button
+        const logoutBtn = document.querySelector('.logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to logout?')) {
+                    localStorage.clear();
+                    window.location.href = 'index.html';
+                }
+            });
+        }
     }
 
-    // Get current time
-    getCurrentTime() {
+    updateDateTime() {
         const now = new Date();
-        return now.toLocaleTimeString('en-US', {
+        
+        // Format time
+        const time = now.toLocaleTimeString('en-US', {
+            hour12: false,
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            second: '2-digit'
         });
-    }
-
-    // Get current date
-    getCurrentDate() {
-        const now = new Date();
-        return now.toLocaleDateString('en-US', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+        
+        // Format date
+        const date = now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-    }
 
-    // Update date and time
-    updateDateTime() {
         const timeEl = document.getElementById('currentTime');
         const dateEl = document.getElementById('currentDate');
         
-        if (timeEl) {
-            timeEl.textContent = this.getCurrentTime();
-        }
-        
-        if (dateEl) {
-            dateEl.textContent = this.getCurrentDate();
-        }
-    }
-
-    // Update page title
-    updateTitle(title, subtitle = '') {
-        this.currentPage = title;
-        this.currentSubtitle = subtitle || this.currentSubtitle;
-        
-        const titleEl = document.querySelector('.main-header .header-left h1');
-        const subtitleEl = document.querySelector('.main-header .subtitle');
-        
-        if (titleEl) {
-            titleEl.textContent = title;
-        }
-        
-        if (subtitleEl) {
-            subtitleEl.textContent = subtitle || this.currentSubtitle;
-        }
-    }
-
-    // Add navbar styles
-    addNavbarStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .user-info-desktop {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-left: 20px;
-                padding-left: 20px;
-                border-left: 1px solid #e0e0e0;
-            }
-            
-            .user-avatar-sm {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #19BEBB 0%, #0fa8a6 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-size: 18px;
-                overflow: hidden;
-            }
-            
-            .user-avatar-sm img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            
-            .user-details {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .user-name-sm {
-                font-weight: 600;
-                font-size: 14px;
-                color: #333;
-            }
-            
-            .user-role-sm {
-                font-size: 12px;
-                color: #666;
-            }
-            
-            @media (max-width: 768px) {
-                .user-info-desktop {
-                    display: none;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Logout
-    logout() {
-        localStorage.removeItem('stockmint_token');
-        localStorage.removeItem('stockmint_user');
-        localStorage.removeItem('stockmint_plan');
-        window.location.href = 'index.html';
+        if (timeEl) timeEl.textContent = time;
+        if (dateEl) dateEl.textContent = date;
     }
 }
 
@@ -192,7 +88,5 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = StockMintNavbar;
 }
 
-// Make available globally
-if (typeof window !== 'undefined') {
-    window.StockMintNavbar = StockMintNavbar;
-}
+// Global
+window.StockMintNavbar = StockMintNavbar;
