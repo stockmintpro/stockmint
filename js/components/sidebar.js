@@ -5,6 +5,7 @@ class StockMintSidebar {
     this.config = config || {};
     this.menu = menu || { items: [] };
     this.user = null;
+    this.plan = config.currentPlan || 'basic';
   }
 
   // Render sidebar
@@ -13,7 +14,8 @@ class StockMintSidebar {
     
     const logoUrl = 'https://i.ibb.co.com/XxvfRDyV/logo-stockmint-png.png';
     const user = this.getUserData();
-    const plan = localStorage.getItem('stockmint_plan') || 'basic';
+    const plan = this.plan;
+    const planBadge = this.config.planBadges[plan] || this.config.planBadges.basic;
     
     return `
       <aside class="sidebar" id="sidebar">
@@ -28,7 +30,9 @@ class StockMintSidebar {
               <span class="tagline-line">Precision Inventory</span>
               <span class="tagline-with-badge">
                 <span class="tagline-line">& Profit Tracking</span>
-                <span class="pro-badge">${plan.toUpperCase()}</span>
+                <span class="pro-badge" style="background: ${planBadge.bgColor}; color: ${planBadge.textColor}; border: 1px solid ${planBadge.color}">
+                  ${planBadge.text}
+                </span>
               </span>
             </div>
           </div>
@@ -51,94 +55,177 @@ class StockMintSidebar {
           </div>
           <div class="user-info">
             <div class="user-name">${user.name}</div>
-            <div class="user-role">${user.isDemo ? 'Demo User' : 'Administrator'}</div>
+            <div class="user-role">${user.isDemo ? 'Demo User' : plan.toUpperCase() + ' User'}</div>
           </div>
           <button class="logout-btn" id="logoutBtn" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
           </button>
         </div>
       </aside>
+      
+      <style>
+        .pro-badge {
+          background: ${planBadge.bgColor};
+          color: ${planBadge.textColor};
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          margin-left: 8px;
+          border: 1px solid ${planBadge.color};
+        }
+        
+        .tagline-with-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .user-role {
+          font-size: 12px;
+          color: #19BEBB;
+          font-weight: 600;
+        }
+      </style>
     `;
   }
 
-  // Render menu items (2 levels max)
-  // Di sidebar.js, ubah renderMenuItems:
-renderMenuItems(items) {
-    const currentPlan = localStorage.getItem('stockmint_plan') || 'demo';
-    const disabledMenus = window.StockMintConfig?.getDisabledMenus(currentPlan) || [];
+  // Render menu items (2 levels max) with plan restrictions
+  renderMenuItems(items, level = 0) {
+    if (!items || !Array.isArray(items)) {
+      console.error('Invalid menu items:', items);
+      return '';
+    }
     
     return items.map(item => {
-        const hasChildren = item.children && item.children.length > 0;
-        const isActive = window.location.hash === item.path || 
-                       window.location.hash.startsWith(item.id);
-        
-        // Check if main menu is disabled
-        const isMainDisabled = disabledMenus.includes(item.id);
-        
-        return `
-            <li class="menu-item ${isActive ? 'active' : ''} ${hasChildren ? 'has-submenu' : ''}">
-                <a href="${isMainDisabled ? 'javascript:void(0)' : item.path}" 
-                   class="menu-link ${isMainDisabled ? 'disabled' : ''}" 
-                   data-menu="${item.id}"
-                   ${isMainDisabled ? 'onclick="showUpgradeModal(\'' + item.title + '\')"' : ''}>
-                    <span class="menu-icon">${isMainDisabled ? 
-                        window.StockMintConfig?.getMenuIconWithLock(item.id, item.icon) : 
-                        item.icon
-                    }</span>
-                    <span class="menu-title">${item.title}</span>
-                    ${isMainDisabled ? '<span class="menu-lock"><i class="fas fa-lock"></i></span>' : ''}
-                    ${hasChildren ? '<span class="menu-arrow"><i class="fas fa-chevron-down"></i></span>' : ''}
-                </a>
-                ${hasChildren ? this.renderSubMenu(item.children, disabledMenus) : ''}
-            </li>
-        `;
-    }).join('');
-}
-
-renderSubMenu(children, disabledMenus) {
-    return `
-        <div class="submenu">
-            <ul>
-                ${children.map(child => {
-                    const isChildDisabled = disabledMenus.includes(child.id);
-                    return `
-                        <li>
-                            <a href="${isChildDisabled ? 'javascript:void(0)' : child.path}" 
-                               class="submenu-link ${isChildDisabled ? 'disabled' : ''}" 
-                               data-submenu="${child.id}"
-                               ${isChildDisabled ? 'onclick="showUpgradeModal(\'' + child.title + '\')"' : ''}>
-                                <span class="menu-icon">${isChildDisabled ? '🔒' : '↳'}</span>
-                                <span>${child.title}</span>
-                                ${isChildDisabled ? '<span class="menu-lock"><i class="fas fa-lock"></i></span>' : ''}
-                            </a>
-                        </li>
-                    `;
-                }).join('')}
-            </ul>
-        </div>
-    `;
-}
-
-  // Fungsi global untuk show upgrade modal
-window.showUpgradeModal = function(featureName) {
-    if (typeof window.StockMintApp !== 'undefined' && 
-        typeof window.StockMintApp.showUpgradeModal === 'function') {
-        window.StockMintApp.showUpgradeModal(featureName);
-    } else {
-        // Fallback simple modal
-        const modalHTML = `
-            <div class="modal-overlay" style="...">
-                <div class="modal-content" style="...">
-                    <h3>🔒 Feature Locked</h3>
-                    <p>"${featureName}" requires upgrade.</p>
-                    <button onclick="window.location.hash='#upgrade'">Upgrade Now</button>
-                </div>
+      // Check if menu item is allowed for current plan
+      if (!this.isMenuItemAllowed(item)) {
+        return '';
+      }
+      
+      const hasChildren = item.children && item.children.length > 0;
+      const isActive = this.isItemActive(item);
+      
+      if (level > 1) {
+        console.warn('Menu depth > 2 levels, skipping:', item.id);
+        return '';
+      }
+      
+      return `
+        <li class="menu-item ${hasChildren && level === 0 ? 'has-submenu' : ''} ${isActive ? 'active' : ''}">
+          <a href="${item.url || '#'}" 
+             class="${level === 0 ? 'menu-link' : 'submenu-link'} ${isActive ? 'active' : ''}"
+             data-id="${item.id}"
+             ${hasChildren && level === 0 ? 'data-has-children="true"' : ''}
+             ${!item.url || item.url === '#' ? 'onclick="return false;"' : ''}>
+            
+            <span class="menu-icon">
+              <i class="${item.icon || 'fas fa-circle'}"></i>
+            </span>
+            
+            <span class="menu-title">${item.title}</span>
+            
+            ${hasChildren && level === 0 ? `
+              <span class="menu-arrow">
+                <i class="fas fa-chevron-down"></i>
+              </span>
+            ` : ''}
+            
+            ${this.isMenuItemRestricted(item) ? `
+              <span class="menu-lock">
+                <i class="fas fa-lock"></i>
+              </span>
+            ` : ''}
+          </a>
+          
+          ${hasChildren && level === 0 ? `
+            <div class="submenu">
+              <ul>
+                ${this.renderMenuItems(item.children, level + 1)}
+              </ul>
             </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
+          ` : ''}
+        </li>
+      `;
+    }).join('');
+  }
+
+  // Check if menu item is allowed for current plan
+  isMenuItemAllowed(item) {
+    const plan = this.plan;
+    
+    // Demo restrictions
+    if (plan === 'demo') {
+      const demoRestrictedItems = [
+        'Data Migration',
+        'Marketplace Fee',
+        'Purchase Returns',
+        'Purchase Deposits',
+        'Sales Returns',
+        'Refunds',
+        'Stock Adjustments',
+        'Stock Opname',
+        'Receipts',
+        'Journals',
+        'Reports',
+        'Analytics',
+        'User Management',
+        'Role & Permissions',
+        'Notification Settings',
+        'API Integrations'
+      ];
+      
+      if (demoRestrictedItems.includes(item.title)) {
+        return false;
+      }
     }
-};
-  
+    
+    // Basic restrictions (can't access pro features)
+    if (plan === 'basic') {
+      const basicRestrictedItems = [
+        'Reports', // basic has basic reporting, but not advanced reports
+        'Analytics'
+      ];
+      
+      if (basicRestrictedItems.includes(item.title)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // Check if menu item is restricted (show lock icon)
+  isMenuItemRestricted(item) {
+    const plan = this.plan;
+    
+    if (plan === 'demo') {
+      const demoRestrictedItems = [
+        'Data Migration',
+        'Marketplace Fee',
+        'Purchase Returns',
+        'Purchase Deposits',
+        'Sales Returns',
+        'Refunds',
+        'Stock Adjustments',
+        'Stock Opname',
+        'Receipts',
+        'Journals',
+        'Reports',
+        'Analytics',
+        'User Management',
+        'Role & Permissions',
+        'Notification Settings',
+        'API Integrations'
+      ];
+      
+      return demoRestrictedItems.includes(item.title);
+    }
+    
+    return false;
+  }
+
   // Check if item is active
   isItemActive(item) {
     const currentHash = window.location.hash.substring(1) || 'dashboard';
@@ -212,6 +299,17 @@ window.showUpgradeModal = function(featureName) {
           parent.classList.toggle('active');
         }
       });
+    });
+    
+    // Prevent clicking on restricted items
+    document.querySelectorAll('.menu-link, .submenu-link').forEach(link => {
+      if (link.querySelector('.menu-lock')) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const menuTitle = this.querySelector('.menu-title').textContent;
+          alert(`"${menuTitle}" is not available in your current plan. Please upgrade to access this feature.`);
+        });
+      }
     });
     
     // Logout button
