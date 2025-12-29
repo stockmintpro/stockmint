@@ -35,7 +35,12 @@ const StockMintMenu = {
       id: 'purchases',
       title: 'Purchases',
       icon: 'fas fa-shopping-cart',
-      url: '#purchases'
+      url: '#purchases',
+      children: [
+                { id: 'purchase-orders', title: 'Purchase Orders', path: '#purchases/orders' },
+                { id: 'purchase-returns', title: 'Purchase Returns', path: '#purchases/returns' },
+                { id: 'purchase-deposits', title: 'Purchase Deposits', path: '#purchases/deposits' }
+      ]
     },
     
     // ========== SALES ==========
@@ -43,7 +48,12 @@ const StockMintMenu = {
       id: 'sales',
       title: 'Sales',
       icon: 'fas fa-money-bill-wave',
-      url: '#sales'
+      url: '#sales',
+      children: [
+                { id: 'sales-orders', title: 'Sales Orders', path: '#sales/orders' },
+                { id: 'sales-returns', title: 'Sales Returns', path: '#sales/returns' },
+                { id: 'refunds', title: 'Refunds', path: '#sales/refunds' }
+      ]
     },
     
     // ========== INVENTORY ==========
@@ -51,7 +61,12 @@ const StockMintMenu = {
       id: 'inventory',
       title: 'Inventory',
       icon: 'fas fa-warehouse',
-      url: '#inventory'
+      url: '#inventory',
+      children: [
+                { id: 'stock-transfers', title: 'Stock Transfers', path: '#inventory/transfers' },
+                { id: 'stock-adjustments', title: 'Stock Adjustments', path: '#inventory/adjustments' },
+                { id: 'stock-opname', title: 'Stock Opname', path: '#inventory/opname' }
+      ]
     },
     
     // ========== TRANSACTIONS ==========
@@ -59,7 +74,12 @@ const StockMintMenu = {
       id: 'transactions',
       title: 'Transactions',
       icon: 'fas fa-exchange-alt',
-      url: '#transactions'
+      url: '#transactions',
+      children: [
+                { id: 'payments', title: 'Payments', path: '#transactions/payments' },
+                { id: 'receipts', title: 'Receipts', path: '#transactions/receipts' },
+                { id: 'journals', title: 'Journals', path: '#transactions/journals' }
+      ]
     },
     
     // ========== TOOLS ==========
