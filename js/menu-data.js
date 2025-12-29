@@ -37,9 +37,9 @@ const StockMintMenu = {
       icon: 'fas fa-shopping-cart',
       url: '#purchases',
       children: [
-                { id: 'purchase-orders', title: 'Purchase Orders', path: '#purchases/orders' },
-                { id: 'purchase-returns', title: 'Purchase Returns', path: '#purchases/returns' },
-                { id: 'purchase-deposits', title: 'Purchase Deposits', path: '#purchases/deposits' }
+                { id: 'purchase-orders', title: 'Purchase Orders', url: '#purchases/orders' },
+                { id: 'purchase-returns', title: 'Purchase Returns', url: '#purchases/returns' },
+                { id: 'purchase-deposits', title: 'Purchase Deposits', url: '#purchases/deposits' }
       ]
     },
     
@@ -50,9 +50,9 @@ const StockMintMenu = {
       icon: 'fas fa-money-bill-wave',
       url: '#sales',
       children: [
-                { id: 'sales-orders', title: 'Sales Orders', path: '#sales/orders' },
-                { id: 'sales-returns', title: 'Sales Returns', path: '#sales/returns' },
-                { id: 'refunds', title: 'Refunds', path: '#sales/refunds' }
+                { id: 'sales-orders', title: 'Sales Orders', url: '#sales/orders' },
+                { id: 'sales-returns', title: 'Sales Returns', url: '#sales/returns' },
+                { id: 'refunds', title: 'Refunds', url: '#sales/refunds' }
       ]
     },
     
@@ -63,9 +63,9 @@ const StockMintMenu = {
       icon: 'fas fa-warehouse',
       url: '#inventory',
       children: [
-                { id: 'stock-transfers', title: 'Stock Transfers', path: '#inventory/transfers' },
-                { id: 'stock-adjustments', title: 'Stock Adjustments', path: '#inventory/adjustments' },
-                { id: 'stock-opname', title: 'Stock Opname', path: '#inventory/opname' }
+                { id: 'stock-transfers', title: 'Stock Transfers', url: '#inventory/transfers' },
+                { id: 'stock-adjustments', title: 'Stock Adjustments', url: '#inventory/adjustments' },
+                { id: 'stock-opname', title: 'Stock Opname', url: '#inventory/opname' }
       ]
     },
     
@@ -76,9 +76,9 @@ const StockMintMenu = {
       icon: 'fas fa-exchange-alt',
       url: '#transactions',
       children: [
-                { id: 'payments', title: 'Payments', path: '#transactions/payments' },
-                { id: 'receipts', title: 'Receipts', path: '#transactions/receipts' },
-                { id: 'journals', title: 'Journals', path: '#transactions/journals' }
+                { id: 'payments', title: 'Payments', url: '#transactions/payments' },
+                { id: 'receipts', title: 'Receipts', url: '#transactions/receipts' },
+                { id: 'journals', title: 'Journals', url: '#transactions/journals' }
       ]
     },
     
