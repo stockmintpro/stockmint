@@ -2,11 +2,90 @@
 <html>
 <head>
     <title>Redirecting... - StockMint</title>
-    <style>body{font-family:sans-serif;text-align:center;padding-top:50px;}</style>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #19BEBB;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        h2 {
+            color: #19BEBB;
+            margin-bottom: 10px;
+        }
+        
+        .success {
+            color: #10b981;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .error {
+            color: #ef4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .plan-badge {
+            display: inline-block;
+            background: #19BEBB;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #19BEBB;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #0fa8a6;
+        }
+    </style>
 </head>
 <body>
-    <h2>Authenticating...</h2>
-    <p>Please wait while we log you in.</p>
+    <div class="container">
+        <div class="loading-spinner"></div>
+        <h2>Authenticating...</h2>
+        <p>Please wait while we log you in.</p>
+    </div>
     
     <script>
     // 1. Ambil token dari URL
@@ -17,9 +96,11 @@
     
     if (error) {
         // Jika error dari Google
-        document.body.innerHTML = `<h3 style="color:red">Login Failed</h3>
-                                  <p>Error: ${error}</p>
-                                  <button onclick="window.location.href='../index.html'">Back to Login</button>`;
+        document.querySelector('.container').innerHTML = `
+            <div class="error">❌</div>
+            <h2>Login Failed</h2>
+            <p>Error: ${error}</p>
+            <button onclick="window.location.href='../index.html'">Back to Login</button>`;
     } else if (token) {
         // 2. Ambil info user dari Google
         fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -27,27 +108,54 @@
         })
         .then(res => res.json())
         .then(user => {
-            // 3. Simpan ke localStorage
+            // 3. Simpan ke localStorage dengan plan BASIC
             localStorage.setItem('stockmint_user', JSON.stringify({
                 name: user.name,
                 email: user.email,
                 picture: user.picture,
-                token: token
+                token: token,
+                isDemo: false,  // Tandai sebagai bukan demo
+                timestamp: Date.now()
             }));
             localStorage.setItem('stockmint_token', token);
             
-            // 4. Redirect ke dashboard
-            window.location.href = '../app.html';
+            // SETEL PLAN BASIC secara otomatis untuk user Google
+            localStorage.setItem('stockmint_plan', 'basic');
+            
+            // Tampilkan pesan sukses dengan badge plan
+            document.querySelector('.container').innerHTML = `
+                <div class="success">✓</div>
+                <h2>Welcome, ${user.name}!</h2>
+                <p>You have successfully logged in with Google.</p>
+                <div class="plan-badge">BASIC PLAN ACTIVATED</div>
+                <p style="margin: 15px 0; font-size: 14px; color: #666;">
+                    You now have full access to all BASIC plan features.
+                </p>
+                <p style="font-weight: 600; color: #19BEBB;">
+                    Redirecting to dashboard...
+                </p>
+            `;
+            
+            // 4. Redirect ke dashboard setelah 2 detik
+            setTimeout(() => {
+                window.location.href = '../app.html';
+            }, 2000);
         })
         .catch(err => {
             console.error(err);
-            document.body.innerHTML = `<h3>Login Error</h3>
-                                      <p>Failed to get user info</p>
-                                      <button onclick="window.location.href='../index.html'">Retry</button>`;
+            document.querySelector('.container').innerHTML = `
+                <div class="error">❌</div>
+                <h2>Login Error</h2>
+                <p>Failed to get user information from Google.</p>
+                <button onclick="window.location.href='../index.html'">Back to Login</button>`;
         });
     } else {
         // Jika tidak ada token, kembali ke login
-        window.location.href = '../index.html';
+        document.querySelector('.container').innerHTML = `
+            <div class="error">❌</div>
+            <h2>No Access Token</h2>
+            <p>Authentication token not found. Please try logging in again.</p>
+            <button onclick="window.location.href='../index.html'">Back to Login</button>`;
     }
     </script>
 </body>
