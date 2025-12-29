@@ -7,6 +7,7 @@ class StockMintApp {
     this.currentPage = 'dashboard';
     this.user = null;
     this.initialized = false;
+    this.currentPlan = 'basic'; // default
   }
   
   // Initialize application
@@ -59,33 +60,34 @@ class StockMintApp {
         console.log('👤 User loaded:', this.user.name);
       } else {
         console.warn('⚠️ No user data found');
-        this.user = { name: 'User', isDemo: true };
+        this.user = { name: 'Guest', isDemo: true };
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      this.user = { name: 'User', isDemo: false };
+      this.user = { name: 'Guest', isDemo: true };
     }
   }
   
   // Setup configuration based on user plan
   setupConfig() {
-    const plan = localStorage.getItem('stockmint_plan') || 'basic';
-    console.log('📊 User plan:', plan);
+    this.currentPlan = localStorage.getItem('stockmint_plan') || 'basic';
+    
+    // If user is demo, force demo plan
+    if (this.user && this.user.isDemo) {
+      this.currentPlan = 'demo';
+      localStorage.setItem('stockmint_plan', 'demo');
+    }
+    
+    console.log('📊 User plan:', this.currentPlan);
     
     // Set features based on plan
-    this.config.features = {
-      multiUser: plan === 'pro' || plan === 'advance',
-      multiWarehouse: plan === 'pro' || plan === 'advance',
-      advancedReporting: plan === 'pro' || plan === 'advance',
-      realTimeUpdates: plan === 'advance'
-    };
+    if (this.config.updateFeatures) {
+      this.config.updateFeatures(this.currentPlan);
+    }
     
-    // Set plan badge
-    this.config.planBadges = {
-      basic: { text: 'BASIC', color: '#6c757d' },
-      pro: { text: 'PRO', color: '#19BEBB' },
-      advance: { text: 'ADVANCE', color: '#ff6b35' }
-    };
+    // Set current plan in config
+    this.config.currentPlan = this.currentPlan;
+    this.config.currentPlanBadge = this.config.planBadges[this.currentPlan] || this.config.planBadges.basic;
   }
   
   // Load UI components (sidebar, navbar)
@@ -159,6 +161,16 @@ class StockMintApp {
       const hash = window.location.hash.substring(1) || 'dashboard';
       console.log('➡️ Navigating to:', hash);
       
+      // Check if feature is allowed for current plan
+      if (!this.isPageAllowedForPlan(hash)) {
+        this.showNotification('This feature is not available in your current plan', 'warning');
+        // Redirect to dashboard if not allowed
+        if (hash !== 'dashboard') {
+          window.location.hash = '#dashboard';
+          return;
+        }
+      }
+      
       this.currentPage = hash;
       this.loadPage(hash);
       
@@ -169,6 +181,54 @@ class StockMintApp {
       console.error('❌ Error handling route change:', error);
       this.showNotification('Failed to load page', 'error');
     }
+  }
+  
+  // Check if page is allowed for current plan
+  isPageAllowedForPlan(page) {
+    // Demo restrictions
+    if (this.currentPlan === 'demo') {
+      const demoRestrictedPages = [
+        'master/data-migration',
+        'master/marketplace-fee',
+        'purchases/returns',
+        'purchases/deposits',
+        'sales/returns',
+        'sales/refunds',
+        'inventory/adjustments',
+        'inventory/opname',
+        'transactions/receipts',
+        'transactions/journals',
+        'tools/reports',
+        'tools/analytics',
+        'settings/user-management',
+        'settings/role-permissions',
+        'settings/notification-settings',
+        'settings/api-integrations'
+      ];
+      
+      // Check if any restricted page matches
+      for (const restrictedPage of demoRestrictedPages) {
+        if (page.startsWith(restrictedPage) || page === restrictedPage) {
+          return false;
+        }
+      }
+    }
+    
+    // Basic restrictions (can't access pro/advance features)
+    if (this.currentPlan === 'basic') {
+      const basicRestrictedPages = [
+        'tools/reports', // basic has basic reporting, but not advanced
+        'tools/analytics'
+      ];
+      
+      for (const restrictedPage of basicRestrictedPages) {
+        if (page.startsWith(restrictedPage) || page === restrictedPage) {
+          return false;
+        }
+      }
+    }
+    
+    return true;
   }
   
   // Load page content
@@ -239,12 +299,12 @@ class StockMintApp {
       'sales/orders': 'Sales Orders',
       'sales/returns': 'Sales Returns',
       'sales/refunds': 'Refunds',
-	  'inventory': 'Inventory',
-	  'inventory/transfers': 'Stock Transfers',
+     'inventory': 'Inventory',
+     'inventory/transfers': 'Stock Transfers',
       'inventory/adjustments': 'Stock Adjustments',
       'inventory/opname': 'Stock Opname',
       'transactions': 'Transactions',
-	  'transactions/payments': 'Payments',
+      'transactions/payments': 'Payments',
       'transactions/receipts': 'Receipts', 
       'transactions/journals': 'Journals',
       'tools': 'Tools',
@@ -309,13 +369,19 @@ class StockMintApp {
   // Dashboard content (original)
   getDashboardContent() {
     const userName = this.user?.name || 'User';
+    const plan = this.currentPlan.toUpperCase();
     
     return `
       <div class="dashboard-content">
         <!-- Welcome Section -->
         <div class="dashboard-welcome">
           <h2>Welcome back, ${userName}!</h2>
-          <p>Monitor your business performance with real-time analytics and powerful insights. All you need to manage inventory and profit in one dashboard.</p>
+          <p>You are currently on the <strong>${plan}</strong> plan. Monitor your business performance with real-time analytics and powerful insights.</p>
+          ${this.currentPlan === 'demo' ? 
+            `<div class="demo-warning">
+              <i class="fas fa-info-circle"></i>
+              <span>Demo mode has limited features. Upgrade to unlock all features.</span>
+            </div>` : ''}
           <button class="btn-refresh" id="refreshBtn">
             <i class="fas fa-sync-alt"></i> Refresh Data
           </button>
@@ -381,11 +447,27 @@ class StockMintApp {
           </div>
         </div>
         
+        <!-- Plan Upgrade Banner for Demo -->
+        ${this.currentPlan === 'demo' ? `
+          <div class="upgrade-banner">
+            <div class="upgrade-content">
+              <i class="fas fa-crown" style="color: #ffd700;"></i>
+              <div>
+                <h3>Unlock All Features</h3>
+                <p>Upgrade to BASIC, PRO, or ADVANCE plan to access advanced features like multi-user, multi-warehouse, and advanced reporting.</p>
+              </div>
+              <button class="btn-upgrade" onclick="StockMintApp.showUpgradeModal()">
+                <i class="fas fa-rocket"></i> Upgrade Now
+              </button>
+            </div>
+          </div>
+        ` : ''}
+        
         <!-- Recent Activity -->
         <div class="recent-activity">
           <div class="activity-header">
             <h3>Recent Activity</h3>
-            <a href="#tools/reports" class="view-all">View All</a>
+            ${this.currentPlan !== 'demo' ? `<a href="#tools/reports" class="view-all">View All</a>` : ''}
           </div>
           <div class="activity-list">
             <div class="activity-item">
@@ -420,15 +502,90 @@ class StockMintApp {
           </div>
         </div>
       </div>
+      
+      <style>
+        .demo-warning {
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          border-radius: 8px;
+          padding: 10px 15px;
+          margin: 15px 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #856404;
+        }
+        
+        .upgrade-banner {
+          background: linear-gradient(135deg, #19BEBB 0%, #0fa8a6 100%);
+          border-radius: 12px;
+          padding: 20px;
+          margin: 20px 0;
+          color: white;
+        }
+        
+        .upgrade-content {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+        
+        .upgrade-content i {
+          font-size: 36px;
+        }
+        
+        .upgrade-content div {
+          flex: 1;
+        }
+        
+        .upgrade-content h3 {
+          margin: 0 0 5px 0;
+          font-size: 20px;
+        }
+        
+        .upgrade-content p {
+          margin: 0;
+          opacity: 0.9;
+          font-size: 14px;
+        }
+        
+        .btn-upgrade {
+          background: white;
+          color: #19BEBB;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: transform 0.2s;
+        }
+        
+        .btn-upgrade:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+      </style>
     `;
   }
   
-  // Master Data content
+  // Master Data content with plan restrictions
   getMasterDataContent() {
+    const isDemo = this.currentPlan === 'demo';
+    
     return `
       <div class="page-content">
         <h1>Master Data</h1>
         <p class="page-subtitle">Manage your core business data and settings</p>
+        
+        ${isDemo ? `
+          <div class="demo-alert">
+            <i class="fas fa-info-circle"></i>
+            <span>Demo mode: Some features are disabled. Upgrade to BASIC or higher to unlock all features.</span>
+          </div>
+        ` : ''}
         
         <div class="cards-grid">
           <div class="feature-card" onclick="window.location.hash='#master/company'">
@@ -439,12 +596,14 @@ class StockMintApp {
             <p>Company profile and information</p>
           </div>
           
-          <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
+          <div class="feature-card ${!this.config.features.multiWarehouse && this.currentPlan !== 'demo' ? 'disabled-feature' : ''}" 
+               onclick="${this.config.features.multiWarehouse || this.currentPlan === 'demo' ? 'window.location.hash=\'#master/warehouses\'' : 'StockMintApp.showFeatureLocked(\'Multi-Warehouse\')'}">
             <div class="feature-icon" style="background: #667eea;">
               <i class="fas fa-warehouse"></i>
             </div>
             <h3>Warehouses</h3>
             <p>Manage storage locations</p>
+            ${!this.config.features.multiWarehouse && this.currentPlan !== 'demo' ? '<div class="feature-locked"><i class="fas fa-lock"></i> PRO</div>' : ''}
           </div>
           
           <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
@@ -478,41 +637,155 @@ class StockMintApp {
             <h3>Categories</h3>
             <p>Product categories and grouping</p>
           </div>
+          
+          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'StockMintApp.showFeatureLocked(\'Data Migration\')'}">
+            <div class="feature-icon" style="background: #3b82f6;">
+              <i class="fas fa-database"></i>
+            </div>
+            <h3>Data Migration</h3>
+            <p>Import data from old systems</p>
+            ${isDemo ? '<div class="feature-locked"><i class="fas fa-lock"></i> DEMO</div>' : ''}
+          </div>
+          
+          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'StockMintApp.showFeatureLocked(\'Marketplace Fee\')'}">
+            <div class="feature-icon" style="background: #f97316;">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <h3>Marketplace Fee</h3>
+            <p>Configure marketplace fees</p>
+            ${isDemo ? '<div class="feature-locked"><i class="fas fa-lock"></i> DEMO</div>' : ''}
+          </div>
         </div>
+        
+        <style>
+          .demo-alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #856404;
+          }
+          
+          .disabled-feature {
+            opacity: 0.6;
+            cursor: not-allowed;
+            position: relative;
+          }
+          
+          .feature-locked {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+        </style>
       </div>
     `;
   }
   
   // Default page content (for other pages) - NO DUPLICATE TITLE
-	getDefaultPageContent(page) {
-	const title = this.getPageTitle(page);
-  
-	return `
-		<div class="page-content">
-		<!-- HAPUS <h1> dan <p class="page-subtitle"> di sini -->
-		<!-- Judul sudah ada di Navbar, jadi tidak perlu diulang di konten -->
-      
-		<div class="card" style="margin-top: 20px;">
-			<div class="card-header">
-				<h3><i class="fas fa-tools"></i> ${title} - Coming Soon</h3>
-			</div>
-			<div class="card-body">
-				<p>The <strong>${title}</strong> feature is currently under development.</p>
-				<p>We're working hard to bring you this functionality. Please check back later for updates.</p>
+  getDefaultPageContent(page) {
+    const title = this.getPageTitle(page);
+    const isDemo = this.currentPlan === 'demo';
+    const demoRestricted = isDemo && [
+      'Data Migration',
+      'Marketplace Fee',
+      'Purchase Returns',
+      'Purchase Deposits',
+      'Sales Returns',
+      'Refunds',
+      'Stock Adjustments',
+      'Stock Opname',
+      'Receipts',
+      'Journals',
+      'Reports',
+      'Analytics',
+      'User Management',
+      'Role & Permissions',
+      'Notification Settings',
+      'API Integrations'
+    ].some(restrictedTitle => title.includes(restrictedTitle));
+    
+    if (demoRestricted) {
+      return `
+        <div class="page-content">
+          <div class="feature-locked-page">
+            <i class="fas fa-lock" style="font-size: 48px; color: #ef4444; margin-bottom: 20px;"></i>
+            <h2>Feature Locked</h2>
+            <p>The <strong>${title}</strong> feature is not available in DEMO mode.</p>
+            <p>Upgrade to BASIC, PRO, or ADVANCE plan to access this feature and many more.</p>
+            <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+              <button onclick="window.location.hash='dashboard'" class="btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+              </button>
+              <button onclick="StockMintApp.showUpgradeModal()" class="btn-primary">
+                <i class="fas fa-rocket"></i> Upgrade Plan
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <style>
+          .feature-locked-page {
+            text-align: center;
+            padding: 50px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+          }
           
-			<div style="margin-top: 20px; display: flex; gap: 10px;">
-				<button onclick="window.location.hash='dashboard'" class="btn-primary">
-					<i class="fas fa-arrow-left"></i> Back to Dashboard
-				</button>
-				<button onclick="window.location.hash='help'" class="btn-secondary">
-					<i class="fas fa-question-circle"></i> Get Help
-				</button>
-			</div>
-			</div>
-		</div>
-		</div>
-		`;
-	}
+          .feature-locked-page h2 {
+            color: #ef4444;
+            margin-bottom: 15px;
+          }
+          
+          .feature-locked-page p {
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.6;
+          }
+        </style>
+      `;
+    }
+    
+    return `
+      <div class="page-content">
+        <!-- HAPUS <h1> dan <p class="page-subtitle"> di sini -->
+        <!-- Judul sudah ada di Navbar, jadi tidak perlu diulang di konten -->
+      
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h3><i class="fas fa-tools"></i> ${title} - Coming Soon</h3>
+          </div>
+          <div class="card-body">
+            <p>The <strong>${title}</strong> feature is currently under development.</p>
+            <p>We're working hard to bring you this functionality. Please check back later for updates.</p>
+          
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+              <button onclick="window.location.hash='dashboard'" class="btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+              </button>
+              <button onclick="window.location.hash='help'" class="btn-secondary">
+                <i class="fas fa-question-circle"></i> Get Help
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
   
   // Error page
   getErrorPage(page, error) {
@@ -606,6 +879,197 @@ class StockMintApp {
         </div>
       `;
     }
+  }
+  
+  // Show feature locked message
+  static showFeatureLocked(featureName) {
+    alert(`"${featureName}" is only available in BASIC, PRO, or ADVANCE plans. Please upgrade to unlock this feature.`);
+  }
+  
+  // Show upgrade modal
+  static showUpgradeModal() {
+    // In real implementation, this would show a modal
+    // For now, we'll show an alert with options
+    const plans = [
+      { name: 'BASIC', price: '$19/month', features: ['All demo features', 'Multi-scenario marketplace fees', 'Returned products management', 'Data migration'] },
+      { name: 'PRO', price: '$49/month', features: ['All BASIC features', 'Multi-user (up to 3)', 'Multi-warehouse (up to 3)', 'Advanced reporting', 'Auto-refresh every 5 minutes'] },
+      { name: 'ADVANCE', price: '$99/month', features: ['All PRO features', 'Full accounting integration', 'Real-time updates', 'Custom reporting', 'Advanced analytics'] }
+    ];
+    
+    const modal = document.createElement('div');
+    modal.className = 'upgrade-modal';
+    modal.innerHTML = `
+      <div class="modal-overlay" onclick="this.parentElement.remove()"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Upgrade Your Plan</h3>
+          <button class="modal-close" onclick="this.closest('.upgrade-modal').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="plans-grid">
+            ${plans.map(plan => `
+              <div class="plan-card ${plan.name === 'PRO' ? 'recommended' : ''}">
+                ${plan.name === 'PRO' ? '<div class="plan-badge">RECOMMENDED</div>' : ''}
+                <h4>${plan.name}</h4>
+                <div class="plan-price">${plan.price}</div>
+                <ul class="plan-features">
+                  ${plan.features.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('')}
+                </ul>
+                <button class="btn-select-plan" onclick="StockMintApp.selectPlan('${plan.name.toLowerCase()}')">
+                  Select ${plan.name}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .upgrade-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+      }
+      
+      .modal-overlay {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+      }
+      
+      .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+      }
+      
+      .modal-header h3 {
+        margin: 0;
+        font-size: 24px;
+      }
+      
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #666;
+      }
+      
+      .modal-body {
+        padding: 20px;
+      }
+      
+      .plans-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      
+      .plan-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        position: relative;
+      }
+      
+      .plan-card.recommended {
+        border-color: #19BEBB;
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(25, 190, 187, 0.2);
+      }
+      
+      .plan-badge {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #19BEBB;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      
+      .plan-card h4 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+      }
+      
+      .plan-price {
+        font-size: 28px;
+        font-weight: bold;
+        color: #19BEBB;
+        margin-bottom: 20px;
+      }
+      
+      .plan-features {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 20px 0;
+      }
+      
+      .plan-features li {
+        padding: 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .plan-features li i {
+        color: #10b981;
+      }
+      
+      .btn-select-plan {
+        width: 100%;
+        padding: 12px;
+        background: #19BEBB;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      
+      .btn-select-plan:hover {
+        background: #0fa8a6;
+      }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+  }
+  
+  // Select plan (for demo purposes)
+  static selectPlan(plan) {
+    localStorage.setItem('stockmint_plan', plan);
+    alert(`Plan upgraded to ${plan.toUpperCase()}! Page will reload to apply changes.`);
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   }
   
   // Logout
