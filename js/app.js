@@ -407,37 +407,27 @@ class StockMintApp {
     return subtitles[page] || 'Manage your business operations';
   }
   
-  // Get page content
+  // Get page content - UPDATE untuk handle multi-step setup
   getPageContent(page) {
     // Feature locked page for demo users
     if (page === 'feature-locked') {
-      return this.getFeatureLockedContent();
+        return this.getFeatureLockedContent();
     }
     
     // Dashboard content
     if (page === 'dashboard') {
-      return this.getDashboardContent();
+        return this.getDashboardContent();
     }
     
-    // Master Data content - gunakan SetupWizard jika belum setup
+    // Master Data content
     if (page === 'master-data') {
-      const setupCompleted = localStorage.getItem('stockmint_setup_completed');
-      if (!setupCompleted && !this.user?.isDemo) {
-        // Redirect to setup options
-        window.location.hash = '#setup/start-new';
-        return this.getSetupWizardContent('start-new');
-      } else {
         return this.getMasterDataContent();
-      }
     }
     
-    // Setup pages
-    if (page === 'setup/start-new') {
-      return this.getSetupWizardContent('start-new');
-    }
-    
-    if (page === 'setup/migrate') {
-      return this.getSetupWizardContent('migrate');
+    // Setup pages - gunakan SetupWizardMulti
+    if (page.startsWith('setup/')) {
+        const setupWizard = new SetupWizardMulti();
+        return setupWizard.render();
     }
     
     // Other pages
