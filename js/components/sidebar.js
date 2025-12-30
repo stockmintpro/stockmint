@@ -1,4 +1,4 @@
-// StockMint Sidebar Component - UPDATED (Show all menus but disable some)
+// StockMint Sidebar Component - FIXED VERSION (Only restrict specific submenus)
 
 class StockMintSidebar {
   constructor(config, menu) {
@@ -178,22 +178,54 @@ class StockMintSidebar {
     return items.map(item => {
       const hasChildren = item.children && item.children.length > 0;
       const isActive = this.isItemActive(item);
-      const isEnabled = this.isMenuItemEnabled(item);
-      const isRestricted = !isEnabled;
+      
+      // Untuk parent menu (level 0), selalu enabled kecuali menu utama yang tidak punya children
+      const isEnabled = level === 0 ? true : this.isMenuItemEnabled(item);
+      const isRestricted = !isEnabled && level > 0;
       
       if (level > 1) {
         console.warn('Menu depth > 2 levels, skipping:', item.id);
         return '';
       }
       
+      // Jika ini parent menu dengan children
+      if (hasChildren && level === 0) {
+        return `
+          <li class="menu-item has-submenu ${isActive ? 'active' : ''}">
+            <a href="#" 
+               class="menu-link ${isActive ? 'active' : ''}"
+               data-id="${item.id}"
+               data-has-children="true"
+               onclick="return false;">
+              
+              <span class="menu-icon">
+                <i class="${item.icon || 'fas fa-circle'}"></i>
+              </span>
+              
+              <span class="menu-title">${item.title}</span>
+              
+              <span class="menu-arrow">
+                <i class="fas fa-chevron-down"></i>
+              </span>
+            </a>
+            
+            <div class="submenu">
+              <ul>
+                ${this.renderMenuItems(item.children, level + 1)}
+              </ul>
+            </div>
+          </li>
+        `;
+      }
+      
+      // Jika ini submenu (level 1) atau menu tanpa children (level 0)
       return `
-        <li class="menu-item ${hasChildren && level === 0 ? 'has-submenu' : ''} ${isActive ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}">
+        <li class="menu-item ${isActive ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}">
           <a href="${isEnabled ? (item.url || '#') : '#'}" 
              class="${level === 0 ? 'menu-link' : 'submenu-link'} ${isActive ? 'active' : ''}"
              data-id="${item.id}"
              data-enabled="${isEnabled}"
              ${isRestricted ? 'data-restricted="true" data-feature-name="' + item.title + '"' : ''}
-             ${hasChildren && level === 0 ? 'data-has-children="true"' : ''}
              ${!isEnabled ? 'style="cursor: not-allowed;"' : ''}>
             
             <span class="menu-icon">
@@ -202,38 +234,25 @@ class StockMintSidebar {
             
             <span class="menu-title">${item.title}</span>
             
-            ${hasChildren && level === 0 ? `
-              <span class="menu-arrow">
-                <i class="fas fa-chevron-down"></i>
-              </span>
-            ` : ''}
-            
             ${isRestricted ? `
               <span class="menu-lock" title="Upgrade to unlock">
                 <i class="fas fa-lock"></i>
               </span>
             ` : ''}
           </a>
-          
-          ${hasChildren && level === 0 ? `
-            <div class="submenu">
-              <ul>
-                ${this.renderMenuItems(item.children, level + 1)}
-              </ul>
-            </div>
-          ` : ''}
         </li>
       `;
     }).join('');
   }
 
-  // Check if menu item is enabled for current plan
+  // Check if menu item is enabled for current plan - FIXED!
+  // Hanya submenu tertentu yang di-disable untuk DEMO
   isMenuItemEnabled(item) {
     const plan = this.plan;
     
-    // For DEMO: Some menus are disabled but still visible
+    // For DEMO: Only specific submenus are disabled
     if (plan === 'demo') {
-      const demoRestrictedMenus = [
+      const demoRestrictedSubmenus = [
         'Data Migration',
         'Marketplace Fee',
         'Purchase Returns',
@@ -252,37 +271,19 @@ class StockMintSidebar {
         'API Integrations'
       ];
       
-      // Check if this item or any parent is restricted
-      const isRestricted = demoRestrictedMenus.includes(item.title);
-      
-      // Also check children recursively
-      if (item.children) {
-        const hasRestrictedChild = item.children.some(child => 
-          demoRestrictedMenus.includes(child.title)
-        );
-        return !isRestricted && !hasRestrictedChild;
-      }
-      
-      return !isRestricted;
+      // Hanya disable jika item ADA dalam daftar restricted
+      // Parent menu TIDAK pernah di-disable, hanya submenu tertentu
+      return !demoRestrictedSubmenus.includes(item.title);
     }
     
-    // For BASIC: Some PRO features are disabled
+    // For BASIC: Semua enabled kecuali Reports & Analytics (advanced)
     if (plan === 'basic') {
-      const basicRestrictedMenus = [
+      const basicRestrictedSubmenus = [
         'Reports', // advanced reports
         'Analytics'
       ];
       
-      const isRestricted = basicRestrictedMenus.includes(item.title);
-      
-      if (item.children) {
-        const hasRestrictedChild = item.children.some(child => 
-          basicRestrictedMenus.includes(child.title)
-        );
-        return !isRestricted && !hasRestrictedChild;
-      }
-      
-      return !isRestricted;
+      return !basicRestrictedSubmenus.includes(item.title);
     }
     
     // PRO and ADVANCE have all menus enabled
@@ -353,8 +354,8 @@ class StockMintSidebar {
       }
     });
     
-    // Submenu toggle (only for enabled items)
-    document.querySelectorAll('.menu-item.has-submenu:not(.disabled) > .menu-link').forEach(link => {
+    // Submenu toggle untuk semua parent menu
+    document.querySelectorAll('.menu-item.has-submenu > .menu-link').forEach(link => {
       link.addEventListener('click', function(e) {
         if (this.getAttribute('data-has-children') === 'true') {
           e.preventDefault();
@@ -406,7 +407,9 @@ class StockMintSidebar {
     });
     
     // Initial active state
-    this.updateActiveState();
+    setTimeout(() => {
+      this.updateActiveState();
+    }, 100);
   }
   
   // Update active menu state
@@ -460,4 +463,4 @@ class StockMintSidebar {
 
 // Export
 window.StockMintSidebar = StockMintSidebar;
-console.log('StockMintSidebar class loaded');
+console.log('✅ StockMintSidebar class loaded - FIXED VERSION');
