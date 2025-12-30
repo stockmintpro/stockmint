@@ -425,11 +425,19 @@ class StockMintApp {
     }
     
     // Setup pages - PERBAIKI DI SINI! 
+    // Di app.js - di dalam method getPageContent()
     if (page.startsWith('setup/')) {
-        // Gunakan SetupWizard biasa untuk halaman migrasi dan start-new
+       // Buat instance SetupWizard dan render
         const wizard = new SetupWizard();
-        return wizard.render();
-    }
+        const html = wizard.render();
+    
+       // Setelah konten dimuat, bind events
+        setTimeout(() => {
+        wizard.bindEvents();
+        }, 100);
+    
+        return html;
+     }
     
     // Other pages
     return this.getDefaultPageContent(page);
