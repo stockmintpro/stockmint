@@ -562,42 +562,52 @@ class SetupWizard {
         }
     }
 
-    handleCompanyForm() {
-        const companyName = document.getElementById('companyName').value;
-        const companyTaxId = document.getElementById('companyTaxId').value;
-        const companyAddress = document.getElementById('companyAddress').value;
-        const companyPhone = document.getElementById('companyPhone')?.value || '';
-        const companyEmail = document.getElementById('companyEmail')?.value || '';
-        const businessType = document.getElementById('businessType')?.value || '';
-        const agreeTerms = document.getElementById('agreeTerms')?.checked || true;
-        
-        if (!companyName) {
-            this.showNotification('Company name is required', 'error');
-            return;
-        }
-        
-        // Simpan data perusahaan
-        const companyData = {
-            name: companyName,
-            taxId: companyTaxId,
-            address: companyAddress,
-            phone: companyPhone,
-            email: companyEmail,
-            businessType: businessType,
-            setupDate: new Date().toISOString()
-        };
-        
-        localStorage.setItem('stockmint_company', JSON.stringify(companyData));
-        localStorage.setItem('stockmint_setup_completed', 'true');
-        
-        this.showNotification('✅ Company information saved! Setup completed.', 'success');
-        
-        setTimeout(() => {
-            window.location.hash = '#dashboard';
-            window.location.reload();
-        }, 1500);
+    // Di bagian handleCompanyForm() - GANTI dengan ini:
+handleCompanyForm() {
+    const companyName = document.getElementById('companyName').value;
+    const companyTaxId = document.getElementById('companyTaxId').value;
+    const companyAddress = document.getElementById('companyAddress').value;
+    const companyPhone = document.getElementById('companyPhone')?.value || '';
+    const companyEmail = document.getElementById('companyEmail')?.value || '';
+    const businessType = document.getElementById('businessType')?.value || '';
+    const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
+    
+    if (!companyName) {
+        this.showNotification('Company name is required', 'error');
+        return;
     }
-
+    
+    if (!agreeTerms) {
+        this.showNotification('You must agree to the Terms of Service', 'error');
+        return;
+    }
+    
+    // Simpan data perusahaan
+    const companyData = {
+        id: 1,
+        name: companyName,
+        taxId: companyTaxId,
+        address: companyAddress,
+        phone: companyPhone,
+        email: companyEmail,
+        businessType: businessType,
+        setupDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    
+    // Simpan ke localStorage
+    localStorage.setItem('stockmint_company', JSON.stringify(companyData));
+    localStorage.setItem('stockmint_setup_current_step', 'warehouse'); // Set step berikutnya
+    
+    this.showNotification('✅ Company information saved! Moving to next step...', 'success');
+    
+    // Redirect ke step warehouse
+    setTimeout(() => {
+        window.location.hash = '#setup/warehouse';
+    }, 1000);
+}
+    
     handleFileUpload(file) {
         const reader = new FileReader();
         const uploadStatus = document.getElementById('uploadStatus');
