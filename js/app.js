@@ -1,4 +1,4 @@
-// StockMint Main Application - UPDATED VERSION
+// StockMint Main Application - UPDATED VERSION WITH FIRST-TIME SETUP
 
 class StockMintApp {
   constructor() {
@@ -333,7 +333,9 @@ class StockMintApp {
       'settings/backup-restore': 'Backup & Restore',
       'settings/regional-settings': 'Regional Settings',
       'contacts': 'Contacts',
-      'help': 'Help & Guide'
+      'help': 'Help & Guide',
+      'setup/start-new': 'Start New Setup',
+      'setup/migrate': 'Data Migration'
     };
     
     return titles[page] || this.formatPageName(page);
@@ -356,7 +358,9 @@ class StockMintApp {
       'inventory': 'Stock and warehouse management',
       'tools': 'Business tools and utilities',
       'settings': 'System configuration and preferences',
-      'help': 'Documentation and support'
+      'help': 'Documentation and support',
+      'setup/start-new': 'Set up your business information',
+      'setup/migrate': 'Import your existing data'
     };
     
     return subtitles[page] || 'Manage your business operations';
@@ -379,8 +383,167 @@ class StockMintApp {
       return this.getMasterDataContent();
     }
     
+    // Setup pages
+    if (page === 'setup/start-new') {
+      return this.getSetupWizardContent('start-new');
+    }
+    
+    if (page === 'setup/migrate') {
+      return this.getSetupWizardContent('migrate');
+    }
+    
     // Other pages
     return this.getDefaultPageContent(page);
+  }
+  
+  // Setup initial page (check for first-time setup)
+  setupInitialPage() {
+    const setupCompleted = localStorage.getItem('stockmint_setup_completed');
+    const dataMigrated = localStorage.getItem('stockmint_data_migrated');
+    
+    // Check if it's first time login (not demo)
+    const user = this.user;
+    const isFirstTime = !setupCompleted && !user?.isDemo;
+    
+    if (isFirstTime) {
+        console.log('First-time setup required');
+        // Redirect to setup page
+        window.location.hash = '#master-data';
+        
+        // Show welcome modal
+        setTimeout(() => {
+            this.showWelcomeModal();
+        }, 1000);
+    }
+  }
+  
+  // Show welcome modal for first-time users
+  showWelcomeModal() {
+    const modalHTML = `
+        <div class="modal-overlay" id="welcomeModal" style="
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); display: flex; align-items: center;
+            justify-content: center; z-index: 9999; padding: 20px;
+        ">
+            <div class="modal-content" style="
+                background: white; border-radius: 15px; padding: 30px;
+                max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            ">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;">
+                        🎉
+                    </div>
+                    <h2 style="color: #333; margin-bottom: 10px;">Welcome to StockMint!</h2>
+                    <p style="color: #666;">Let's set up your inventory system</p>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+                    <button onclick="window.location.hash='#setup/start-new'" 
+                            style="background: #19BEBB; color: white; border: none; 
+                                   padding: 15px; border-radius: 10px; font-size: 16px;
+                                   font-weight: 600; cursor: pointer; display: flex;
+                                   align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fas fa-rocket"></i> Start New Setup
+                    </button>
+                    
+                    <button onclick="window.location.hash='#setup/migrate'"
+                            style="background: white; color: #19BEBB; border: 2px solid #19BEBB;
+                                   padding: 15px; border-radius: 10px; font-size: 16px;
+                                   font-weight: 600; cursor: pointer; display: flex;
+                                   align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fas fa-file-import"></i> Migrate Existing Data
+                    </button>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button onclick="document.getElementById('welcomeModal').remove()"
+                            style="background: none; border: none; color: #666;
+                                   cursor: pointer; font-size: 14px;">
+                        <i class="fas fa-times"></i> Skip for now
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  }
+  
+  // Get setup wizard content
+  getSetupWizardContent(type) {
+    if (type === 'start-new') {
+        return `
+            <div class="page-content">
+                <h1>🚀 Start New Setup</h1>
+                <p class="page-subtitle">Fill in your basic business information</p>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-building"></i> Company Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="companyForm">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                                <div>
+                                    <label>Company Name *</label>
+                                    <input type="text" class="form-control" required>
+                                </div>
+                                <div>
+                                    <label>Tax ID</label>
+                                    <input type="text" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label>Address</label>
+                                <textarea class="form-control" rows="3"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i> Save & Continue
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Migration content
+        return `
+            <div class="page-content">
+                <h1>📤 Data Migration</h1>
+                <p class="page-subtitle">Import your existing data</p>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-import"></i> Upload Your Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 60px; color: #19BEBB; margin-bottom: 20px;">
+                                📊
+                            </div>
+                            <h3>Download Template First</h3>
+                            <p style="color: #666; margin-bottom: 30px;">
+                                Download our Excel template, fill in your data, then upload it here.
+                            </p>
+                            
+                            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
+                                <button class="btn-primary" onclick="window.open('template.html', '_blank')">
+                                    <i class="fas fa-download"></i> Download Template
+                                </button>
+                                <button class="btn-secondary" onclick="document.getElementById('migrationFile').click()">
+                                    <i class="fas fa-upload"></i> Upload Filled Template
+                                </button>
+                            </div>
+                            
+                            <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
   }
   
   // Dashboard content (original)
@@ -1036,16 +1199,6 @@ getMasterDataContent() {
       refreshBtn.addEventListener('click', () => {
         this.showNotification('Dashboard refreshed!', 'success');
       });
-    }
-  }
-  
-  // Setup initial page (check for first-time setup)
-  setupInitialPage() {
-    const setupCompleted = localStorage.getItem('stockmint_setup_completed');
-    
-    if (!setupCompleted && !this.user?.isDemo) {
-      console.log('First-time setup required');
-      // You can redirect to setup page here if needed
     }
   }
   
