@@ -1,4 +1,4 @@
-// StockMint Main Application - UPDATED VERSION WITH FIRST-TIME SETUP
+// StockMint Main Application - COMPLETE VERSION WITH FIRST-TIME SETUP
 
 class StockMintApp {
   constructor() {
@@ -9,6 +9,7 @@ class StockMintApp {
     this.initialized = false;
     this.currentPlan = 'basic'; // default
     this.attemptedPage = null; // Untuk menyimpan halaman yang dicoba diakses
+    this.inSetupMode = false; // Flag untuk mode setup
   }
   
   // Initialize application
@@ -22,16 +23,26 @@ class StockMintApp {
       // Step 2: Setup configuration
       this.setupConfig();
       
-      // Step 3: Load UI components
+      // Step 3: Check if first-time setup is needed
+      const shouldSetup = this.checkFirstTimeSetup();
+      
+      if (shouldSetup) {
+        console.log('🔄 First-time setup required, showing welcome modal');
+        // Skip loading components for now, go directly to setup
+        this.showWelcomeModal();
+        return; // Keluar dari init sementara
+      }
+      
+      // Step 4: Load UI components (jika sudah setup)
       this.loadComponents();
       
-      // Step 4: Setup routing
+      // Step 5: Setup routing
       this.setupRouting();
       
-      // Step 5: Load initial page
-      this.setupInitialPage();
+      // Step 6: Load initial page
+      this.loadInitialPage();
       
-      // Step 6: Mark as initialized
+      // Step 7: Mark as initialized
       this.initialized = true;
       
       console.log('✅ StockMintApp initialized successfully');
@@ -89,6 +100,26 @@ class StockMintApp {
     // Set current plan in config
     this.config.currentPlan = this.currentPlan;
     this.config.currentPlanBadge = this.config.planBadges[this.currentPlan] || this.config.planBadges.basic;
+  }
+  
+  // Check if first-time setup is needed
+  checkFirstTimeSetup() {
+    const setupCompleted = localStorage.getItem('stockmint_setup_completed');
+    const user = this.user;
+    
+    // Jika user adalah demo, langsung lanjut tanpa setup
+    if (user?.isDemo) {
+      console.log('👤 Demo user detected, skipping setup');
+      return false;
+    }
+    
+    // Jika belum setup, tampilkan wizard
+    if (!setupCompleted) {
+      console.log('🔄 First-time setup required');
+      return true;
+    }
+    
+    return false;
   }
   
   // Load UI components (sidebar, navbar)
@@ -243,6 +274,13 @@ class StockMintApp {
     return true;
   }
   
+  // Load initial page
+  loadInitialPage() {
+    const hash = window.location.hash.substring(1) || 'dashboard';
+    this.currentPage = hash;
+    this.loadPage(hash);
+  }
+  
   // Load page content
   loadPage(page) {
     const contentArea = document.getElementById('contentArea');
@@ -303,6 +341,7 @@ class StockMintApp {
       'master/tax-rates': 'Tax Rates',
       'master/currency': 'Currency',
       'master/marketplace-fee': 'Marketplace Fee',
+      'master/data-migration': 'Data Migration',
       'purchases': 'Purchases',
       'purchases/orders': 'Purchase Orders',
       'purchases/returns': 'Purchase Returns',
@@ -335,7 +374,8 @@ class StockMintApp {
       'contacts': 'Contacts',
       'help': 'Help & Guide',
       'setup/start-new': 'Start New Setup',
-      'setup/migrate': 'Data Migration'
+      'setup/migrate': 'Data Migration',
+      'feature-locked': 'Feature Locked'
     };
     
     return titles[page] || this.formatPageName(page);
@@ -360,7 +400,8 @@ class StockMintApp {
       'settings': 'System configuration and preferences',
       'help': 'Documentation and support',
       'setup/start-new': 'Set up your business information',
-      'setup/migrate': 'Import your existing data'
+      'setup/migrate': 'Import your existing data',
+      'feature-locked': 'Upgrade your plan to unlock this feature'
     };
     
     return subtitles[page] || 'Manage your business operations';
@@ -378,9 +419,16 @@ class StockMintApp {
       return this.getDashboardContent();
     }
     
-    // Master Data content
+    // Master Data content - gunakan SetupWizard jika belum setup
     if (page === 'master-data') {
-      return this.getMasterDataContent();
+      const setupCompleted = localStorage.getItem('stockmint_setup_completed');
+      if (!setupCompleted && !this.user?.isDemo) {
+        // Redirect to setup options
+        window.location.hash = '#setup/start-new';
+        return this.getSetupWizardContent('start-new');
+      } else {
+        return this.getMasterDataContent();
+      }
     }
     
     // Setup pages
@@ -396,157 +444,7 @@ class StockMintApp {
     return this.getDefaultPageContent(page);
   }
   
-  // Setup initial page (check for first-time setup)
-  setupInitialPage() {
-    const setupCompleted = localStorage.getItem('stockmint_setup_completed');
-    const dataMigrated = localStorage.getItem('stockmint_data_migrated');
-    
-    // Check if it's first time login (not demo)
-    const user = this.user;
-    const isFirstTime = !setupCompleted && !user?.isDemo;
-    
-    if (isFirstTime) {
-        console.log('First-time setup required');
-        // Redirect to setup page
-        window.location.hash = '#master-data';
-        
-        // Show welcome modal
-        setTimeout(() => {
-            this.showWelcomeModal();
-        }, 1000);
-    }
-  }
-  
-  // Show welcome modal for first-time users
-  showWelcomeModal() {
-    const modalHTML = `
-        <div class="modal-overlay" id="welcomeModal" style="
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7); display: flex; align-items: center;
-            justify-content: center; z-index: 9999; padding: 20px;
-        ">
-            <div class="modal-content" style="
-                background: white; border-radius: 15px; padding: 30px;
-                max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            ">
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <div style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;">
-                        🎉
-                    </div>
-                    <h2 style="color: #333; margin-bottom: 10px;">Welcome to StockMint!</h2>
-                    <p style="color: #666;">Let's set up your inventory system</p>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
-                    <button onclick="window.location.hash='#setup/start-new'" 
-                            style="background: #19BEBB; color: white; border: none; 
-                                   padding: 15px; border-radius: 10px; font-size: 16px;
-                                   font-weight: 600; cursor: pointer; display: flex;
-                                   align-items: center; justify-content: center; gap: 10px;">
-                        <i class="fas fa-rocket"></i> Start New Setup
-                    </button>
-                    
-                    <button onclick="window.location.hash='#setup/migrate'"
-                            style="background: white; color: #19BEBB; border: 2px solid #19BEBB;
-                                   padding: 15px; border-radius: 10px; font-size: 16px;
-                                   font-weight: 600; cursor: pointer; display: flex;
-                                   align-items: center; justify-content: center; gap: 10px;">
-                        <i class="fas fa-file-import"></i> Migrate Existing Data
-                    </button>
-                </div>
-                
-                <div style="text-align: center;">
-                    <button onclick="document.getElementById('welcomeModal').remove()"
-                            style="background: none; border: none; color: #666;
-                                   cursor: pointer; font-size: 14px;">
-                        <i class="fas fa-times"></i> Skip for now
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-  }
-  
-  // Get setup wizard content
-  getSetupWizardContent(type) {
-    if (type === 'start-new') {
-        return `
-            <div class="page-content">
-                <h1>🚀 Start New Setup</h1>
-                <p class="page-subtitle">Fill in your basic business information</p>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-building"></i> Company Information</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="companyForm">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                                <div>
-                                    <label>Company Name *</label>
-                                    <input type="text" class="form-control" required>
-                                </div>
-                                <div>
-                                    <label>Tax ID</label>
-                                    <input type="text" class="form-control">
-                                </div>
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>Address</label>
-                                <textarea class="form-control" rows="3"></textarea>
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save"></i> Save & Continue
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else {
-        // Migration content
-        return `
-            <div class="page-content">
-                <h1>📤 Data Migration</h1>
-                <p class="page-subtitle">Import your existing data</p>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-file-import"></i> Upload Your Data</h3>
-                    </div>
-                    <div class="card-body">
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="font-size: 60px; color: #19BEBB; margin-bottom: 20px;">
-                                📊
-                            </div>
-                            <h3>Download Template First</h3>
-                            <p style="color: #666; margin-bottom: 30px;">
-                                Download our Excel template, fill in your data, then upload it here.
-                            </p>
-                            
-                            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
-                                <button class="btn-primary" onclick="window.open('template.html', '_blank')">
-                                    <i class="fas fa-download"></i> Download Template
-                                </button>
-                                <button class="btn-secondary" onclick="document.getElementById('migrationFile').click()">
-                                    <i class="fas fa-upload"></i> Upload Filled Template
-                                </button>
-                            </div>
-                            
-                            <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-  }
-  
-  // Dashboard content (original)
+  // Dashboard content
   getDashboardContent() {
     const userName = this.user?.name || 'User';
     const plan = this.currentPlan.toUpperCase();
@@ -751,156 +649,353 @@ class StockMintApp {
     `;
   }
   
-  // Master Data content with plan restrictions - DIPERBAIKI
-getMasterDataContent() {
-  const isDemo = this.currentPlan === 'demo';
-  const isBasic = this.currentPlan === 'basic';
-  
-  return `
-    <div class="page-content">
-      <h1>Master Data</h1>
-      <p class="page-subtitle">Manage your core business data and settings</p>
-      
-      ${isDemo ? `
-        <div class="demo-alert">
-          <i class="fas fa-info-circle"></i>
-          <span>Demo mode: Most features are enabled! Only Data Migration and Marketplace Fee are disabled.</span>
-        </div>
-      ` : ''}
-      
-      <div class="cards-grid">
-        <div class="feature-card" onclick="window.location.hash='#master/company'">
-          <div class="feature-icon" style="background: #19BEBB;">
-            <i class="fas fa-building"></i>
-          </div>
-          <h3>Company</h3>
-          <p>Company profile and information</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
+  // Master Data content with plan restrictions
+  getMasterDataContent() {
+    const isDemo = this.currentPlan === 'demo';
+    const isBasic = this.currentPlan === 'basic';
+    
+    return `
+      <div class="page-content">
+        <h1>Master Data</h1>
+        <p class="page-subtitle">Manage your core business data and settings</p>
         
-        <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
-          <div class="feature-icon" style="background: #667eea;">
-            <i class="fas fa-warehouse"></i>
+        ${isDemo ? `
+          <div class="demo-alert">
+            <i class="fas fa-info-circle"></i>
+            <span>Demo mode: Most features are enabled! Only Data Migration and Marketplace Fee are disabled.</span>
           </div>
-          <h3>Warehouses</h3>
-          <p>Manage storage locations</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
+        ` : ''}
         
-        <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
-          <div class="feature-icon" style="background: #10b981;">
-            <i class="fas fa-truck"></i>
+        <div class="cards-grid">
+          <div class="feature-card" onclick="window.location.hash='#master/company'">
+            <div class="feature-icon" style="background: #19BEBB;">
+              <i class="fas fa-building"></i>
+            </div>
+            <h3>Company</h3>
+            <p>Company profile and information</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Suppliers</h3>
-          <p>Supplier information and contacts</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/customers'">
-          <div class="feature-icon" style="background: #f59e0b;">
-            <i class="fas fa-users"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
+            <div class="feature-icon" style="background: #667eea;">
+              <i class="fas fa-warehouse"></i>
+            </div>
+            <h3>Warehouses</h3>
+            <p>Manage storage locations</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Customers</h3>
-          <p>Customer database</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/products'">
-          <div class="feature-icon" style="background: #ef4444;">
-            <i class="fas fa-boxes"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
+            <div class="feature-icon" style="background: #10b981;">
+              <i class="fas fa-truck"></i>
+            </div>
+            <h3>Suppliers</h3>
+            <p>Supplier information and contacts</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Products</h3>
-          <p>Product catalog and inventory</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/categories'">
-          <div class="feature-icon" style="background: #8b5cf6;">
-            <i class="fas fa-tags"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/customers'">
+            <div class="feature-icon" style="background: #f59e0b;">
+              <i class="fas fa-users"></i>
+            </div>
+            <h3>Customers</h3>
+            <p>Customer database</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Categories</h3>
-          <p>Product categories and grouping</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/units'">
-          <div class="feature-icon" style="background: #3b82f6;">
-            <i class="fas fa-balance-scale"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/products'">
+            <div class="feature-icon" style="background: #ef4444;">
+              <i class="fas fa-boxes"></i>
+            </div>
+            <h3>Products</h3>
+            <p>Product catalog and inventory</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Units</h3>
-          <p>Measurement units and conversions</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/tax-rates'">
-          <div class="feature-icon" style="background: #10b981;">
-            <i class="fas fa-percent"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/categories'">
+            <div class="feature-icon" style="background: #8b5cf6;">
+              <i class="fas fa-tags"></i>
+            </div>
+            <h3>Categories</h3>
+            <p>Product categories and grouping</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Tax Rates</h3>
-          <p>Tax configurations and rates</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card" onclick="window.location.hash='#master/currency'">
-          <div class="feature-icon" style="background: #f59e0b;">
-            <i class="fas fa-money-bill-wave"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/units'">
+            <div class="feature-icon" style="background: #3b82f6;">
+              <i class="fas fa-balance-scale"></i>
+            </div>
+            <h3>Units</h3>
+            <p>Measurement units and conversions</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Currency</h3>
-          <p>Currency exchange rates</p>
-          <span class="feature-access">✅ Available in Demo</span>
-        </div>
-        
-        <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-             onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'feature-locked\''}">
-          <div class="feature-icon" style="background: #f97316;">
-            <i class="fas fa-percentage"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/tax-rates'">
+            <div class="feature-icon" style="background: #10b981;">
+              <i class="fas fa-percent"></i>
+            </div>
+            <h3>Tax Rates</h3>
+            <p>Tax configurations and rates</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Marketplace Fee</h3>
-          <p>Configure marketplace fees</p>
-          ${isDemo ? 
-            '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
-            '<span class="feature-access">✅ Available</span>'}
-        </div>
-        
-        <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-             onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'feature-locked\''}">
-          <div class="feature-icon" style="background: #6b7280;">
-            <i class="fas fa-database"></i>
+          
+          <div class="feature-card" onclick="window.location.hash='#master/currency'">
+            <div class="feature-icon" style="background: #f59e0b;">
+              <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <h3>Currency</h3>
+            <p>Currency exchange rates</p>
+            <span class="feature-access">✅ Available in Demo</span>
           </div>
-          <h3>Data Migration</h3>
-          <p>Import data from old systems</p>
-          ${isDemo ? 
-            '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
-            '<span class="feature-access">✅ Available</span>'}
+          
+          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'#feature-locked\''}">
+            <div class="feature-icon" style="background: #f97316;">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <h3>Marketplace Fee</h3>
+            <p>Configure marketplace fees</p>
+            ${isDemo ? 
+              '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
+              '<span class="feature-access">✅ Available</span>'}
+          </div>
+          
+          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'#feature-locked\''}">
+            <div class="feature-icon" style="background: #6b7280;">
+              <i class="fas fa-database"></i>
+            </div>
+            <h3>Data Migration</h3>
+            <p>Import data from old systems</p>
+            ${isDemo ? 
+              '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
+              '<span class="feature-access">✅ Available</span>'}
+          </div>
         </div>
       </div>
-    </div>
-    
-    <style>
-      .feature-access {
-        display: block;
-        margin-top: 10px;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 3px 8px;
-        border-radius: 12px;
-        text-align: center;
-      }
       
-      .feature-access.locked {
-        background: #fee2e2;
-        color: #dc2626;
-        border: 1px solid #fca5a5;
-      }
-      
-      .feature-card .feature-access:not(.locked) {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-      }
-    </style>
-  `;
-}
+      <style>
+        .feature-access {
+          display: block;
+          margin-top: 10px;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 12px;
+          text-align: center;
+        }
+        
+        .feature-access.locked {
+          background: #fee2e2;
+          color: #dc2626;
+          border: 1px solid #fca5a5;
+        }
+        
+        .feature-card .feature-access:not(.locked) {
+          background: #d1fae5;
+          color: #065f46;
+          border: 1px solid #a7f3d0;
+        }
+        
+        .disabled-feature {
+          opacity: 0.7;
+          cursor: not-allowed !important;
+        }
+        
+        .demo-alert {
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          border-radius: 8px;
+          padding: 10px 15px;
+          margin: 15px 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #856404;
+        }
+      </style>
+    `;
+  }
+  
+  // Get setup wizard content
+  getSetupWizardContent(type) {
+    if (type === 'start-new') {
+        return `
+            <div class="page-content">
+                <h1>🚀 Start New Setup</h1>
+                <p class="page-subtitle">Fill in your basic business information</p>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-building"></i> Company Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="companyForm">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                                <div>
+                                    <label>Company Name *</label>
+                                    <input type="text" id="companyName" class="form-control" required placeholder="Enter company name">
+                                </div>
+                                <div>
+                                    <label>Tax ID</label>
+                                    <input type="text" id="companyTaxId" class="form-control" placeholder="Enter tax ID (optional)">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label>Address</label>
+                                <textarea id="companyAddress" class="form-control" rows="3" placeholder="Enter company address"></textarea>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label>Phone Number</label>
+                                <input type="tel" id="companyPhone" class="form-control" placeholder="Enter phone number">
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label>Email</label>
+                                <input type="email" id="companyEmail" class="form-control" placeholder="Enter email address">
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i> Save & Continue
+                            </button>
+                            
+                            <button type="button" class="btn-secondary" onclick="window.location.hash='#dashboard'" style="margin-left: 10px;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('companyForm');
+                    if (form) {
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            
+                            const companyName = document.getElementById('companyName').value;
+                            const companyTaxId = document.getElementById('companyTaxId').value;
+                            const companyAddress = document.getElementById('companyAddress').value;
+                            const companyPhone = document.getElementById('companyPhone').value;
+                            const companyEmail = document.getElementById('companyEmail').value;
+                            
+                            if (!companyName) {
+                                alert('Company name is required');
+                                return;
+                            }
+                            
+                            // Save company data
+                            const companyData = {
+                                name: companyName,
+                                taxId: companyTaxId,
+                                address: companyAddress,
+                                phone: companyPhone,
+                                email: companyEmail,
+                                setupDate: new Date().toISOString()
+                            };
+                            
+                            localStorage.setItem('stockmint_company', JSON.stringify(companyData));
+                            localStorage.setItem('stockmint_setup_completed', 'true');
+                            
+                            // Show success message
+                            alert('✅ Company information saved! Setup completed.');
+                            
+                            // Redirect to dashboard
+                            window.location.hash = '#dashboard';
+                            window.location.reload();
+                        });
+                    }
+                });
+            </script>
+        `;
+    } else {
+        // Migration content
+        return `
+            <div class="page-content">
+                <h1>📤 Data Migration</h1>
+                <p class="page-subtitle">Import your existing data</p>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-import"></i> Upload Your Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 60px; color: #19BEBB; margin-bottom: 20px;">
+                                📊
+                            </div>
+                            <h3>Download Template First</h3>
+                            <p style="color: #666; margin-bottom: 30px;">
+                                Download our Excel template, fill in your data, then upload it here.
+                            </p>
+                            
+                            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
+                                <button class="btn-primary" onclick="window.open('template.html', '_blank')">
+                                    <i class="fas fa-download"></i> Download Template
+                                </button>
+                                <button class="btn-secondary" id="uploadMigrationFile">
+                                    <i class="fas fa-upload"></i> Upload Filled Template
+                                </button>
+                            </div>
+                            
+                            <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
+                            
+                            <div id="uploadStatus" style="margin-top: 20px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const uploadBtn = document.getElementById('uploadMigrationFile');
+                    const fileInput = document.getElementById('migrationFile');
+                    const uploadStatus = document.getElementById('uploadStatus');
+                    
+                    if (uploadBtn && fileInput) {
+                        uploadBtn.addEventListener('click', function() {
+                            fileInput.click();
+                        });
+                        
+                        fileInput.addEventListener('change', function(e) {
+                            const file = e.target.files[0];
+                            if (file) {
+                                // Validate file type
+                                const validTypes = ['.xlsx', '.xls', '.csv'];
+                                const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+                                
+                                if (!validTypes.includes(fileExt)) {
+                                    uploadStatus.innerHTML = '<div style="color: #ef4444; background: #fee2e2; padding: 10px; border-radius: 5px;">❌ Please upload Excel or CSV files only</div>';
+                                    return;
+                                }
+                                
+                                uploadStatus.innerHTML = '<div style="color: #f59e0b; background: #fef3c7; padding: 10px; border-radius: 5px;"><i class="fas fa-spinner fa-spin"></i> Processing file...</div>';
+                                
+                                // Simulate file processing
+                                setTimeout(function() {
+                                    // Mark migration as completed
+                                    localStorage.setItem('stockmint_setup_completed', 'true');
+                                    localStorage.setItem('stockmint_data_migrated', 'true');
+                                    
+                                    uploadStatus.innerHTML = '<div style="color: #10b981; background: #d1fae5; padding: 10px; border-radius: 5px;">✅ Data migration completed successfully!</div>';
+                                    
+                                    // Redirect after 2 seconds
+                                    setTimeout(function() {
+                                        window.location.hash = '#dashboard';
+                                        window.location.reload();
+                                    }, 2000);
+                                }, 2000);
+                            }
+                        });
+                    }
+                });
+            </script>
+        `;
+    }
+  }
   
   // Feature locked content (for demo users)
   getFeatureLockedContent() {
@@ -974,7 +1069,7 @@ getMasterDataContent() {
           </div>
           
           <div class="back-to-dashboard">
-            <button onclick="window.location.hash='dashboard'" class="btn-secondary">
+            <button onclick="window.location.hash='#dashboard'" class="btn-secondary">
               <i class="fas fa-arrow-left"></i> Back to Dashboard
             </button>
           </div>
@@ -1156,10 +1251,10 @@ getMasterDataContent() {
             <p>We're working hard to bring you this functionality. Please check back later for updates.</p>
           
             <div style="margin-top: 20px; display: flex; gap: 10px;">
-              <button onclick="window.location.hash='dashboard'" class="btn-primary">
+              <button onclick="window.location.hash='#dashboard'" class="btn-primary">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
               </button>
-              <button onclick="window.location.hash='help'" class="btn-secondary">
+              <button onclick="window.location.hash='#help'" class="btn-secondary">
                 <i class="fas fa-question-circle"></i> Get Help
               </button>
             </div>
@@ -1177,7 +1272,7 @@ getMasterDataContent() {
         <h3>Error Loading Page</h3>
         <p>Failed to load: ${this.getPageTitle(page)}</p>
         <p style="color: #666; font-size: 14px; margin-top: 10px;">Error: ${error.message}</p>
-        <button onclick="window.location.hash='dashboard'" class="btn-primary" style="margin-top: 20px;">
+        <button onclick="window.location.hash='#dashboard'" class="btn-primary" style="margin-top: 20px;">
           <i class="fas fa-arrow-left"></i> Go to Dashboard
         </button>
       </div>
@@ -1200,6 +1295,181 @@ getMasterDataContent() {
         this.showNotification('Dashboard refreshed!', 'success');
       });
     }
+  }
+  
+  // Show welcome modal for first-time users
+  showWelcomeModal() {
+    // Sembunyikan loading screen
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+      loadingScreen.classList.add('hidden');
+    }
+    
+    // Tampilkan modal welcome
+    const modalHTML = `
+      <div class="modal-overlay" id="welcomeModal" style="
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); display: flex; align-items: center;
+        justify-content: center; z-index: 9999; padding: 20px;
+      ">
+        <div class="modal-content" style="
+          background: white; border-radius: 15px; padding: 30px;
+          max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        ">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;">
+              🎉
+            </div>
+            <h2 style="color: #333; margin-bottom: 10px;">Welcome to StockMint!</h2>
+            <p style="color: #666;">Let's set up your inventory system</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+            <button id="startNewBtn" 
+                    style="background: #19BEBB; color: white; border: none; 
+                           padding: 15px; border-radius: 10px; font-size: 16px;
+                           font-weight: 600; cursor: pointer; display: flex;
+                           align-items: center; justify-content: center; gap: 10px;">
+              <i class="fas fa-rocket"></i> Start New Setup
+            </button>
+            
+            <button id="migrateBtn"
+                    style="background: white; color: #19BEBB; border: 2px solid #19BEBB;
+                           padding: 15px; border-radius: 10px; font-size: 16px;
+                           font-weight: 600; cursor: pointer; display: flex;
+                           align-items: center; justify-content: center; gap: 10px;">
+              <i class="fas fa-file-import"></i> Migrate Existing Data
+            </button>
+          </div>
+          
+          <div style="text-align: center;">
+            <button id="skipSetupBtn"
+                    style="background: none; border: none; color: #666;
+                           cursor: pointer; font-size: 14px;">
+              <i class="fas fa-times"></i> Skip for now
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Bind events
+    setTimeout(() => {
+      document.getElementById('startNewBtn').addEventListener('click', () => {
+        this.startSetup('start-new');
+      });
+      
+      document.getElementById('migrateBtn').addEventListener('click', () => {
+        this.startSetup('migrate');
+      });
+      
+      document.getElementById('skipSetupBtn').addEventListener('click', () => {
+        this.skipSetup();
+      });
+    }, 100);
+  }
+  
+  // Start setup process
+  startSetup(type) {
+    // Hapus modal welcome
+    const welcomeModal = document.getElementById('welcomeModal');
+    if (welcomeModal) {
+      welcomeModal.remove();
+    }
+    
+    // Tandai sedang dalam mode setup
+    this.inSetupMode = true;
+    
+    // Load components minimal
+    this.loadMinimalComponents();
+    
+    // Setup routing
+    this.setupRouting();
+    
+    // Navigate to setup page
+    if (type === 'start-new') {
+      window.location.hash = '#setup/start-new';
+    } else {
+      window.location.hash = '#setup/migrate';
+    }
+    
+    // Tampilkan app container
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) {
+      appContainer.classList.remove('hidden');
+    }
+  }
+  
+  // Load minimal components for setup mode
+  loadMinimalComponents() {
+    console.log('🛠️ Loading minimal components for setup...');
+    
+    // Load sidebar minimal
+    if (window.StockMintSidebar) {
+      try {
+        const sidebar = new StockMintSidebar(this.config, this.menu);
+        const sidebarContainer = document.getElementById('sidebarContainer');
+        if (sidebarContainer) {
+          sidebarContainer.innerHTML = sidebar.render();
+          
+          // Bind sidebar events
+          setTimeout(() => {
+            if (sidebar.bindEvents) {
+              sidebar.bindEvents();
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('❌ Error loading sidebar:', error);
+      }
+    }
+    
+    // Load navbar minimal
+    if (window.StockMintNavbar) {
+      try {
+        const navbar = new StockMintNavbar(this.config);
+        const navbarContainer = document.getElementById('navbarContainer');
+        if (navbarContainer) {
+          navbarContainer.innerHTML = navbar.render();
+          
+          if (navbar.bindEvents) {
+            navbar.bindEvents();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading navbar:', error);
+      }
+    }
+  }
+  
+  // Skip setup
+  skipSetup() {
+    // Tandai setup sebagai selesai
+    localStorage.setItem('stockmint_setup_completed', 'true');
+    
+    // Hapus modal
+    const welcomeModal = document.getElementById('welcomeModal');
+    if (welcomeModal) {
+      welcomeModal.remove();
+    }
+    
+    // Lanjutkan inisialisasi normal
+    this.loadComponents();
+    this.setupRouting();
+    this.initialized = true;
+    
+    // Tampilkan app container
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) {
+      appContainer.classList.remove('hidden');
+    }
+    
+    // Navigate to dashboard
+    window.location.hash = '#dashboard';
+    
+    console.log('✅ Setup skipped, continuing to dashboard');
   }
   
   // Show notification
