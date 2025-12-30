@@ -1,8 +1,8 @@
-// setup-wizard.js - First-time setup page
+// setup-wizard.js - First-time setup page with multi-step wizard
 class SetupWizard {
     constructor() {
         this.currentStep = 1;
-        this.totalSteps = 3;
+        this.totalSteps = 6; // Company, Warehouse, Supplier, Customer, Category, Product
         this.setupData = {
             company: {},
             warehouse: {},
@@ -13,6 +13,15 @@ class SetupWizard {
         };
         this.isDemoUser = false;
         this.currentPlan = localStorage.getItem('stockmint_plan') || 'basic';
+        this.loadSavedData();
+    }
+
+    loadSavedData() {
+        // Load any previously saved data
+        const savedCompany = localStorage.getItem('stockmint_company');
+        if (savedCompany) {
+            this.setupData.company = JSON.parse(savedCompany);
+        }
     }
 
     render() {
@@ -171,72 +180,612 @@ class SetupWizard {
     renderStartNew() {
         return `
             <div class="page-content">
-                <h1>🚀 Start New Setup</h1>
-                <p class="page-subtitle">Fill in your basic business information</p>
+                <h1>🚀 First-Time Setup Wizard</h1>
+                <p class="page-subtitle">Complete these 6 steps to set up your inventory system</p>
+                
+                <!-- Progress Steps -->
+                <div class="setup-progress">
+                    <div class="step-indicator ${this.currentStep >= 1 ? 'active' : ''} ${this.currentStep === 1 ? 'current' : ''}">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Company</div>
+                    </div>
+                    <div class="step-connector ${this.currentStep >= 2 ? 'active' : ''}"></div>
+                    <div class="step-indicator ${this.currentStep >= 2 ? 'active' : ''} ${this.currentStep === 2 ? 'current' : ''}">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Warehouse</div>
+                    </div>
+                    <div class="step-connector ${this.currentStep >= 3 ? 'active' : ''}"></div>
+                    <div class="step-indicator ${this.currentStep >= 3 ? 'active' : ''} ${this.currentStep === 3 ? 'current' : ''}">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Supplier</div>
+                    </div>
+                    <div class="step-connector ${this.currentStep >= 4 ? 'active' : ''}"></div>
+                    <div class="step-indicator ${this.currentStep >= 4 ? 'active' : ''} ${this.currentStep === 4 ? 'current' : ''}">
+                        <div class="step-number">4</div>
+                        <div class="step-label">Customer</div>
+                    </div>
+                    <div class="step-connector ${this.currentStep >= 5 ? 'active' : ''}"></div>
+                    <div class="step-indicator ${this.currentStep >= 5 ? 'active' : ''} ${this.currentStep === 5 ? 'current' : ''}">
+                        <div class="step-number">5</div>
+                        <div class="step-label">Category</div>
+                    </div>
+                    <div class="step-connector ${this.currentStep >= 6 ? 'active' : ''}"></div>
+                    <div class="step-indicator ${this.currentStep >= 6 ? 'active' : ''} ${this.currentStep === 6 ? 'current' : ''}">
+                        <div class="step-number">6</div>
+                        <div class="step-label">Product</div>
+                    </div>
+                </div>
                 
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-building"></i> Company Information</h3>
+                        <h3><i class="fas fa-${this.getStepIcon()}"></i> ${this.getStepTitle()}</h3>
+                        <p>${this.getStepDescription()}</p>
                     </div>
                     <div class="card-body">
-                        <form id="companyForm">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                                <div>
-                                    <label>Company Name *</label>
-                                    <input type="text" id="companyName" class="form-control" required placeholder="Enter company name">
-                                </div>
-                                <div>
-                                    <label>Tax ID</label>
-                                    <input type="text" id="companyTaxId" class="form-control" placeholder="Enter tax ID (optional)">
-                                </div>
+                        ${this.renderCurrentStep()}
+                        
+                        <div class="setup-navigation" style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                            <div>
+                                ${this.currentStep > 1 ? `
+                                    <button class="btn-secondary" id="prevStepBtn">
+                                        <i class="fas fa-arrow-left"></i> Previous
+                                    </button>
+                                ` : ''}
                             </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>Address</label>
-                                <textarea id="companyAddress" class="form-control" rows="3" placeholder="Enter company address"></textarea>
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>Phone Number</label>
-                                <input type="tel" id="companyPhone" class="form-control" placeholder="Enter phone number">
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>Email</label>
-                                <input type="email" id="companyEmail" class="form-control" placeholder="Enter email address">
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>Business Type</label>
-                                <select id="businessType" class="form-control">
-                                    <option value="">Select business type</option>
-                                    <option value="retail">Retail</option>
-                                    <option value="wholesale">Wholesale</option>
-                                    <option value="manufacturing">Manufacturing</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="services">Services</option>
-                                </select>
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label>
-                                    <input type="checkbox" id="agreeTerms"> 
-                                    I agree to the Terms of Service and Privacy Policy
-                                </label>
-                            </div>
-                            
-                            <div style="display: flex; gap: 10px;">
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-save"></i> Save & Continue
+                            <div>
+                                <button class="btn-secondary" onclick="window.location.hash='#dashboard'">
+                                    <i class="fas fa-times"></i> Cancel Setup
                                 </button>
-                                <button type="button" class="btn-secondary" onclick="window.location.hash='#dashboard'">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
+                                ${this.currentStep < this.totalSteps ? `
+                                    <button class="btn-primary" id="nextStepBtn" style="margin-left: 10px;">
+                                        Continue <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                ` : `
+                                    <button class="btn-success" id="completeSetupBtn" style="margin-left: 10px;">
+                                        <i class="fas fa-check-circle"></i> Complete Setup
+                                    </button>
+                                `}
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
+                
+                <div class="setup-tips" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #19BEBB;">
+                    <h4><i class="fas fa-lightbulb"></i> Setup Tips:</h4>
+                    <p>${this.getStepTips()}</p>
+                </div>
             </div>
+            
+            <style>
+                .setup-progress {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 30px 0;
+                    flex-wrap: wrap;
+                }
+                
+                .step-indicator {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    position: relative;
+                    z-index: 2;
+                }
+                
+                .step-number {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: #e9ecef;
+                    color: #6c757d;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-bottom: 8px;
+                    transition: all 0.3s ease;
+                }
+                
+                .step-label {
+                    font-size: 12px;
+                    color: #6c757d;
+                    text-align: center;
+                    min-width: 80px;
+                }
+                
+                .step-indicator.active .step-number {
+                    background: #19BEBB;
+                    color: white;
+                }
+                
+                .step-indicator.current .step-number {
+                    box-shadow: 0 0 0 4px rgba(25, 190, 187, 0.2);
+                }
+                
+                .step-connector {
+                    width: 60px;
+                    height: 2px;
+                    background: #e9ecef;
+                    margin: 0 5px;
+                    transition: all 0.3s ease;
+                }
+                
+                .step-connector.active {
+                    background: #19BEBB;
+                }
+                
+                @media (max-width: 768px) {
+                    .step-connector {
+                        width: 30px;
+                    }
+                    
+                    .step-label {
+                        min-width: 60px;
+                        font-size: 10px;
+                    }
+                }
+                
+                .btn-success {
+                    background: #10b981;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }
+                
+                .btn-success:hover {
+                    background: #0da271;
+                    transform: translateY(-2px);
+                }
+            </style>
+        `;
+    }
+
+    getStepIcon() {
+        const icons = ['building', 'warehouse', 'truck', 'users', 'tags', 'box'];
+        return icons[this.currentStep - 1] || 'check-circle';
+    }
+
+    getStepTitle() {
+        const titles = [
+            'Company Information',
+            'Warehouse Setup',
+            'Supplier Information',
+            'Customer Information',
+            'Product Category',
+            'Add First Product'
+        ];
+        return titles[this.currentStep - 1] || 'Setup Complete';
+    }
+
+    getStepDescription() {
+        const descriptions = [
+            'Tell us about your business',
+            'Where do you store your inventory?',
+            'Who supplies your products?',
+            'Who are your customers?',
+            'How do you categorize products?',
+            'Add your first product to inventory'
+        ];
+        return descriptions[this.currentStep - 1] || '';
+    }
+
+    getStepTips() {
+        const tips = [
+            'Your company information will appear on invoices and reports.',
+            'You can add more warehouses later from the Master Data menu.',
+            'Add your main supplier. You can add more suppliers later.',
+            'Add your main customer. You can add more customers later.',
+            'Create categories to organize your products effectively.',
+            'This will be your first inventory item. You can add more products later.'
+        ];
+        return tips[this.currentStep - 1] || '';
+    }
+
+    renderCurrentStep() {
+        switch(this.currentStep) {
+            case 1:
+                return this.renderStepCompany();
+            case 2:
+                return this.renderStepWarehouse();
+            case 3:
+                return this.renderStepSupplier();
+            case 4:
+                return this.renderStepCustomer();
+            case 5:
+                return this.renderStepCategory();
+            case 6:
+                return this.renderStepProduct();
+            default:
+                return '<p>Invalid step</p>';
+        }
+    }
+
+    renderStepCompany() {
+        const company = this.setupData.company || {};
+        return `
+            <form id="stepForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Company Name *</label>
+                        <input type="text" id="companyName" class="form-control" required 
+                               value="${company.name || ''}" placeholder="Enter company name">
+                    </div>
+                    <div>
+                        <label>Tax ID</label>
+                        <input type="text" id="companyTaxId" class="form-control" 
+                               value="${company.taxId || ''}" placeholder="Enter tax ID (optional)">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Address</label>
+                    <textarea id="companyAddress" class="form-control" rows="3" 
+                              placeholder="Enter company address">${company.address || ''}</textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Phone Number</label>
+                        <input type="tel" id="companyPhone" class="form-control" 
+                               value="${company.phone || ''}" placeholder="Enter phone number">
+                    </div>
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="companyEmail" class="form-control" 
+                               value="${company.email || ''}" placeholder="Enter email address">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Business Type</label>
+                    <select id="businessType" class="form-control">
+                        <option value="">Select business type</option>
+                        <option value="retail" ${company.businessType === 'retail' ? 'selected' : ''}>Retail</option>
+                        <option value="wholesale" ${company.businessType === 'wholesale' ? 'selected' : ''}>Wholesale</option>
+                        <option value="manufacturing" ${company.businessType === 'manufacturing' ? 'selected' : ''}>Manufacturing</option>
+                        <option value="ecommerce" ${company.businessType === 'ecommerce' ? 'selected' : ''}>E-commerce</option>
+                        <option value="services" ${company.businessType === 'services' ? 'selected' : ''}>Services</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" id="agreeTerms" required> 
+                        I agree to the Terms of Service and Privacy Policy
+                    </label>
+                </div>
+            </form>
+        `;
+    }
+
+    renderStepWarehouse() {
+        const warehouse = this.setupData.warehouse || {};
+        return `
+            <form id="stepForm">
+                <div style="margin-bottom: 20px;">
+                    <label>Warehouse Name *</label>
+                    <input type="text" id="warehouseName" class="form-control" required 
+                           value="${warehouse.name || ''}" placeholder="e.g., Main Warehouse, Storefront">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Location/Area *</label>
+                        <input type="text" id="warehouseLocation" class="form-control" required 
+                               value="${warehouse.location || ''}" placeholder="e.g., Downtown, Industrial Area">
+                    </div>
+                    <div>
+                        <label>Warehouse Code</label>
+                        <input type="text" id="warehouseCode" class="form-control" 
+                               value="${warehouse.code || 'WH001'}" placeholder="Auto-generated">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Address</label>
+                    <textarea id="warehouseAddress" class="form-control" rows="2" 
+                              placeholder="Warehouse address (optional)">${warehouse.address || ''}</textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Contact Person</label>
+                        <input type="text" id="warehouseContact" class="form-control" 
+                               value="${warehouse.contactPerson || ''}" placeholder="Warehouse manager">
+                    </div>
+                    <div>
+                        <label>Contact Phone</label>
+                        <input type="tel" id="warehousePhone" class="form-control" 
+                               value="${warehouse.phone || ''}" placeholder="Warehouse phone">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" id="isPrimaryWarehouse" ${warehouse.isPrimary ? 'checked' : 'checked'}> 
+                        Set as primary warehouse
+                    </label>
+                    <small style="display: block; color: #666; margin-top: 5px;">
+                        Primary warehouse is used as default for inventory operations.
+                    </small>
+                </div>
+            </form>
+        `;
+    }
+
+    renderStepSupplier() {
+        const supplier = this.setupData.supplier || {};
+        return `
+            <form id="stepForm">
+                <div style="margin-bottom: 20px;">
+                    <label>Supplier Name *</label>
+                    <input type="text" id="supplierName" class="form-control" required 
+                           value="${supplier.name || ''}" placeholder="e.g., PT. Supplier Jaya">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Supplier Code</label>
+                        <input type="text" id="supplierCode" class="form-control" 
+                               value="${supplier.code || 'SUP001'}" placeholder="Auto-generated">
+                    </div>
+                    <div>
+                        <label>Contact Person</label>
+                        <input type="text" id="supplierContact" class="form-control" 
+                               value="${supplier.contactPerson || ''}" placeholder="Contact person name">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Address</label>
+                    <textarea id="supplierAddress" class="form-control" rows="2" 
+                              placeholder="Supplier address">${supplier.address || ''}</textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Phone Number</label>
+                        <input type="tel" id="supplierPhone" class="form-control" 
+                               value="${supplier.phone || ''}" placeholder="Supplier phone">
+                    </div>
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="supplierEmail" class="form-control" 
+                               value="${supplier.email || ''}" placeholder="Supplier email">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Payment Terms</label>
+                        <select id="paymentTerms" class="form-control">
+                            <option value="">Select payment terms</option>
+                            <option value="cash" ${supplier.paymentTerms === 'cash' ? 'selected' : ''}>Cash on Delivery</option>
+                            <option value="7days" ${supplier.paymentTerms === '7days' ? 'selected' : ''}>Net 7 Days</option>
+                            <option value="14days" ${supplier.paymentTerms === '14days' ? 'selected' : ''}>Net 14 Days</option>
+                            <option value="30days" ${supplier.paymentTerms === '30days' ? 'selected' : ''}>Net 30 Days</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tax ID</label>
+                        <input type="text" id="supplierTaxId" class="form-control" 
+                               value="${supplier.taxId || ''}" placeholder="Supplier tax ID">
+                    </div>
+                </div>
+            </form>
+        `;
+    }
+
+    renderStepCustomer() {
+        const customer = this.setupData.customer || {};
+        return `
+            <form id="stepForm">
+                <div style="margin-bottom: 20px;">
+                    <label>Customer Name *</label>
+                    <input type="text" id="customerName" class="form-control" required 
+                           value="${customer.name || ''}" placeholder="e.g., John Doe, PT. Customer Maju">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Customer Code</label>
+                        <input type="text" id="customerCode" class="form-control" 
+                               value="${customer.code || 'CUST001'}" placeholder="Auto-generated">
+                    </div>
+                    <div>
+                        <label>Customer Type</label>
+                        <select id="customerType" class="form-control">
+                            <option value="retail" ${customer.type === 'retail' ? 'selected' : ''}>Retail</option>
+                            <option value="wholesale" ${customer.type === 'wholesale' ? 'selected' : ''}>Wholesale</option>
+                            <option value="corporate" ${customer.type === 'corporate' ? 'selected' : ''}>Corporate</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Address</label>
+                    <textarea id="customerAddress" class="form-control" rows="2" 
+                              placeholder="Customer address">${customer.address || ''}</textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Phone Number</label>
+                        <input type="tel" id="customerPhone" class="form-control" 
+                               value="${customer.phone || ''}" placeholder="Customer phone">
+                    </div>
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="customerEmail" class="form-control" 
+                               value="${customer.email || ''}" placeholder="Customer email">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Payment Terms</label>
+                        <select id="customerPaymentTerms" class="form-control">
+                            <option value="cash" ${customer.paymentTerms === 'cash' ? 'selected' : ''}>Cash</option>
+                            <option value="7days" ${customer.paymentTerms === '7days' ? 'selected' : ''}>Net 7 Days</option>
+                            <option value="14days" ${customer.paymentTerms === '14days' ? 'selected' : ''}>Net 14 Days</option>
+                            <option value="30days" ${customer.paymentTerms === '30days' ? 'selected' : ''}>Net 30 Days</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Credit Limit</label>
+                        <input type="number" id="creditLimit" class="form-control" 
+                               value="${customer.creditLimit || '0'}" placeholder="0 for no limit">
+                    </div>
+                </div>
+            </form>
+        `;
+    }
+
+    renderStepCategory() {
+        const category = this.setupData.category || {};
+        return `
+            <form id="stepForm">
+                <div style="margin-bottom: 20px;">
+                    <label>Category Name *</label>
+                    <input type="text" id="categoryName" class="form-control" required 
+                           value="${category.name || ''}" placeholder="e.g., Electronics, Grocery, Clothing">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Category Code</label>
+                        <input type="text" id="categoryCode" class="form-control" 
+                               value="${category.code || 'CAT001'}" placeholder="Auto-generated">
+                    </div>
+                    <div>
+                        <label>Parent Category</label>
+                        <select id="parentCategory" class="form-control">
+                            <option value="">None (Main Category)</option>
+                            <!-- Will be populated with existing categories -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Description</label>
+                    <textarea id="categoryDescription" class="form-control" rows="3" 
+                              placeholder="Describe this category">${category.description || ''}</textarea>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Category Color</label>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                        ${['#19BEBB', '#667eea', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'].map(color => `
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="categoryColor" value="${color}" 
+                                       ${category.color === color ? 'checked' : ''}>
+                                <span style="display: inline-block; width: 20px; height: 20px; border-radius: 4px; background: ${color};"></span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            </form>
+        `;
+    }
+
+    renderStepProduct() {
+        const product = this.setupData.product || {};
+        return `
+            <form id="stepForm">
+                <div style="margin-bottom: 20px;">
+                    <label>Product Name *</label>
+                    <input type="text" id="productName" class="form-control" required 
+                           value="${product.name || ''}" placeholder="e.g., iPhone 15, Rice 5kg">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Product Code/SKU *</label>
+                        <input type="text" id="productCode" class="form-control" required 
+                               value="${product.code || 'PROD001'}" placeholder="Unique product code">
+                    </div>
+                    <div>
+                        <label>Barcode (Optional)</label>
+                        <input type="text" id="productBarcode" class="form-control" 
+                               value="${product.barcode || ''}" placeholder="Barcode number">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Category</label>
+                        <select id="productCategory" class="form-control" required>
+                            <option value="">Select category</option>
+                            <!-- Will be populated with categories -->
+                        </select>
+                    </div>
+                    <div>
+                        <label>Unit of Measurement</label>
+                        <select id="productUnit" class="form-control" required>
+                            <option value="">Select unit</option>
+                            <option value="pcs" ${product.unit === 'pcs' ? 'selected' : ''}>Pieces (pcs)</option>
+                            <option value="kg" ${product.unit === 'kg' ? 'selected' : ''}>Kilogram (kg)</option>
+                            <option value="gram" ${product.unit === 'gram' ? 'selected' : ''}>Gram (g)</option>
+                            <option value="liter" ${product.unit === 'liter' ? 'selected' : ''}>Liter (L)</option>
+                            <option value="pack" ${product.unit === 'pack' ? 'selected' : ''}>Pack</option>
+                            <option value="box" ${product.unit === 'box' ? 'selected' : ''}>Box</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Cost Price *</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666;">Rp</span>
+                            <input type="number" id="costPrice" class="form-control" required 
+                                   value="${product.costPrice || ''}" placeholder="0" 
+                                   style="padding-left: 30px;" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div>
+                        <label>Selling Price *</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666;">Rp</span>
+                            <input type="number" id="sellingPrice" class="form-control" required 
+                                   value="${product.sellingPrice || ''}" placeholder="0" 
+                                   style="padding-left: 30px;" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label>Initial Stock</label>
+                        <input type="number" id="initialStock" class="form-control" 
+                               value="${product.initialStock || '0'}" placeholder="0" min="0">
+                    </div>
+                    <div>
+                        <label>Reorder Level</label>
+                        <input type="number" id="reorderLevel" class="form-control" 
+                               value="${product.reorderLevel || '10'}" placeholder="10" min="0">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Description</label>
+                    <textarea id="productDescription" class="form-control" rows="3" 
+                              placeholder="Product description">${product.description || ''}</textarea>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" id="hasExpiryDate" ${product.hasExpiry ? 'checked' : ''}> 
+                        This product has expiry date
+                    </label>
+                </div>
+            </form>
         `;
     }
 
@@ -484,7 +1033,7 @@ class SetupWizard {
                     </div>
                     <div class="card-body">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                            <button class="btn-secondary" onclick="this.downloadTemplate()">
+                            <button class="btn-secondary" onclick="SetupWizard.downloadTemplate()">
                                 <i class="fas fa-file-excel"></i> Download Template
                             </button>
                             <button class="btn-secondary" id="importDataBtn">
@@ -575,13 +1124,42 @@ class SetupWizard {
     }
 
     bindEvents() {
-        // Handle company form submission
-        const companyForm = document.getElementById('companyForm');
-        if (companyForm) {
-            companyForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleCompanyForm();
-            });
+        // Handle form submission for each step
+        const stepForm = document.getElementById('stepForm');
+        if (stepForm) {
+            // Remove any existing listeners
+            const newForm = stepForm.cloneNode(true);
+            stepForm.parentNode.replaceChild(newForm, stepForm);
+            
+            // Handle next step button
+            const nextBtn = document.getElementById('nextStepBtn');
+            const prevBtn = document.getElementById('prevStepBtn');
+            const completeBtn = document.getElementById('completeSetupBtn');
+            
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.saveCurrentStep();
+                    this.currentStep++;
+                    this.updateWizard();
+                });
+            }
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.saveCurrentStep();
+                    this.currentStep--;
+                    this.updateWizard();
+                });
+            }
+            
+            if (completeBtn) {
+                completeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.completeSetup();
+                });
+            }
         }
         
         // Handle migration file upload
@@ -659,10 +1237,51 @@ class SetupWizard {
         }
     }
 
-    handleCompanyForm() {
-        const companyName = document.getElementById('companyName').value;
-        const companyTaxId = document.getElementById('companyTaxId').value;
-        const companyAddress = document.getElementById('companyAddress').value;
+    updateWizard() {
+        // Save current step to localStorage
+        localStorage.setItem('stockmint_setup_current_step', this.currentStep.toString());
+        
+        // Update the wizard display
+        const setupContainer = document.querySelector('.page-content');
+        if (setupContainer) {
+            setupContainer.innerHTML = this.renderStartNew();
+            this.bindEvents();
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+    }
+
+    saveCurrentStep() {
+        switch(this.currentStep) {
+            case 1:
+                this.saveCompanyData();
+                break;
+            case 2:
+                this.saveWarehouseData();
+                break;
+            case 3:
+                this.saveSupplierData();
+                break;
+            case 4:
+                this.saveCustomerData();
+                break;
+            case 5:
+                this.saveCategoryData();
+                break;
+            case 6:
+                this.saveProductData();
+                break;
+        }
+        
+        // Save to temporary storage
+        localStorage.setItem('stockmint_setup_temp', JSON.stringify(this.setupData));
+    }
+
+    saveCompanyData() {
+        const companyName = document.getElementById('companyName')?.value;
+        const companyTaxId = document.getElementById('companyTaxId')?.value || '';
+        const companyAddress = document.getElementById('companyAddress')?.value || '';
         const companyPhone = document.getElementById('companyPhone')?.value || '';
         const companyEmail = document.getElementById('companyEmail')?.value || '';
         const businessType = document.getElementById('businessType')?.value || '';
@@ -670,16 +1289,15 @@ class SetupWizard {
         
         if (!companyName) {
             this.showNotification('Company name is required', 'error');
-            return;
+            throw new Error('Company name required');
         }
         
         if (!agreeTerms) {
             this.showNotification('You must agree to the Terms of Service', 'error');
-            return;
+            throw new Error('Terms not agreed');
         }
         
-        // Simpan data perusahaan
-        const companyData = {
+        this.setupData.company = {
             id: 1,
             name: companyName,
             taxId: companyTaxId,
@@ -692,16 +1310,272 @@ class SetupWizard {
             updatedAt: new Date().toISOString()
         };
         
-        // Simpan ke localStorage
-        localStorage.setItem('stockmint_company', JSON.stringify(companyData));
-        localStorage.setItem('stockmint_setup_completed', 'true');
+        this.showNotification('Company information saved', 'success');
+    }
+
+    saveWarehouseData() {
+        const warehouseName = document.getElementById('warehouseName')?.value;
+        const warehouseLocation = document.getElementById('warehouseLocation')?.value || '';
+        const warehouseCode = document.getElementById('warehouseCode')?.value || 'WH001';
+        const warehouseAddress = document.getElementById('warehouseAddress')?.value || '';
+        const warehouseContact = document.getElementById('warehouseContact')?.value || '';
+        const warehousePhone = document.getElementById('warehousePhone')?.value || '';
+        const isPrimary = document.getElementById('isPrimaryWarehouse')?.checked || true;
         
-        this.showNotification('✅ Company information saved! Setup completed.', 'success');
+        if (!warehouseName) {
+            this.showNotification('Warehouse name is required', 'error');
+            throw new Error('Warehouse name required');
+        }
         
-        setTimeout(() => {
-            window.location.hash = '#dashboard';
-            window.location.reload();
-        }, 1500);
+        this.setupData.warehouse = {
+            id: 1,
+            name: warehouseName,
+            location: warehouseLocation,
+            code: warehouseCode,
+            address: warehouseAddress,
+            contactPerson: warehouseContact,
+            phone: warehousePhone,
+            isPrimary: isPrimary,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.showNotification('Warehouse information saved', 'success');
+    }
+
+    saveSupplierData() {
+        const supplierName = document.getElementById('supplierName')?.value;
+        const supplierCode = document.getElementById('supplierCode')?.value || 'SUP001';
+        const supplierContact = document.getElementById('supplierContact')?.value || '';
+        const supplierAddress = document.getElementById('supplierAddress')?.value || '';
+        const supplierPhone = document.getElementById('supplierPhone')?.value || '';
+        const supplierEmail = document.getElementById('supplierEmail')?.value || '';
+        const paymentTerms = document.getElementById('paymentTerms')?.value || '';
+        const supplierTaxId = document.getElementById('supplierTaxId')?.value || '';
+        
+        if (!supplierName) {
+            this.showNotification('Supplier name is required', 'error');
+            throw new Error('Supplier name required');
+        }
+        
+        this.setupData.supplier = {
+            id: 1,
+            name: supplierName,
+            code: supplierCode,
+            contactPerson: supplierContact,
+            address: supplierAddress,
+            phone: supplierPhone,
+            email: supplierEmail,
+            paymentTerms: paymentTerms,
+            taxId: supplierTaxId,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.showNotification('Supplier information saved', 'success');
+    }
+
+    saveCustomerData() {
+        const customerName = document.getElementById('customerName')?.value;
+        const customerCode = document.getElementById('customerCode')?.value || 'CUST001';
+        const customerType = document.getElementById('customerType')?.value || 'retail';
+        const customerAddress = document.getElementById('customerAddress')?.value || '';
+        const customerPhone = document.getElementById('customerPhone')?.value || '';
+        const customerEmail = document.getElementById('customerEmail')?.value || '';
+        const paymentTerms = document.getElementById('customerPaymentTerms')?.value || 'cash';
+        const creditLimit = document.getElementById('creditLimit')?.value || '0';
+        
+        if (!customerName) {
+            this.showNotification('Customer name is required', 'error');
+            throw new Error('Customer name required');
+        }
+        
+        this.setupData.customer = {
+            id: 1,
+            name: customerName,
+            code: customerCode,
+            type: customerType,
+            address: customerAddress,
+            phone: customerPhone,
+            email: customerEmail,
+            paymentTerms: paymentTerms,
+            creditLimit: parseFloat(creditLimit),
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.showNotification('Customer information saved', 'success');
+    }
+
+    saveCategoryData() {
+        const categoryName = document.getElementById('categoryName')?.value;
+        const categoryCode = document.getElementById('categoryCode')?.value || 'CAT001';
+        const categoryDescription = document.getElementById('categoryDescription')?.value || '';
+        const categoryColor = document.querySelector('input[name="categoryColor"]:checked')?.value || '#19BEBB';
+        
+        if (!categoryName) {
+            this.showNotification('Category name is required', 'error');
+            throw new Error('Category name required');
+        }
+        
+        this.setupData.category = {
+            id: 'CAT001',
+            name: categoryName,
+            code: categoryCode,
+            description: categoryDescription,
+            color: categoryColor,
+            parentId: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.showNotification('Category information saved', 'success');
+    }
+
+    saveProductData() {
+        const productName = document.getElementById('productName')?.value;
+        const productCode = document.getElementById('productCode')?.value;
+        const productBarcode = document.getElementById('productBarcode')?.value || '';
+        const productCategory = document.getElementById('productCategory')?.value || 'CAT001';
+        const productUnit = document.getElementById('productUnit')?.value;
+        const costPrice = document.getElementById('costPrice')?.value;
+        const sellingPrice = document.getElementById('sellingPrice')?.value;
+        const initialStock = document.getElementById('initialStock')?.value || '0';
+        const reorderLevel = document.getElementById('reorderLevel')?.value || '10';
+        const productDescription = document.getElementById('productDescription')?.value || '';
+        const hasExpiry = document.getElementById('hasExpiryDate')?.checked || false;
+        
+        if (!productName || !productCode || !productUnit || !costPrice || !sellingPrice) {
+            this.showNotification('Please fill all required fields', 'error');
+            throw new Error('Required fields missing');
+        }
+        
+        if (parseFloat(sellingPrice) < parseFloat(costPrice)) {
+            this.showNotification('Selling price should be higher than cost price', 'warning');
+        }
+        
+        this.setupData.product = {
+            id: productCode,
+            name: productName,
+            code: productCode,
+            barcode: productBarcode,
+            categoryId: productCategory,
+            unit: productUnit,
+            costPrice: parseFloat(costPrice),
+            sellingPrice: parseFloat(sellingPrice),
+            initialStock: parseInt(initialStock),
+            currentStock: parseInt(initialStock),
+            reorderLevel: parseInt(reorderLevel),
+            description: productDescription,
+            hasExpiry: hasExpiry,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.showNotification('Product information saved', 'success');
+    }
+
+    completeSetup() {
+        try {
+            // Save the last step data
+            this.saveProductData();
+            
+            // Save all data to localStorage
+            this.saveAllDataToStorage();
+            
+            // Mark setup as completed
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            localStorage.removeItem('stockmint_setup_current_step');
+            localStorage.removeItem('stockmint_setup_temp');
+            
+            // Create opening stock entry
+            this.createOpeningStock();
+            
+            this.showNotification('✅ Setup completed successfully! Your system is now ready.', 'success');
+            
+            setTimeout(() => {
+                window.location.hash = '#dashboard';
+                window.location.reload();
+            }, 2000);
+            
+        } catch (error) {
+            this.showNotification(`❌ Error: ${error.message}`, 'error');
+        }
+    }
+
+    saveAllDataToStorage() {
+        // Save company
+        if (this.setupData.company) {
+            localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
+        }
+        
+        // Save warehouse (as array)
+        if (this.setupData.warehouse) {
+            const warehouses = [this.setupData.warehouse];
+            localStorage.setItem('stockmint_warehouses', JSON.stringify(warehouses));
+        }
+        
+        // Save supplier (as array)
+        if (this.setupData.supplier) {
+            const suppliers = [this.setupData.supplier];
+            localStorage.setItem('stockmint_suppliers', JSON.stringify(suppliers));
+        }
+        
+        // Save customer (as array)
+        if (this.setupData.customer) {
+            const customers = [this.setupData.customer];
+            localStorage.setItem('stockmint_customers', JSON.stringify(customers));
+        }
+        
+        // Save category (as array)
+        if (this.setupData.category) {
+            const categories = [this.setupData.category];
+            localStorage.setItem('stockmint_categories', JSON.stringify(categories));
+        }
+        
+        // Save product (as array)
+        if (this.setupData.product) {
+            const products = [this.setupData.product];
+            localStorage.setItem('stockmint_products', JSON.stringify(products));
+        }
+    }
+
+    createOpeningStock() {
+        if (this.setupData.product && this.setupData.warehouse) {
+            const openingStock = {
+                id: `OS${Date.now()}`,
+                productId: this.setupData.product.id,
+                warehouseId: this.setupData.warehouse.id,
+                quantity: this.setupData.product.initialStock || 0,
+                date: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            };
+            
+            // Save opening stock
+            const existingStock = JSON.parse(localStorage.getItem('stockmint_opening_stock') || '[]');
+            existingStock.push(openingStock);
+            localStorage.setItem('stockmint_opening_stock', JSON.stringify(existingStock));
+            
+            // Create product-supplier-warehouse relationship
+            if (this.setupData.supplier) {
+                const relationship = {
+                    id: `REL${Date.now()}`,
+                    productId: this.setupData.product.id,
+                    supplierId: this.setupData.supplier.id,
+                    warehouseId: this.setupData.warehouse.id,
+                    isPrimarySupplier: true,
+                    isPrimaryWarehouse: true,
+                    createdAt: new Date().toISOString()
+                };
+                
+                const existingRelations = JSON.parse(localStorage.getItem('stockmint_product_supplier_warehouse') || '[]');
+                existingRelations.push(relationship);
+                localStorage.setItem('stockmint_product_supplier_warehouse', JSON.stringify(existingRelations));
+            }
+        }
     }
     
     handleFileUpload(file) {
@@ -837,6 +1711,7 @@ class SetupWizard {
                 // Clear only setup data
                 localStorage.removeItem('stockmint_setup_completed');
                 localStorage.removeItem('stockmint_setup_current_step');
+                localStorage.removeItem('stockmint_setup_temp');
                 localStorage.removeItem('stockmint_company');
                 localStorage.removeItem('stockmint_warehouses');
                 localStorage.removeItem('stockmint_suppliers');
@@ -953,24 +1828,36 @@ class SetupWizard {
                 ["5. Upload back to StockMint"]
             ],
             "dim_Company": [
-                ["Company Name*", "Tax ID", "Address", "Phone", "Email", "Business Type"],
-                ["Your Company", "123456789", "123 Main St", "+123456789", "contact@company.com", "Retail"]
+                ["COMPANY_ID", "COMPANY_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "LOGO_URL", "DEFAULT_WAREHOUSE_ID", "DEFAULT_CURRENCY", "DECIMAL_PLACES"],
+                [1, "Your Company", "123 Main St", "12345", "Your City", "Your Country", "", "+123456789", "", "", "contact@company.com", "123456789", "", "", "", 1, "Rp.", 0]
+            ],
+            "dim_Warehouses": [
+                ["STORAGE_ID", "STORAGE_NAME", "STORAGE_AREA", "IS_PRIMARY"],
+                [1, "Main Warehouse", "Your Area", 1]
             ],
             "dim_Products": [
-                ["Product Code*", "Product Name*", "Category", "Unit", "Cost Price", "Selling Price", "Stock Quantity"],
-                ["PROD001", "Sample Product", "Electronics", "pcs", "10.00", "15.00", "100"]
+                ["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY_ID", "UNIT", "SIZE", "COLOR", "HAS_EXPIRY", "ARCHIVE"],
+                ["PROD001", "Sample Product", "Product description", "CAT001", "pcs", "250 gr", "", 1, 0]
             ],
             "dim_Categories": [
-                ["Category ID*", "Category Name*", "Description"],
-                ["CAT001", "Electronics", "Electronic devices and accessories"]
+                ["CATEGORY_ID", "CATEGORY_NAME"],
+                ["CAT001", "Sample Category"]
             ],
             "dim_Suppliers": [
-                ["Supplier Code*", "Supplier Name*", "Contact Person", "Phone", "Email", "Address"],
-                ["SUP001", "Sample Supplier", "John Doe", "+123456789", "supplier@example.com", "456 Supplier St"]
+                ["SUPPLIER_ID", "SUPPLIER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "ADDITIONAL_TEXT", "IS_ACTIVE"],
+                [1, "Sample Supplier", "", "", "Supplier City", "Supplier Country", "", "John Doe", "+123456789", "", "", "supplier@example.com", "", "", "", "", 1]
             ],
             "dim_Customers": [
-                ["Customer Code*", "Customer Name*", "Contact Person", "Phone", "Email", "Address"],
-                ["CUS001", "Sample Customer", "Jane Smith", "+987654321", "customer@example.com", "789 Customer Ave"]
+                ["CUSTOMER_ID", "CUSTOMER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "CUSTOMER_TYPE", "CREDIT_LIMIT", "IS_ACTIVE"],
+                [1, "Sample Customer", "", "", "Customer City", "Customer Country", "", "Jane Smith", "+987654321", "", "", "customer@example.com", "", "", "", "RETAIL", 1000000, 1]
+            ],
+            "Product_Supplier_Warehouse": [
+                ["LINK_ID", "PRODUCT_ID", "SUPPLIER_ID", "WAREHOUSE_ID", "IS_PRIMARY_SUPPLIER", "IS_PRIMARY_WAREHOUSE"],
+                ["LINK00001", "PROD001", 1, 1, 1, 1]
+            ],
+            "Opening_Stock": [
+                ["PRODUCT_ID", "WAREHOUSE_ID", "OPENING_QTY", "AS_OF_DATE"],
+                ["PROD001", 1, 100, "${new Date().toISOString().slice(0,10)} 00:00:00"]
             ]
         };
         
@@ -984,7 +1871,7 @@ class SetupWizard {
         }
         
         // Download
-        XLSX.writeFile(wb, "StockMint_Data_Template.xlsx");
+        XLSX.writeFile(wb, "StockMint_Setup_Template.xlsx");
         this.showNotification('✅ Template downloaded successfully!', 'success');
     }
 
