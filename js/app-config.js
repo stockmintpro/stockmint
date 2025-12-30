@@ -56,7 +56,7 @@ const PlanFeatures = {
         dataMigration: false, // disabled on demo
         backupResetRestore: true,
         multiLanguageSupport: true,
-        basicReporting: true,
+        basicReporting: false, // Reports disabled on demo
         advancedReporting: false,
         customReporting: false,
         moneyBackGuarantee: false,
