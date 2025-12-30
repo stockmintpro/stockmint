@@ -1,7 +1,7 @@
 // setup-wizard.js - First-time setup page with multi-step wizard
 class SetupWizard {
     constructor() {
-        this.currentStep = 1;
+        this.currentStep = parseInt(localStorage.getItem('stockmint_setup_current_step')) || 1;
         this.totalSteps = 6; // Company, Warehouse, Supplier, Customer, Category, Product
         this.setupData = {
             company: {},
@@ -21,6 +21,11 @@ class SetupWizard {
         const savedCompany = localStorage.getItem('stockmint_company');
         if (savedCompany) {
             this.setupData.company = JSON.parse(savedCompany);
+        }
+        // Load temp setup data if exists
+        const tempData = localStorage.getItem('stockmint_setup_temp');
+        if (tempData) {
+            this.setupData = { ...this.setupData, ...JSON.parse(tempData) };
         }
     }
 
@@ -185,34 +190,36 @@ class SetupWizard {
                 
                 <!-- Progress Steps -->
                 <div class="setup-progress">
-                    <div class="step-indicator ${this.currentStep >= 1 ? 'active' : ''} ${this.currentStep === 1 ? 'current' : ''}">
-                        <div class="step-number">1</div>
-                        <div class="step-label">Company</div>
-                    </div>
-                    <div class="step-connector ${this.currentStep >= 2 ? 'active' : ''}"></div>
-                    <div class="step-indicator ${this.currentStep >= 2 ? 'active' : ''} ${this.currentStep === 2 ? 'current' : ''}">
-                        <div class="step-number">2</div>
-                        <div class="step-label">Warehouse</div>
-                    </div>
-                    <div class="step-connector ${this.currentStep >= 3 ? 'active' : ''}"></div>
-                    <div class="step-indicator ${this.currentStep >= 3 ? 'active' : ''} ${this.currentStep === 3 ? 'current' : ''}">
-                        <div class="step-number">3</div>
-                        <div class="step-label">Supplier</div>
-                    </div>
-                    <div class="step-connector ${this.currentStep >= 4 ? 'active' : ''}"></div>
-                    <div class="step-indicator ${this.currentStep >= 4 ? 'active' : ''} ${this.currentStep === 4 ? 'current' : ''}">
-                        <div class="step-number">4</div>
-                        <div class="step-label">Customer</div>
-                    </div>
-                    <div class="step-connector ${this.currentStep >= 5 ? 'active' : ''}"></div>
-                    <div class="step-indicator ${this.currentStep >= 5 ? 'active' : ''} ${this.currentStep === 5 ? 'current' : ''}">
-                        <div class="step-number">5</div>
-                        <div class="step-label">Category</div>
-                    </div>
-                    <div class="step-connector ${this.currentStep >= 6 ? 'active' : ''}"></div>
-                    <div class="step-indicator ${this.currentStep >= 6 ? 'active' : ''} ${this.currentStep === 6 ? 'current' : ''}">
-                        <div class="step-number">6</div>
-                        <div class="step-label">Product</div>
+                    <div class="progress-container">
+                        <div class="step-indicator ${this.currentStep >= 1 ? 'active' : ''} ${this.currentStep === 1 ? 'current' : ''}">
+                            <div class="step-number">1</div>
+                            <div class="step-label">Company</div>
+                        </div>
+                        <div class="step-connector ${this.currentStep >= 2 ? 'active' : ''}"></div>
+                        <div class="step-indicator ${this.currentStep >= 2 ? 'active' : ''} ${this.currentStep === 2 ? 'current' : ''}">
+                            <div class="step-number">2</div>
+                            <div class="step-label">Warehouse</div>
+                        </div>
+                        <div class="step-connector ${this.currentStep >= 3 ? 'active' : ''}"></div>
+                        <div class="step-indicator ${this.currentStep >= 3 ? 'active' : ''} ${this.currentStep === 3 ? 'current' : ''}">
+                            <div class="step-number">3</div>
+                            <div class="step-label">Supplier</div>
+                        </div>
+                        <div class="step-connector ${this.currentStep >= 4 ? 'active' : ''}"></div>
+                        <div class="step-indicator ${this.currentStep >= 4 ? 'active' : ''} ${this.currentStep === 4 ? 'current' : ''}">
+                            <div class="step-number">4</div>
+                            <div class="step-label">Customer</div>
+                        </div>
+                        <div class="step-connector ${this.currentStep >= 5 ? 'active' : ''}"></div>
+                        <div class="step-indicator ${this.currentStep >= 5 ? 'active' : ''} ${this.currentStep === 5 ? 'current' : ''}">
+                            <div class="step-number">5</div>
+                            <div class="step-label">Category</div>
+                        </div>
+                        <div class="step-connector ${this.currentStep >= 6 ? 'active' : ''}"></div>
+                        <div class="step-indicator ${this.currentStep >= 6 ? 'active' : ''} ${this.currentStep === 6 ? 'current' : ''}">
+                            <div class="step-number">6</div>
+                            <div class="step-label">Product</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -227,21 +234,21 @@ class SetupWizard {
                         <div class="setup-navigation" style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                             <div>
                                 ${this.currentStep > 1 ? `
-                                    <button class="btn-secondary" id="prevStepBtn">
+                                    <button type="button" class="btn-secondary" id="prevStepBtn">
                                         <i class="fas fa-arrow-left"></i> Previous
                                     </button>
                                 ` : ''}
                             </div>
                             <div>
-                                <button class="btn-secondary" onclick="window.location.hash='#dashboard'">
+                                <button type="button" class="btn-secondary" onclick="window.location.hash='#dashboard'">
                                     <i class="fas fa-times"></i> Cancel Setup
                                 </button>
                                 ${this.currentStep < this.totalSteps ? `
-                                    <button class="btn-primary" id="nextStepBtn" style="margin-left: 10px;">
+                                    <button type="button" class="btn-primary" id="nextStepBtn" style="margin-left: 10px;">
                                         Continue <i class="fas fa-arrow-right"></i>
                                     </button>
                                 ` : `
-                                    <button class="btn-success" id="completeSetupBtn" style="margin-left: 10px;">
+                                    <button type="button" class="btn-success" id="completeSetupBtn" style="margin-left: 10px;">
                                         <i class="fas fa-check-circle"></i> Complete Setup
                                     </button>
                                 `}
@@ -258,11 +265,17 @@ class SetupWizard {
             
             <style>
                 .setup-progress {
+                    margin: 30px 0;
+                    width: 100%;
+                    overflow-x: auto;
+                }
+                
+                .progress-container {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    margin: 30px 0;
-                    flex-wrap: wrap;
+                    justify-content: space-between;
+                    min-width: 600px;
+                    position: relative;
                 }
                 
                 .step-indicator {
@@ -271,6 +284,7 @@ class SetupWizard {
                     align-items: center;
                     position: relative;
                     z-index: 2;
+                    min-width: 80px;
                 }
                 
                 .step-number {
@@ -292,7 +306,7 @@ class SetupWizard {
                     font-size: 12px;
                     color: #6c757d;
                     text-align: center;
-                    min-width: 80px;
+                    white-space: nowrap;
                 }
                 
                 .step-indicator.active .step-number {
@@ -302,10 +316,11 @@ class SetupWizard {
                 
                 .step-indicator.current .step-number {
                     box-shadow: 0 0 0 4px rgba(25, 190, 187, 0.2);
+                    animation: pulse 2s infinite;
                 }
                 
                 .step-connector {
-                    width: 60px;
+                    flex: 1;
                     height: 2px;
                     background: #e9ecef;
                     margin: 0 5px;
@@ -316,14 +331,45 @@ class SetupWizard {
                     background: #19BEBB;
                 }
                 
+                @keyframes pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(25, 190, 187, 0.4); }
+                    70% { box-shadow: 0 0 0 6px rgba(25, 190, 187, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(25, 190, 187, 0); }
+                }
+                
                 @media (max-width: 768px) {
-                    .step-connector {
-                        width: 30px;
+                    .progress-container {
+                        min-width: 800px; /* Lebih lebar untuk mobile scrolling */
+                    }
+                    
+                    .step-indicator {
+                        min-width: 60px;
+                    }
+                    
+                    .step-number {
+                        width: 32px;
+                        height: 32px;
+                        font-size: 14px;
                     }
                     
                     .step-label {
-                        min-width: 60px;
                         font-size: 10px;
+                    }
+                    
+                    .step-connector {
+                        margin: 0 2px;
+                    }
+                }
+                
+                @media (min-width: 769px) and (max-width: 1200px) {
+                    .progress-container {
+                        min-width: 700px;
+                    }
+                }
+                
+                @media (min-width: 1201px) {
+                    .progress-container {
+                        min-width: 800px;
                     }
                 }
                 
@@ -409,7 +455,7 @@ class SetupWizard {
     renderStepCompany() {
         const company = this.setupData.company || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div>
                         <label>Company Name *</label>
@@ -456,7 +502,7 @@ class SetupWizard {
                 
                 <div style="margin-bottom: 20px;">
                     <label>
-                        <input type="checkbox" id="agreeTerms" required> 
+                        <input type="checkbox" id="agreeTerms" required ${company.agreeTerms ? 'checked' : ''}> 
                         I agree to the Terms of Service and Privacy Policy
                     </label>
                 </div>
@@ -467,7 +513,7 @@ class SetupWizard {
     renderStepWarehouse() {
         const warehouse = this.setupData.warehouse || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="margin-bottom: 20px;">
                     <label>Warehouse Name *</label>
                     <input type="text" id="warehouseName" class="form-control" required 
@@ -508,7 +554,7 @@ class SetupWizard {
                 
                 <div style="margin-bottom: 20px;">
                     <label>
-                        <input type="checkbox" id="isPrimaryWarehouse" ${warehouse.isPrimary ? 'checked' : 'checked'}> 
+                        <input type="checkbox" id="isPrimaryWarehouse" ${warehouse.isPrimary !== false ? 'checked' : ''}> 
                         Set as primary warehouse
                     </label>
                     <small style="display: block; color: #666; margin-top: 5px;">
@@ -522,7 +568,7 @@ class SetupWizard {
     renderStepSupplier() {
         const supplier = this.setupData.supplier || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="margin-bottom: 20px;">
                     <label>Supplier Name *</label>
                     <input type="text" id="supplierName" class="form-control" required 
@@ -585,7 +631,7 @@ class SetupWizard {
     renderStepCustomer() {
         const customer = this.setupData.customer || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="margin-bottom: 20px;">
                     <label>Customer Name *</label>
                     <input type="text" id="customerName" class="form-control" required 
@@ -650,7 +696,7 @@ class SetupWizard {
     renderStepCategory() {
         const category = this.setupData.category || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="margin-bottom: 20px;">
                     <label>Category Name *</label>
                     <input type="text" id="categoryName" class="form-control" required 
@@ -680,12 +726,12 @@ class SetupWizard {
                 
                 <div style="margin-bottom: 20px;">
                     <label>Category Color</label>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
                         ${['#19BEBB', '#667eea', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'].map(color => `
-                            <label style="display: flex; align-items: center; gap: 5px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                 <input type="radio" name="categoryColor" value="${color}" 
-                                       ${category.color === color ? 'checked' : ''}>
-                                <span style="display: inline-block; width: 20px; height: 20px; border-radius: 4px; background: ${color};"></span>
+                                       ${category.color === color ? 'checked' : (color === '#19BEBB' && !category.color ? 'checked' : '')}>
+                                <span style="display: inline-block; width: 24px; height: 24px; border-radius: 4px; background: ${color}; border: 2px solid ${color === '#19BEBB' && !category.color ? '#333' : 'transparent'};"></span>
                             </label>
                         `).join('')}
                     </div>
@@ -697,7 +743,7 @@ class SetupWizard {
     renderStepProduct() {
         const product = this.setupData.product || {};
         return `
-            <form id="stepForm">
+            <form id="stepForm" onsubmit="return false;">
                 <div style="margin-bottom: 20px;">
                     <label>Product Name *</label>
                     <input type="text" id="productName" class="form-control" required 
@@ -722,7 +768,7 @@ class SetupWizard {
                         <label>Category</label>
                         <select id="productCategory" class="form-control" required>
                             <option value="">Select category</option>
-                            <!-- Will be populated with categories -->
+                            <option value="CAT001" ${product.categoryId === 'CAT001' ? 'selected' : ''}>Sample Category</option>
                         </select>
                     </div>
                     <div>
@@ -812,7 +858,7 @@ class SetupWizard {
                                 <div class="step-content">
                                     <h4>Download Template</h4>
                                     <p>Get the Excel template with all required sheets</p>
-                                    <button class="btn-primary" onclick="window.open('template.html', '_blank')">
+                                    <button type="button" class="btn-primary" onclick="window.open('template.html', '_blank')">
                                         <i class="fas fa-download"></i> Download Template
                                     </button>
                                 </div>
@@ -849,7 +895,7 @@ class SetupWizard {
                                     <h4>Upload & Validate</h4>
                                     <p>Upload your filled template for validation</p>
                                     <div style="text-align: center; margin: 20px 0;">
-                                        <button class="btn-secondary" id="uploadMigrationFile" style="padding: 12px 24px;">
+                                        <button type="button" class="btn-secondary" id="uploadMigrationFile" style="padding: 12px 24px;">
                                             <i class="fas fa-upload"></i> Upload Filled Template
                                         </button>
                                         <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
@@ -986,101 +1032,6 @@ class SetupWizard {
                         <p>Product categories and grouping</p>
                         <span class="badge">READY</span>
                     </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/units'">
-                        <div class="feature-icon" style="background: #3b82f6;">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <h3>Units</h3>
-                        <p>Measurement units and conversions</p>
-                        <span class="badge">READY</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/tax-rates'">
-                        <div class="feature-icon" style="background: #10b981;">
-                            <i class="fas fa-percent"></i>
-                        </div>
-                        <h3>Tax Rates</h3>
-                        <p>Tax configurations and rates</p>
-                        <span class="badge">READY</span>
-                    </div>
-                    
-                    <div class="feature-card ${this.currentPlan === 'demo' ? 'disabled-feature' : ''}" 
-                         onclick="${this.currentPlan !== 'demo' ? 'window.location.hash=\'#master/marketplace-fee\'' : ''}">
-                        <div class="feature-icon" style="background: #f97316;">
-                            <i class="fas fa-percentage"></i>
-                        </div>
-                        <h3>Marketplace Fee</h3>
-                        <p>Configure marketplace fees</p>
-                        <span class="badge">${this.currentPlan === 'demo' ? 'LOCKED' : 'READY'}</span>
-                    </div>
-                    
-                    <div class="feature-card ${this.currentPlan === 'demo' ? 'disabled-feature' : ''}" 
-                         onclick="${this.currentPlan !== 'demo' ? 'window.location.hash=\'#master/data-migration\'' : ''}">
-                        <div class="feature-icon" style="background: #6b7280;">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <h3>Data Migration</h3>
-                        <p>Import data from old systems</p>
-                        <span class="badge">${this.currentPlan === 'demo' ? 'LOCKED' : 'READY'}</span>
-                    </div>
-                </div>
-                
-                <!-- Data Management Tools -->
-                <div class="card" style="margin-top: 30px;">
-                    <div class="card-header">
-                        <h3><i class="fas fa-database"></i> Data Management Tools</h3>
-                    </div>
-                    <div class="card-body">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                            <button class="btn-secondary" onclick="SetupWizard.downloadTemplate()">
-                                <i class="fas fa-file-excel"></i> Download Template
-                            </button>
-                            <button class="btn-secondary" id="importDataBtn">
-                                <i class="fas fa-upload"></i> Import Data
-                            </button>
-                            <button class="btn-secondary" id="exportDataBtn">
-                                <i class="fas fa-download"></i> Export Data
-                            </button>
-                            <button class="btn-secondary" id="backupDataBtn">
-                                <i class="fas fa-save"></i> Backup Now
-                            </button>
-                            <button class="btn-secondary" id="restoreDataBtn">
-                                <i class="fas fa-history"></i> Restore Backup
-                            </button>
-                            <button class="btn-secondary" id="resetSetupBtn" style="color: #f59e0b;">
-                                <i class="fas fa-redo"></i> Reset Setup
-                            </button>
-                            <button class="btn-secondary" id="fullResetBtn" style="color: #ef4444;">
-                                <i class="fas fa-trash-alt"></i> Full Reset
-                            </button>
-                        </div>
-                        <input type="file" id="uploadData" accept=".xlsx,.xls,.csv" style="display: none;">
-                        
-                        <div class="instructions" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                            <p><strong><i class="fas fa-exclamation-triangle"></i> Warning:</strong> Data reset will delete all your data. This action cannot be undone. Make sure you have a backup.</p>
-                        </div>
-                        
-                        <!-- Data Statistics -->
-                        <div class="data-stats" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                            <div class="stat-box" style="background: #f0f9ff; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #19BEBB;">0</div>
-                                <div style="font-size: 12px; color: #666;">Products</div>
-                            </div>
-                            <div class="stat-box" style="background: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #10b981;">0</div>
-                                <div style="font-size: 12px; color: #666;">Suppliers</div>
-                            </div>
-                            <div class="stat-box" style="background: #fef3c7; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">0</div>
-                                <div style="font-size: 12px; color: #666;">Customers</div>
-                            </div>
-                            <div class="stat-box" style="background: #fef2f2; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #ef4444;">0</div>
-                                <div style="font-size: 12px; color: #666;">Warehouses</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
             
@@ -1093,21 +1044,8 @@ class SetupWizard {
                     border-radius: 12px;
                     margin-top: 8px;
                     text-transform: uppercase;
-                }
-                
-                .badge[data-status="ready"] {
-                    background: #d1fae5;
-                    color: #065f46;
-                }
-                
-                .badge[data-status="demo"] {
-                    background: #fef3c7;
-                    color: #92400e;
-                }
-                
-                .badge[data-status="locked"] {
-                    background: #fee2e2;
-                    color: #dc2626;
+                    background: ${this.isDemoUser ? '#fef3c7' : '#d1fae5'};
+                    color: ${this.isDemoUser ? '#92400e' : '#065f46'};
                 }
                 
                 .disabled-feature {
@@ -1125,41 +1063,41 @@ class SetupWizard {
 
     bindEvents() {
         // Handle form submission for each step
-        const stepForm = document.getElementById('stepForm');
-        if (stepForm) {
-            // Remove any existing listeners
-            const newForm = stepForm.cloneNode(true);
-            stepForm.parentNode.replaceChild(newForm, stepForm);
-            
-            // Handle next step button
-            const nextBtn = document.getElementById('nextStepBtn');
-            const prevBtn = document.getElementById('prevStepBtn');
-            const completeBtn = document.getElementById('completeSetupBtn');
-            
-            if (nextBtn) {
-                nextBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.saveCurrentStep();
-                    this.currentStep++;
-                    this.updateWizard();
-                });
-            }
-            
-            if (prevBtn) {
-                prevBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.saveCurrentStep();
-                    this.currentStep--;
-                    this.updateWizard();
-                });
-            }
-            
-            if (completeBtn) {
-                completeBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.completeSetup();
-                });
-            }
+        const nextBtn = document.getElementById('nextStepBtn');
+        const prevBtn = document.getElementById('prevStepBtn');
+        const completeBtn = document.getElementById('completeSetupBtn');
+        
+        // Remove existing event listeners first
+        if (nextBtn) {
+            nextBtn.replaceWith(nextBtn.cloneNode(true));
+        }
+        if (prevBtn) {
+            prevBtn.replaceWith(prevBtn.cloneNode(true));
+        }
+        if (completeBtn) {
+            completeBtn.replaceWith(completeBtn.cloneNode(true));
+        }
+        
+        // Bind new event listeners
+        if (nextBtn) {
+            document.getElementById('nextStepBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleNextStep();
+            });
+        }
+        
+        if (prevBtn) {
+            document.getElementById('prevStepBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handlePrevStep();
+            });
+        }
+        
+        if (completeBtn) {
+            document.getElementById('completeSetupBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleCompleteSetup();
+            });
         }
         
         // Handle migration file upload
@@ -1237,6 +1175,35 @@ class SetupWizard {
         }
     }
 
+    handleNextStep() {
+        try {
+            this.saveCurrentStep();
+            this.currentStep++;
+            this.updateWizard();
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    handlePrevStep() {
+        try {
+            this.saveCurrentStep();
+            this.currentStep--;
+            this.updateWizard();
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    handleCompleteSetup() {
+        try {
+            this.saveCurrentStep();
+            this.completeSetup();
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
     updateWizard() {
         // Save current step to localStorage
         localStorage.setItem('stockmint_setup_current_step', this.currentStep.toString());
@@ -1305,6 +1272,7 @@ class SetupWizard {
             phone: companyPhone,
             email: companyEmail,
             businessType: businessType,
+            agreeTerms: agreeTerms,
             setupDate: new Date().toISOString(),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -1325,6 +1293,11 @@ class SetupWizard {
         if (!warehouseName) {
             this.showNotification('Warehouse name is required', 'error');
             throw new Error('Warehouse name required');
+        }
+        
+        if (!warehouseLocation) {
+            this.showNotification('Warehouse location is required', 'error');
+            throw new Error('Warehouse location required');
         }
         
         this.setupData.warehouse = {
@@ -1452,6 +1425,16 @@ class SetupWizard {
             throw new Error('Required fields missing');
         }
         
+        if (parseFloat(costPrice) <= 0) {
+            this.showNotification('Cost price must be greater than 0', 'error');
+            throw new Error('Invalid cost price');
+        }
+        
+        if (parseFloat(sellingPrice) <= 0) {
+            this.showNotification('Selling price must be greater than 0', 'error');
+            throw new Error('Invalid selling price');
+        }
+        
         if (parseFloat(sellingPrice) < parseFloat(costPrice)) {
             this.showNotification('Selling price should be higher than cost price', 'warning');
         }
@@ -1480,9 +1463,6 @@ class SetupWizard {
 
     completeSetup() {
         try {
-            // Save the last step data
-            this.saveProductData();
-            
             // Save all data to localStorage
             this.saveAllDataToStorage();
             
@@ -1639,52 +1619,6 @@ class SetupWizard {
         };
         
         reader.readAsArrayBuffer(file);
-    }
-
-    validateTemplate(workbook) {
-        // Check for required sheets
-        const requiredSheets = [
-            'dim_Company',
-            'dim_Warehouses',
-            'dim_Products',
-            'dim_Categories'
-        ];
-        
-        const sheetNames = workbook.SheetNames;
-        return requiredSheets.every(sheet => sheetNames.includes(sheet));
-    }
-
-    processUploadedData(workbook) {
-        // Process each sheet
-        const sheets = {};
-        
-        workbook.SheetNames.forEach(sheetName => {
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            sheets[sheetName] = jsonData;
-        });
-        
-        // Save to localStorage
-        this.saveToDatabase(sheets);
-    }
-
-    saveToDatabase(data) {
-        // Simulate saving
-        this.showNotification('📊 Processing data...', 'info');
-        
-        setTimeout(() => {
-            // Mark setup as completed
-            localStorage.setItem('stockmint_setup_completed', 'true');
-            localStorage.setItem('stockmint_data_migrated', 'true');
-            
-            this.showNotification('✅ Data migration completed successfully!', 'success');
-            
-            // Refresh the page
-            setTimeout(() => {
-                window.location.hash = '#dashboard';
-                window.location.reload();
-            }, 1500);
-        }, 2000);
     }
 
     resetAllData(completeReset = false) {
