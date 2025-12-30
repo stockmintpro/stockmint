@@ -57,6 +57,30 @@
             display: flex;
             min-height: 100vh;
         }
+        
+        /* Welcome Modal Styles */
+        .welcome-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        
+        .welcome-modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -101,59 +125,124 @@
     <!-- Load main app -->
     <script src="js/app.js"></script>
     
+    <!-- Initialize App Script -->
     <script>
+        // Function to check if all required scripts are loaded
+        function checkRequiredScripts() {
+            const required = [
+                'StockMintConfig',
+                'StockMintMenu', 
+                'StockMintAuth',
+                'StockMintNavbar',
+                'StockMintSidebar',
+                'SetupWizard',
+                'StockMintApp'
+            ];
+            
+            for (const script of required) {
+                if (!window[script]) {
+                    console.error(`❌ Required script not loaded: ${script}`);
+                    return false;
+                }
+            }
+            return true;
+        }
+        
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM Content Loaded - Checking authentication...');
+            console.log('📄 DOM Content Loaded - Starting initialization...');
             
             // Check authentication
             if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
-                console.log('Not authenticated, redirecting to login');
+                console.log('🔒 Not authenticated, redirecting to login');
                 window.location.href = 'index.html';
                 return;
             }
             
-            console.log('User authenticated, initializing app...');
+            console.log('✅ User authenticated');
             
-            // Initialize app with a small delay to ensure all scripts are loaded
-            setTimeout(() => {
-                if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
-                    console.log('Initializing StockMintApp...');
+            // Wait a bit more to ensure all scripts are loaded
+            const initInterval = setInterval(() => {
+                if (checkRequiredScripts()) {
+                    clearInterval(initInterval);
+                    console.log('✅ All required scripts loaded, initializing app...');
+                    
                     try {
-                        window.StockMintApp.init();
-                        
-                        // Hide loading screen after app is initialized
-                        setTimeout(() => {
-                            document.getElementById('loadingScreen').classList.add('hidden');
-                            document.getElementById('appContainer').classList.remove('hidden');
-                            console.log('App initialized successfully!');
-                        }, 500);
-                        
+                        // Initialize the app
+                        if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
+                            console.log('🚀 Calling StockMintApp.init()...');
+                            window.StockMintApp.init();
+                        } else {
+                            console.error('❌ StockMintApp.init is not a function');
+                            showError('StockMintApp not properly initialized');
+                        }
                     } catch (error) {
-                        console.error('Error initializing app:', error);
-                        document.getElementById('loadingScreen').innerHTML = `
-                            <div style="text-align: center; padding: 20px;">
-                                <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 48px; margin-bottom: 20px;"></i>
-                                <h3>Failed to Load Application</h3>
-                                <p>Error: ${error.message}</p>
-                                <button onclick="window.location.reload()" style="
-                                    background: #19BEBB;
-                                    color: white;
-                                    border: none;
-                                    padding: 10px 20px;
-                                    border-radius: 5px;
-                                    cursor: pointer;
-                                    margin-top: 15px;
-                                ">
-                                    <i class="fas fa-redo"></i> Reload
-                                </button>
-                            </div>
-                        `;
+                        console.error('❌ Error initializing app:', error);
+                        showError(error.message);
                     }
                 } else {
-                    console.error('StockMintApp is not available');
+                    console.log('⏳ Waiting for scripts to load...');
                 }
-            }, 300);
+            }, 100);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(initInterval);
+                if (!checkRequiredScripts()) {
+                    console.error('❌ Script loading timeout');
+                    showError('Some scripts failed to load. Please refresh the page.');
+                }
+            }, 5000);
+        });
+        
+        // Function to show error message
+        function showError(message) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 48px; margin-bottom: 20px;"></i>
+                        <h3>Failed to Load Application</h3>
+                        <p>Error: ${message}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                            <button onclick="window.location.reload()" style="
+                                background: #19BEBB;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-redo"></i> Reload
+                            </button>
+                            <button onclick="window.location.href='index.html'" style="
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-sign-out-alt"></i> Back to Login
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Handle script loading errors
+        window.addEventListener('error', function(event) {
+            console.error('⚠️ Script loading error:', event);
+            const errorMsg = event.message || 'Unknown script error';
+            const src = event.filename || 'unknown file';
+            
+            console.error(`Error in ${src}: ${errorMsg}`);
+            
+            // Only show error if it's critical
+            if (src.includes('app.js') || src.includes('auth.js')) {
+                showError(`Failed to load ${src.split('/').pop()}`);
+            }
         });
     </script>
 </body>
