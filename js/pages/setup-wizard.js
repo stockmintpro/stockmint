@@ -121,18 +121,18 @@ class SetupWizard {
                             <button class="btn-secondary" onclick="window.open('template.html', '_blank')">
                                 <i class="fas fa-download"></i> Download Template
                             </button>
-                            <button class="btn-secondary" id="uploadDataBtn">
+                            <button class="btn-secondary" onclick="document.getElementById('uploadTemplate').click()">
                                 <i class="fas fa-upload"></i> Upload Data
                             </button>
-                            <button class="btn-secondary" id="backupBtn">
+                            <button class="btn-secondary" onclick="this.createBackup()">
                                 <i class="fas fa-save"></i> Backup Data
                             </button>
-                            <button class="btn-secondary" id="resetSetupBtn" style="color: #f59e0b;">
+                            <button class="btn-secondary" onclick="this.resetAllData(false)" style="color: #f59e0b;">
                                 <i class="fas fa-redo"></i> Reset Setup
                             </button>
                         </div>
                         
-                        <input type="file" id="uploadTemplate" accept=".xlsx,.xls,.csv" style="display: none;">
+                        <input type="file" id="uploadTemplate" accept=".xlsx,.xls,.csv" style="display: none;" onchange="setupWizard.handleFileUpload(this.files[0])">
                         
                         <div class="instructions" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                             <h4><i class="fas fa-info-circle"></i> Important Notes:</h4>
@@ -191,35 +191,13 @@ class SetupWizard {
                 <!-- Progress Steps -->
                 <div class="setup-progress">
                     <div class="progress-container">
-                        <div class="step-indicator ${this.currentStep >= 1 ? 'active' : ''} ${this.currentStep === 1 ? 'current' : ''}">
-                            <div class="step-number">1</div>
-                            <div class="step-label">Company</div>
-                        </div>
-                        <div class="step-connector ${this.currentStep >= 2 ? 'active' : ''}"></div>
-                        <div class="step-indicator ${this.currentStep >= 2 ? 'active' : ''} ${this.currentStep === 2 ? 'current' : ''}">
-                            <div class="step-number">2</div>
-                            <div class="step-label">Warehouse</div>
-                        </div>
-                        <div class="step-connector ${this.currentStep >= 3 ? 'active' : ''}"></div>
-                        <div class="step-indicator ${this.currentStep >= 3 ? 'active' : ''} ${this.currentStep === 3 ? 'current' : ''}">
-                            <div class="step-number">3</div>
-                            <div class="step-label">Supplier</div>
-                        </div>
-                        <div class="step-connector ${this.currentStep >= 4 ? 'active' : ''}"></div>
-                        <div class="step-indicator ${this.currentStep >= 4 ? 'active' : ''} ${this.currentStep === 4 ? 'current' : ''}">
-                            <div class="step-number">4</div>
-                            <div class="step-label">Customer</div>
-                        </div>
-                        <div class="step-connector ${this.currentStep >= 5 ? 'active' : ''}"></div>
-                        <div class="step-indicator ${this.currentStep >= 5 ? 'active' : ''} ${this.currentStep === 5 ? 'current' : ''}">
-                            <div class="step-number">5</div>
-                            <div class="step-label">Category</div>
-                        </div>
-                        <div class="step-connector ${this.currentStep >= 6 ? 'active' : ''}"></div>
-                        <div class="step-indicator ${this.currentStep >= 6 ? 'active' : ''} ${this.currentStep === 6 ? 'current' : ''}">
-                            <div class="step-number">6</div>
-                            <div class="step-label">Product</div>
-                        </div>
+                        ${[1,2,3,4,5,6].map(step => `
+                            <div class="step-indicator ${this.currentStep >= step ? 'active' : ''} ${this.currentStep === step ? 'current' : ''}">
+                                <div class="step-number">${step}</div>
+                                <div class="step-label">${this.getStepLabel(step)}</div>
+                            </div>
+                            ${step < 6 ? `<div class="step-connector ${this.currentStep > step ? 'active' : ''}"></div>` : ''}
+                        `).join('')}
                     </div>
                 </div>
                 
@@ -234,7 +212,7 @@ class SetupWizard {
                         <div class="setup-navigation" style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                             <div>
                                 ${this.currentStep > 1 ? `
-                                    <button type="button" class="btn-secondary" id="prevStepBtn">
+                                    <button type="button" class="btn-secondary" onclick="setupWizard.handlePrevStep()">
                                         <i class="fas fa-arrow-left"></i> Previous
                                     </button>
                                 ` : ''}
@@ -244,11 +222,11 @@ class SetupWizard {
                                     <i class="fas fa-times"></i> Cancel Setup
                                 </button>
                                 ${this.currentStep < this.totalSteps ? `
-                                    <button type="button" class="btn-primary" id="nextStepBtn" style="margin-left: 10px;">
+                                    <button type="button" class="btn-primary" onclick="setupWizard.handleNextStep()" style="margin-left: 10px;">
                                         Continue <i class="fas fa-arrow-right"></i>
                                     </button>
                                 ` : `
-                                    <button type="button" class="btn-success" id="completeSetupBtn" style="margin-left: 10px;">
+                                    <button type="button" class="btn-success" onclick="setupWizard.handleCompleteSetup()" style="margin-left: 10px;">
                                         <i class="fas fa-check-circle"></i> Complete Setup
                                     </button>
                                 `}
@@ -274,8 +252,8 @@ class SetupWizard {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    min-width: 600px;
-                    position: relative;
+                    min-width: 800px;
+                    padding: 0 10px;
                 }
                 
                 .step-indicator {
@@ -285,6 +263,7 @@ class SetupWizard {
                     position: relative;
                     z-index: 2;
                     min-width: 80px;
+                    flex-shrink: 0;
                 }
                 
                 .step-number {
@@ -339,7 +318,7 @@ class SetupWizard {
                 
                 @media (max-width: 768px) {
                     .progress-container {
-                        min-width: 800px; /* Lebih lebar untuk mobile scrolling */
+                        min-width: 600px;
                     }
                     
                     .step-indicator {
@@ -361,18 +340,6 @@ class SetupWizard {
                     }
                 }
                 
-                @media (min-width: 769px) and (max-width: 1200px) {
-                    .progress-container {
-                        min-width: 700px;
-                    }
-                }
-                
-                @media (min-width: 1201px) {
-                    .progress-container {
-                        min-width: 800px;
-                    }
-                }
-                
                 .btn-success {
                     background: #10b981;
                     color: white;
@@ -390,6 +357,11 @@ class SetupWizard {
                 }
             </style>
         `;
+    }
+
+    getStepLabel(step) {
+        const labels = ['Company', 'Warehouse', 'Supplier', 'Customer', 'Category', 'Product'];
+        return labels[step - 1] || '';
     }
 
     getStepIcon() {
@@ -713,7 +685,6 @@ class SetupWizard {
                         <label>Parent Category</label>
                         <select id="parentCategory" class="form-control">
                             <option value="">None (Main Category)</option>
-                            <!-- Will be populated with existing categories -->
                         </select>
                     </div>
                 </div>
@@ -835,346 +806,7 @@ class SetupWizard {
         `;
     }
 
-    renderMigrate() {
-        return `
-            <div class="page-content">
-                <h1>📤 Data Migration</h1>
-                <p class="page-subtitle">Import your existing data</p>
-                
-                <div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4><i class="fas fa-exclamation-triangle"></i> Advanced Feature Warning</h4>
-                    <p>This feature is for users who understand database relationships. The Excel template has 12 interconnected sheets with complex relationships.</p>
-                    <p><strong>For beginners:</strong> Use "Start New Setup" instead, which guides you step by step.</p>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-file-import"></i> Step-by-Step Migration</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="migration-steps">
-                            <div class="step">
-                                <div class="step-number">1</div>
-                                <div class="step-content">
-                                    <h4>Download Template</h4>
-                                    <p>Get the Excel template with all required sheets</p>
-                                    <button type="button" class="btn-primary" onclick="window.open('template.html', '_blank')">
-                                        <i class="fas fa-download"></i> Download Template
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="step">
-                                <div class="step-number">2</div>
-                                <div class="step-content">
-                                    <h4>Study the Structure</h4>
-                                    <p>Understand the 12 sheets and their relationships:</p>
-                                    <ul>
-                                        <li><strong>Core Tables:</strong> Company, Warehouses, Products, Categories</li>
-                                        <li><strong>Relational Tables:</strong> Product-Supplier-Warehouse, Opening Stock</li>
-                                        <li><strong>Pricing Tables:</strong> Purchase Price, Sale Price</li>
-                                        <li><strong>Marketplace Tables:</strong> dim_Marketplace, marketplace_fee_components</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            
-                            <div class="step">
-                                <div class="step-number">3</div>
-                                <div class="step-content">
-                                    <h4>Fill Your Data</h4>
-                                    <p>Carefully fill in your data following the exact format</p>
-                                    <div class="alert alert-info" style="background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 10px; border-radius: 5px;">
-                                        <strong>Important:</strong> Don't change sheet names or column headers
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="step">
-                                <div class="step-number">4</div>
-                                <div class="step-content">
-                                    <h4>Upload & Validate</h4>
-                                    <p>Upload your filled template for validation</p>
-                                    <div style="text-align: center; margin: 20px 0;">
-                                        <button type="button" class="btn-secondary" id="uploadMigrationFile" style="padding: 12px 24px;">
-                                            <i class="fas fa-upload"></i> Upload Filled Template
-                                        </button>
-                                        <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
-                                    </div>
-                                    <div id="uploadStatus"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="quick-tips" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4><i class="fas fa-lightbulb"></i> Quick Tips for Success:</h4>
-                            <ol>
-                                <li>Start with small data first (5-10 products)</li>
-                                <li>Ensure IDs are consistent across sheets</li>
-                                <li>Use the same date format: YYYY-MM-DD HH:MM:SS</li>
-                                <li>Keep a backup of your original data</li>
-                                <li>Test with the template that includes example data first</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <style>
-                .migration-steps {
-                    counter-reset: step-counter;
-                }
-                
-                .step {
-                    display: flex;
-                    margin-bottom: 30px;
-                    padding-bottom: 30px;
-                    border-bottom: 1px dashed #dee2e6;
-                }
-                
-                .step:last-child {
-                    border-bottom: none;
-                    margin-bottom: 0;
-                    padding-bottom: 0;
-                }
-                
-                .step-number {
-                    width: 40px;
-                    height: 40px;
-                    background: #19BEBB;
-                    color: white;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    font-size: 18px;
-                    margin-right: 20px;
-                    flex-shrink: 0;
-                }
-                
-                .step-content {
-                    flex: 1;
-                }
-                
-                .step-content h4 {
-                    margin-top: 0;
-                    color: #333;
-                }
-                
-                .step-content ul, .step-content ol {
-                    margin: 10px 0 10px 20px;
-                }
-                
-                .step-content li {
-                    margin-bottom: 5px;
-                }
-            </style>
-        `;
-    }
-
-    renderMasterDataHome() {
-        return `
-            <div class="page-content">
-                <h1>📁 Master Data</h1>
-                <p class="page-subtitle">Manage your core business data and settings</p>
-                
-                <div class="cards-grid">
-                    <div class="feature-card" onclick="window.location.hash='#master/company'">
-                        <div class="feature-icon" style="background: #19BEBB;">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <h3>Company</h3>
-                        <p>Company profile and information</p>
-                        <span class="badge">${this.isDemoUser ? 'DEMO' : 'READY'}</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
-                        <div class="feature-icon" style="background: #667eea;">
-                            <i class="fas fa-warehouse"></i>
-                        </div>
-                        <h3>Warehouses</h3>
-                        <p>Manage storage locations</p>
-                        <span class="badge">${this.currentPlan === 'demo' ? 'DEMO' : 'READY'}</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
-                        <div class="feature-icon" style="background: #10b981;">
-                            <i class="fas fa-truck"></i>
-                        </div>
-                        <h3>Suppliers</h3>
-                        <p>Supplier information and contacts</p>
-                        <span class="badge">READY</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/customers'">
-                        <div class="feature-icon" style="background: #f59e0b;">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h3>Customers</h3>
-                        <p>Customer database</p>
-                        <span class="badge">READY</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/products'">
-                        <div class="feature-icon" style="background: #ef4444;">
-                            <i class="fas fa-boxes"></i>
-                        </div>
-                        <h3>Products</h3>
-                        <p>Product catalog and inventory</p>
-                        <span class="badge">READY</span>
-                    </div>
-                    
-                    <div class="feature-card" onclick="window.location.hash='#master/categories'">
-                        <div class="feature-icon" style="background: #8b5cf6;">
-                            <i class="fas fa-tags"></i>
-                        </div>
-                        <h3>Categories</h3>
-                        <p>Product categories and grouping</p>
-                        <span class="badge">READY</span>
-                    </div>
-                </div>
-            </div>
-            
-            <style>
-                .badge {
-                    display: inline-block;
-                    padding: 3px 8px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    border-radius: 12px;
-                    margin-top: 8px;
-                    text-transform: uppercase;
-                    background: ${this.isDemoUser ? '#fef3c7' : '#d1fae5'};
-                    color: ${this.isDemoUser ? '#92400e' : '#065f46'};
-                }
-                
-                .disabled-feature {
-                    opacity: 0.6;
-                    cursor: not-allowed !important;
-                }
-                
-                .disabled-feature:hover {
-                    transform: none !important;
-                    box-shadow: none !important;
-                }
-            </style>
-        `;
-    }
-
-    bindEvents() {
-        // Handle form submission for each step
-        const nextBtn = document.getElementById('nextStepBtn');
-        const prevBtn = document.getElementById('prevStepBtn');
-        const completeBtn = document.getElementById('completeSetupBtn');
-        
-        // Remove existing event listeners first
-        if (nextBtn) {
-            nextBtn.replaceWith(nextBtn.cloneNode(true));
-        }
-        if (prevBtn) {
-            prevBtn.replaceWith(prevBtn.cloneNode(true));
-        }
-        if (completeBtn) {
-            completeBtn.replaceWith(completeBtn.cloneNode(true));
-        }
-        
-        // Bind new event listeners
-        if (nextBtn) {
-            document.getElementById('nextStepBtn').addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleNextStep();
-            });
-        }
-        
-        if (prevBtn) {
-            document.getElementById('prevStepBtn').addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handlePrevStep();
-            });
-        }
-        
-        if (completeBtn) {
-            document.getElementById('completeSetupBtn').addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleCompleteSetup();
-            });
-        }
-        
-        // Handle migration file upload
-        const uploadBtn = document.getElementById('uploadMigrationFile');
-        const fileInput = document.getElementById('migrationFile');
-        
-        if (uploadBtn && fileInput) {
-            uploadBtn.addEventListener('click', () => {
-                fileInput.click();
-            });
-            
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    this.handleFileUpload(file);
-                }
-            });
-        }
-        
-        // Handle data import button
-        const importBtn = document.getElementById('importDataBtn') || document.getElementById('uploadDataBtn');
-        const uploadInput = document.getElementById('uploadData') || document.getElementById('uploadTemplate');
-        
-        if (importBtn && uploadInput) {
-            importBtn.addEventListener('click', () => {
-                uploadInput.click();
-            });
-            
-            uploadInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    this.handleFileUpload(file);
-                }
-            });
-        }
-        
-        // Reset Setup button (partial reset)
-        const resetSetupBtn = document.getElementById('resetSetupBtn');
-        if (resetSetupBtn) {
-            resetSetupBtn.addEventListener('click', () => {
-                this.resetAllData(false); // Reset setup only
-            });
-        }
-        
-        // Full Reset button (complete reset)
-        const fullResetBtn = document.getElementById('fullResetBtn');
-        if (fullResetBtn) {
-            fullResetBtn.addEventListener('click', () => {
-                this.resetAllData(true); // Complete reset
-            });
-        }
-        
-        // Backup button
-        const backupBtn = document.getElementById('backupBtn') || document.getElementById('backupDataBtn');
-        if (backupBtn) {
-            backupBtn.addEventListener('click', () => {
-                this.createBackup();
-            });
-        }
-        
-        // Export button
-        const exportBtn = document.getElementById('exportDataBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                this.exportData();
-            });
-        }
-        
-        // Restore button
-        const restoreBtn = document.getElementById('restoreDataBtn');
-        if (restoreBtn) {
-            restoreBtn.addEventListener('click', () => {
-                this.restoreBackup();
-            });
-        }
-    }
-
+    // SIMPLIFIED EVENT HANDLERS - Directly callable from onclick
     handleNextStep() {
         try {
             this.saveCurrentStep();
@@ -1208,15 +840,9 @@ class SetupWizard {
         // Save current step to localStorage
         localStorage.setItem('stockmint_setup_current_step', this.currentStep.toString());
         
-        // Update the wizard display
-        const setupContainer = document.querySelector('.page-content');
-        if (setupContainer) {
-            setupContainer.innerHTML = this.renderStartNew();
-            this.bindEvents();
-            
-            // Scroll to top
-            window.scrollTo(0, 0);
-        }
+        // Update the wizard display by reloading the hash
+        window.location.hash = '#setup/start-new';
+        // The main app should re-render the page
     }
 
     saveCurrentStep() {
@@ -1559,7 +1185,6 @@ class SetupWizard {
     }
     
     handleFileUpload(file) {
-        const reader = new FileReader();
         const uploadStatus = document.getElementById('uploadStatus');
         
         if (uploadStatus) {
@@ -1570,55 +1195,28 @@ class SetupWizard {
             `;
         }
         
-        reader.onload = (e) => {
-            try {
-                // For demo purposes, simulate file processing
-                setTimeout(() => {
-                    // Mark migration as completed
-                    localStorage.setItem('stockmint_setup_completed', 'true');
-                    localStorage.setItem('stockmint_data_migrated', 'true');
-                    
-                    if (uploadStatus) {
-                        uploadStatus.innerHTML = `
-                            <div style="background: #d1fae5; padding: 10px; border-radius: 5px;">
-                                <i class="fas fa-check-circle"></i> File processed successfully!
-                            </div>
-                        `;
-                    }
-                    
-                    this.showNotification('✅ Data migration completed successfully!', 'success');
-                    
-                    // Redirect after 2 seconds
-                    setTimeout(() => {
-                        window.location.hash = '#dashboard';
-                        window.location.reload();
-                    }, 2000);
-                }, 2000);
-                
-            } catch (error) {
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = `
-                        <div style="background: #fee2e2; padding: 10px; border-radius: 5px;">
-                            <i class="fas fa-exclamation-circle"></i> Error: ${error.message}
-                        </div>
-                    `;
-                }
-                this.showNotification(`❌ Error reading file: ${error.message}`, 'error');
-            }
-        };
-        
-        reader.onerror = () => {
+        // For demo purposes, simulate file processing
+        setTimeout(() => {
+            // Mark migration as completed
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            localStorage.setItem('stockmint_data_migrated', 'true');
+            
             if (uploadStatus) {
                 uploadStatus.innerHTML = `
-                    <div style="background: #fee2e2; padding: 10px; border-radius: 5px;">
-                        <i class="fas fa-exclamation-circle"></i> Failed to read file
+                    <div style="background: #d1fae5; padding: 10px; border-radius: 5px;">
+                        <i class="fas fa-check-circle"></i> File processed successfully!
                     </div>
                 `;
             }
-            this.showNotification('❌ Failed to read file', 'error');
-        };
-        
-        reader.readAsArrayBuffer(file);
+            
+            this.showNotification('✅ Data migration completed successfully!', 'success');
+            
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.hash = '#dashboard';
+                window.location.reload();
+            }, 2000);
+        }, 2000);
     }
 
     resetAllData(completeReset = false) {
@@ -1693,122 +1291,6 @@ class SetupWizard {
         this.showNotification('✅ Backup created successfully!', 'success');
     }
 
-    exportData() {
-        // For now, same as backup
-        this.createBackup();
-    }
-
-    restoreBackup() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const backupData = JSON.parse(e.target.result);
-                    
-                    // Restore data
-                    if (backupData.data.company) {
-                        localStorage.setItem('stockmint_company', backupData.data.company);
-                    }
-                    if (backupData.data.products) {
-                        localStorage.setItem('stockmint_products', backupData.data.products);
-                    }
-                    if (backupData.data.suppliers) {
-                        localStorage.setItem('stockmint_suppliers', backupData.data.suppliers);
-                    }
-                    if (backupData.data.customers) {
-                        localStorage.setItem('stockmint_customers', backupData.data.customers);
-                    }
-                    if (backupData.data.warehouses) {
-                        localStorage.setItem('stockmint_warehouses', backupData.data.warehouses);
-                    }
-                    if (backupData.data.categories) {
-                        localStorage.setItem('stockmint_categories', backupData.data.categories);
-                    }
-                    
-                    this.showNotification('✅ Backup restored successfully!', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                    
-                } catch (error) {
-                    this.showNotification('❌ Invalid backup file', 'error');
-                }
-            };
-            
-            reader.readAsText(file);
-        };
-        
-        input.click();
-    }
-
-    downloadTemplate() {
-        // Create a simple template structure
-        const templateData = {
-            "Instructions": [
-                ["STOCKMINT DATA TEMPLATE"],
-                ["Instructions:"],
-                ["1. Fill in data in the appropriate sheets"],
-                ["2. Do not modify sheet names"],
-                ["3. Required fields are marked with *"],
-                ["4. Save file as .xlsx or .csv"],
-                ["5. Upload back to StockMint"]
-            ],
-            "dim_Company": [
-                ["COMPANY_ID", "COMPANY_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "LOGO_URL", "DEFAULT_WAREHOUSE_ID", "DEFAULT_CURRENCY", "DECIMAL_PLACES"],
-                [1, "Your Company", "123 Main St", "12345", "Your City", "Your Country", "", "+123456789", "", "", "contact@company.com", "123456789", "", "", "", 1, "Rp.", 0]
-            ],
-            "dim_Warehouses": [
-                ["STORAGE_ID", "STORAGE_NAME", "STORAGE_AREA", "IS_PRIMARY"],
-                [1, "Main Warehouse", "Your Area", 1]
-            ],
-            "dim_Products": [
-                ["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY_ID", "UNIT", "SIZE", "COLOR", "HAS_EXPIRY", "ARCHIVE"],
-                ["PROD001", "Sample Product", "Product description", "CAT001", "pcs", "250 gr", "", 1, 0]
-            ],
-            "dim_Categories": [
-                ["CATEGORY_ID", "CATEGORY_NAME"],
-                ["CAT001", "Sample Category"]
-            ],
-            "dim_Suppliers": [
-                ["SUPPLIER_ID", "SUPPLIER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "ADDITIONAL_TEXT", "IS_ACTIVE"],
-                [1, "Sample Supplier", "", "", "Supplier City", "Supplier Country", "", "John Doe", "+123456789", "", "", "supplier@example.com", "", "", "", "", 1]
-            ],
-            "dim_Customers": [
-                ["CUSTOMER_ID", "CUSTOMER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "CUSTOMER_TYPE", "CREDIT_LIMIT", "IS_ACTIVE"],
-                [1, "Sample Customer", "", "", "Customer City", "Customer Country", "", "Jane Smith", "+987654321", "", "", "customer@example.com", "", "", "", "RETAIL", 1000000, 1]
-            ],
-            "Product_Supplier_Warehouse": [
-                ["LINK_ID", "PRODUCT_ID", "SUPPLIER_ID", "WAREHOUSE_ID", "IS_PRIMARY_SUPPLIER", "IS_PRIMARY_WAREHOUSE"],
-                ["LINK00001", "PROD001", 1, 1, 1, 1]
-            ],
-            "Opening_Stock": [
-                ["PRODUCT_ID", "WAREHOUSE_ID", "OPENING_QTY", "AS_OF_DATE"],
-                ["PROD001", 1, 100, "${new Date().toISOString().slice(0,10)} 00:00:00"]
-            ]
-        };
-        
-        // Create workbook
-        const wb = XLSX.utils.book_new();
-        
-        // Add each sheet
-        for (const [sheetName, data] of Object.entries(templateData)) {
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        }
-        
-        // Download
-        XLSX.writeFile(wb, "StockMint_Setup_Template.xlsx");
-        this.showNotification('✅ Template downloaded successfully!', 'success');
-    }
-
     showNotification(message, type = 'info') {
         if (window.StockMintCommon && window.StockMintCommon.showNotification) {
             window.StockMintCommon.showNotification(message, type);
@@ -1862,9 +1344,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = SetupWizard;
 }
 
-// Global
+// Create global instance
+window.setupWizard = new SetupWizard();
 window.SetupWizard = SetupWizard;
-window.SetupWizard.downloadTemplate = function() {
-    const wizard = new SetupWizard();
-    wizard.downloadTemplate();
-};
