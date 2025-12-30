@@ -588,130 +588,156 @@ class StockMintApp {
     `;
   }
   
-  // Master Data content with plan restrictions
-  getMasterDataContent() {
-    const isDemo = this.currentPlan === 'demo';
-    
-    return `
-      <div class="page-content">
-        <h1>Master Data</h1>
-        <p class="page-subtitle">Manage your core business data and settings</p>
-        
-        ${isDemo ? `
-          <div class="demo-alert">
-            <i class="fas fa-info-circle"></i>
-            <span>Demo mode: All menus are visible but some features are disabled. Upgrade to BASIC or higher to unlock all features.</span>
+  // Master Data content with plan restrictions - DIPERBAIKI
+getMasterDataContent() {
+  const isDemo = this.currentPlan === 'demo';
+  const isBasic = this.currentPlan === 'basic';
+  
+  return `
+    <div class="page-content">
+      <h1>Master Data</h1>
+      <p class="page-subtitle">Manage your core business data and settings</p>
+      
+      ${isDemo ? `
+        <div class="demo-alert">
+          <i class="fas fa-info-circle"></i>
+          <span>Demo mode: Most features are enabled! Only Data Migration and Marketplace Fee are disabled.</span>
+        </div>
+      ` : ''}
+      
+      <div class="cards-grid">
+        <div class="feature-card" onclick="window.location.hash='#master/company'">
+          <div class="feature-icon" style="background: #19BEBB;">
+            <i class="fas fa-building"></i>
           </div>
-        ` : ''}
-        
-        <div class="cards-grid">
-          <div class="feature-card" onclick="window.location.hash='#master/company'">
-            <div class="feature-icon" style="background: #19BEBB;">
-              <i class="fas fa-building"></i>
-            </div>
-            <h3>Company</h3>
-            <p>Company profile and information</p>
-          </div>
-          
-          <div class="feature-card ${!this.config.features.multiWarehouse && this.currentPlan !== 'demo' ? 'disabled-feature' : ''}" 
-               onclick="${this.config.features.multiWarehouse || this.currentPlan === 'demo' ? 'window.location.hash=\'#master/warehouses\'' : 'StockMintApp.showFeatureLocked(\'Multi-Warehouse\')'}">
-            <div class="feature-icon" style="background: #667eea;">
-              <i class="fas fa-warehouse"></i>
-            </div>
-            <h3>Warehouses</h3>
-            <p>Manage storage locations</p>
-            ${!this.config.features.multiWarehouse && this.currentPlan !== 'demo' ? '<div class="feature-locked"><i class="fas fa-lock"></i> PRO</div>' : ''}
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
-            <div class="feature-icon" style="background: #10b981;">
-              <i class="fas fa-truck"></i>
-            </div>
-            <h3>Suppliers</h3>
-            <p>Supplier information and contacts</p>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/customers'">
-            <div class="feature-icon" style="background: #f59e0b;">
-              <i class="fas fa-users"></i>
-            </div>
-            <h3>Customers</h3>
-            <p>Customer database</p>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/products'">
-            <div class="feature-icon" style="background: #ef4444;">
-              <i class="fas fa-boxes"></i>
-            </div>
-            <h3>Products</h3>
-            <p>Product catalog and inventory</p>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/categories'">
-            <div class="feature-icon" style="background: #8b5cf6;">
-              <i class="fas fa-tags"></i>
-            </div>
-            <h3>Categories</h3>
-            <p>Product categories and grouping</p>
-          </div>
-          
-          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'feature-locked\''}">
-            <div class="feature-icon" style="background: #3b82f6;">
-              <i class="fas fa-database"></i>
-            </div>
-            <h3>Data Migration</h3>
-            <p>Import data from old systems</p>
-            ${isDemo ? '<div class="feature-locked"><i class="fas fa-lock"></i> DEMO</div>' : ''}
-          </div>
-          
-          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'feature-locked\''}">
-            <div class="feature-icon" style="background: #f97316;">
-              <i class="fas fa-percentage"></i>
-            </div>
-            <h3>Marketplace Fee</h3>
-            <p>Configure marketplace fees</p>
-            ${isDemo ? '<div class="feature-locked"><i class="fas fa-lock"></i> DEMO</div>' : ''}
-          </div>
+          <h3>Company</h3>
+          <p>Company profile and information</p>
+          <span class="feature-access">✅ Available in Demo</span>
         </div>
         
-        <style>
-          .demo-alert {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #856404;
-          }
-          
-          .disabled-feature {
-            opacity: 0.6;
-            cursor: not-allowed;
-            position: relative;
-          }
-          
-          .feature-locked {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-        </style>
+        <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
+          <div class="feature-icon" style="background: #667eea;">
+            <i class="fas fa-warehouse"></i>
+          </div>
+          <h3>Warehouses</h3>
+          <p>Manage storage locations</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
+          <div class="feature-icon" style="background: #10b981;">
+            <i class="fas fa-truck"></i>
+          </div>
+          <h3>Suppliers</h3>
+          <p>Supplier information and contacts</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/customers'">
+          <div class="feature-icon" style="background: #f59e0b;">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Customers</h3>
+          <p>Customer database</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/products'">
+          <div class="feature-icon" style="background: #ef4444;">
+            <i class="fas fa-boxes"></i>
+          </div>
+          <h3>Products</h3>
+          <p>Product catalog and inventory</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/categories'">
+          <div class="feature-icon" style="background: #8b5cf6;">
+            <i class="fas fa-tags"></i>
+          </div>
+          <h3>Categories</h3>
+          <p>Product categories and grouping</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/units'">
+          <div class="feature-icon" style="background: #3b82f6;">
+            <i class="fas fa-balance-scale"></i>
+          </div>
+          <h3>Units</h3>
+          <p>Measurement units and conversions</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/tax-rates'">
+          <div class="feature-icon" style="background: #10b981;">
+            <i class="fas fa-percent"></i>
+          </div>
+          <h3>Tax Rates</h3>
+          <p>Tax configurations and rates</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.hash='#master/currency'">
+          <div class="feature-icon" style="background: #f59e0b;">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <h3>Currency</h3>
+          <p>Currency exchange rates</p>
+          <span class="feature-access">✅ Available in Demo</span>
+        </div>
+        
+        <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+             onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'feature-locked\''}">
+          <div class="feature-icon" style="background: #f97316;">
+            <i class="fas fa-percentage"></i>
+          </div>
+          <h3>Marketplace Fee</h3>
+          <p>Configure marketplace fees</p>
+          ${isDemo ? 
+            '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
+            '<span class="feature-access">✅ Available</span>'}
+        </div>
+        
+        <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
+             onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'feature-locked\''}">
+          <div class="feature-icon" style="background: #6b7280;">
+            <i class="fas fa-database"></i>
+          </div>
+          <h3>Data Migration</h3>
+          <p>Import data from old systems</p>
+          ${isDemo ? 
+            '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
+            '<span class="feature-access">✅ Available</span>'}
+        </div>
       </div>
-    `;
-  }
+    </div>
+    
+    <style>
+      .feature-access {
+        display: block;
+        margin-top: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      
+      .feature-access.locked {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+      }
+      
+      .feature-card .feature-access:not(.locked) {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+      }
+    </style>
+  `;
+}
   
   // Feature locked content (for demo users)
   getFeatureLockedContent() {
