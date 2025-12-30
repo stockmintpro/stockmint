@@ -3,15 +3,19 @@ class SetupWizard {
     constructor() {
         this.currentStep = parseInt(localStorage.getItem('stockmint_setup_current_step')) || 1;
         this.totalSteps = 6;
-        this.setupData = {};
-        this.loadSavedData();
+        this.setupData = {}; // Inisialisasi sebagai object kosong
+        this.loadSavedData(); // Load data yang sudah disimpan
     }
 
     loadSavedData() {
-        // Load temporary setup data
-        const tempData = localStorage.getItem('stockmint_setup_temp');
-        if (tempData) {
-            this.setupData = JSON.parse(tempData);
+        try {
+            const tempData = localStorage.getItem('stockmint_setup_temp');
+            if (tempData) {
+                this.setupData = JSON.parse(tempData);
+            }
+        } catch (e) {
+            console.error('Error loading saved setup data:', e);
+            this.setupData = {};
         }
     }
 
@@ -122,39 +126,40 @@ class SetupWizard {
 
     renderCurrentStep() {
         const steps = [
-            this.renderStepCompany,
-            this.renderStepWarehouse,
-            this.renderStepSupplier,
-            this.renderStepCustomer,
-            this.renderStepCategory,
-            this.renderStepProduct
+            () => this.renderStepCompany(),
+            () => this.renderStepWarehouse(),
+            () => this.renderStepSupplier(),
+            () => this.renderStepCustomer(),
+            () => this.renderStepCategory(),
+            () => this.renderStepProduct()
         ];
         
         return steps[this.currentStep - 1] ? steps[this.currentStep - 1]() : '<p>Invalid step</p>';
     }
 
     renderStepCompany() {
-        const data = this.setupData.company || {};
+        // Gunakan default object jika this.setupData.company tidak ada
+        const company = (this.setupData && this.setupData.company) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Company Name *</label>
-                    <input type="text" id="companyName" class="form-control" required value="${data.name || ''}" placeholder="Enter company name">
+                    <input type="text" id="companyName" class="form-control" required value="${company.name || ''}" placeholder="Enter company name">
                 </div>
                 
                 <div style="margin-bottom: 15px;">
                     <label>Address</label>
-                    <textarea id="companyAddress" class="form-control" rows="2" placeholder="Company address">${data.address || ''}</textarea>
+                    <textarea id="companyAddress" class="form-control" rows="2" placeholder="Company address">${company.address || ''}</textarea>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Phone</label>
-                        <input type="tel" id="companyPhone" class="form-control" value="${data.phone || ''}" placeholder="Phone number">
+                        <input type="tel" id="companyPhone" class="form-control" value="${company.phone || ''}" placeholder="Phone number">
                     </div>
                     <div>
                         <label>Email</label>
-                        <input type="email" id="companyEmail" class="form-control" value="${data.email || ''}" placeholder="Email address">
+                        <input type="email" id="companyEmail" class="form-control" value="${company.email || ''}" placeholder="Email address">
                     </div>
                 </div>
                 
@@ -162,10 +167,10 @@ class SetupWizard {
                     <label>Business Type</label>
                     <select id="businessType" class="form-control">
                         <option value="">Select business type</option>
-                        <option value="retail" ${data.businessType === 'retail' ? 'selected' : ''}>Retail</option>
-                        <option value="wholesale" ${data.businessType === 'wholesale' ? 'selected' : ''}>Wholesale</option>
-                        <option value="manufacturing" ${data.businessType === 'manufacturing' ? 'selected' : ''}>Manufacturing</option>
-                        <option value="ecommerce" ${data.businessType === 'ecommerce' ? 'selected' : ''}>E-commerce</option>
+                        <option value="retail" ${company.businessType === 'retail' ? 'selected' : ''}>Retail</option>
+                        <option value="wholesale" ${company.businessType === 'wholesale' ? 'selected' : ''}>Wholesale</option>
+                        <option value="manufacturing" ${company.businessType === 'manufacturing' ? 'selected' : ''}>Manufacturing</option>
+                        <option value="ecommerce" ${company.businessType === 'ecommerce' ? 'selected' : ''}>E-commerce</option>
                     </select>
                 </div>
                 
@@ -180,28 +185,28 @@ class SetupWizard {
     }
 
     renderStepWarehouse() {
-        const data = this.setupData.warehouse || {};
+        const warehouse = (this.setupData && this.setupData.warehouse) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Warehouse Name *</label>
-                    <input type="text" id="warehouseName" class="form-control" required value="${data.name || ''}" placeholder="e.g., Main Warehouse">
+                    <input type="text" id="warehouseName" class="form-control" required value="${warehouse.name || ''}" placeholder="e.g., Main Warehouse">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Location/Area *</label>
-                        <input type="text" id="warehouseLocation" class="form-control" required value="${data.location || ''}" placeholder="e.g., Downtown Area">
+                        <input type="text" id="warehouseLocation" class="form-control" required value="${warehouse.location || ''}" placeholder="e.g., Downtown Area">
                     </div>
                     <div>
                         <label>Warehouse Code</label>
-                        <input type="text" id="warehouseCode" class="form-control" value="${data.code || 'WH001'}" placeholder="WH001">
+                        <input type="text" id="warehouseCode" class="form-control" value="${warehouse.code || 'WH001'}" placeholder="WH001">
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 15px;">
                     <label>
-                        <input type="checkbox" id="isPrimaryWarehouse" ${data.isPrimary !== false ? 'checked' : ''}> 
+                        <input type="checkbox" id="isPrimaryWarehouse" ${warehouse.isPrimary !== false ? 'checked' : ''}> 
                         Set as primary warehouse
                     </label>
                 </div>
@@ -210,22 +215,22 @@ class SetupWizard {
     }
 
     renderStepSupplier() {
-        const data = this.setupData.supplier || {};
+        const supplier = (this.setupData && this.setupData.supplier) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Supplier Name *</label>
-                    <input type="text" id="supplierName" class="form-control" required value="${data.name || ''}" placeholder="e.g., PT. Supplier Jaya">
+                    <input type="text" id="supplierName" class="form-control" required value="${supplier.name || ''}" placeholder="e.g., PT. Supplier Jaya">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Contact Person</label>
-                        <input type="text" id="supplierContact" class="form-control" value="${data.contactPerson || ''}" placeholder="Contact person name">
+                        <input type="text" id="supplierContact" class="form-control" value="${supplier.contactPerson || ''}" placeholder="Contact person name">
                     </div>
                     <div>
                         <label>Phone</label>
-                        <input type="tel" id="supplierPhone" class="form-control" value="${data.phone || ''}" placeholder="Supplier phone">
+                        <input type="tel" id="supplierPhone" class="form-control" value="${supplier.phone || ''}" placeholder="Supplier phone">
                     </div>
                 </div>
             </form>
@@ -233,22 +238,22 @@ class SetupWizard {
     }
 
     renderStepCustomer() {
-        const data = this.setupData.customer || {};
+        const customer = (this.setupData && this.setupData.customer) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Customer Name *</label>
-                    <input type="text" id="customerName" class="form-control" required value="${data.name || ''}" placeholder="e.g., John Doe">
+                    <input type="text" id="customerName" class="form-control" required value="${customer.name || ''}" placeholder="e.g., John Doe">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Contact Person</label>
-                        <input type="text" id="customerContact" class="form-control" value="${data.contactPerson || ''}" placeholder="Contact person name">
+                        <input type="text" id="customerContact" class="form-control" value="${customer.contactPerson || ''}" placeholder="Contact person name">
                     </div>
                     <div>
                         <label>Phone</label>
-                        <input type="tel" id="customerPhone" class="form-control" value="${data.phone || ''}" placeholder="Customer phone">
+                        <input type="tel" id="customerPhone" class="form-control" value="${customer.phone || ''}" placeholder="Customer phone">
                     </div>
                 </div>
             </form>
@@ -256,41 +261,41 @@ class SetupWizard {
     }
 
     renderStepCategory() {
-        const data = this.setupData.category || {};
+        const category = (this.setupData && this.setupData.category) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Category Name *</label>
-                    <input type="text" id="categoryName" class="form-control" required value="${data.name || ''}" placeholder="e.g., Electronics">
+                    <input type="text" id="categoryName" class="form-control" required value="${category.name || ''}" placeholder="e.g., Electronics">
                 </div>
                 
                 <div style="margin-bottom: 15px;">
                     <label>Category Code</label>
-                    <input type="text" id="categoryCode" class="form-control" value="${data.code || 'CAT001'}" placeholder="CAT001">
+                    <input type="text" id="categoryCode" class="form-control" value="${category.code || 'CAT001'}" placeholder="CAT001">
                 </div>
             </form>
         `;
     }
 
     renderStepProduct() {
-        const data = this.setupData.product || {};
+        const product = (this.setupData && this.setupData.product) || {};
         return `
             <form id="stepForm">
                 <div style="margin-bottom: 15px;">
                     <label>Product Name *</label>
-                    <input type="text" id="productName" class="form-control" required value="${data.name || ''}" placeholder="e.g., iPhone 15">
+                    <input type="text" id="productName" class="form-control" required value="${product.name || ''}" placeholder="e.g., iPhone 15">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Product Code/SKU *</label>
-                        <input type="text" id="productCode" class="form-control" required value="${data.code || 'PROD001'}" placeholder="PROD001">
+                        <input type="text" id="productCode" class="form-control" required value="${product.code || 'PROD001'}" placeholder="PROD001">
                     </div>
                     <div>
                         <label>Category</label>
                         <select id="productCategory" class="form-control" required>
                             <option value="">Select category</option>
-                            <option value="CAT001" ${data.categoryId === 'CAT001' ? 'selected' : ''}>Electronics</option>
+                            <option value="CAT001" ${product.categoryId === 'CAT001' ? 'selected' : ''}>Electronics</option>
                         </select>
                     </div>
                 </div>
@@ -298,11 +303,11 @@ class SetupWizard {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label>Cost Price (Rp)</label>
-                        <input type="number" id="costPrice" class="form-control" required value="${data.costPrice || ''}" placeholder="0" step="0.01" min="0">
+                        <input type="number" id="costPrice" class="form-control" required value="${product.costPrice || ''}" placeholder="0" step="0.01" min="0">
                     </div>
                     <div>
                         <label>Selling Price (Rp)</label>
-                        <input type="number" id="sellingPrice" class="form-control" required value="${data.sellingPrice || ''}" placeholder="0" step="0.01" min="0">
+                        <input type="number" id="sellingPrice" class="form-control" required value="${product.sellingPrice || ''}" placeholder="0" step="0.01" min="0">
                     </div>
                 </div>
             </form>
