@@ -113,8 +113,8 @@ class SetupWizard {
                             <button class="btn-secondary" id="backupBtn">
                                 <i class="fas fa-save"></i> Backup Data
                             </button>
-                            <button class="btn-secondary" id="resetBtn" style="color: #ef4444;">
-                                <i class="fas fa-redo"></i> Reset Data
+                            <button class="btn-secondary" id="resetSetupBtn" style="color: #f59e0b;">
+                                <i class="fas fa-redo"></i> Reset Setup
                             </button>
                         </div>
                         
@@ -246,46 +246,134 @@ class SetupWizard {
                 <h1>📤 Data Migration</h1>
                 <p class="page-subtitle">Import your existing data</p>
                 
+                <div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Advanced Feature Warning</h4>
+                    <p>This feature is for users who understand database relationships. The Excel template has 12 interconnected sheets with complex relationships.</p>
+                    <p><strong>For beginners:</strong> Use "Start New Setup" instead, which guides you step by step.</p>
+                </div>
+                
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-file-import"></i> Upload Your Data</h3>
+                        <h3><i class="fas fa-file-import"></i> Step-by-Step Migration</h3>
                     </div>
                     <div class="card-body">
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="font-size: 60px; color: #19BEBB; margin-bottom: 20px;">
-                                📊
-                            </div>
-                            <h3>Download Template First</h3>
-                            <p style="color: #666; margin-bottom: 30px;">
-                                Download our Excel template, fill in your data, then upload it here.
-                            </p>
-                            
-                            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
-                                <button class="btn-primary" onclick="this.downloadTemplate()">
-                                    <i class="fas fa-download"></i> Download Template
-                                </button>
-                                <button class="btn-secondary" id="uploadTemplateBtn">
-                                    <i class="fas fa-upload"></i> Upload Filled Template
-                                </button>
+                        <div class="migration-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Download Template</h4>
+                                    <p>Get the Excel template with all required sheets</p>
+                                    <button class="btn-primary" onclick="window.open('template.html', '_blank')">
+                                        <i class="fas fa-download"></i> Download Template
+                                    </button>
+                                </div>
                             </div>
                             
-                            <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
-                            
-                            <div id="uploadStatus" style="margin-top: 20px; min-height: 50px;"></div>
-                            
-                            <div class="instructions" style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                                <h4><i class="fas fa-lightbulb"></i> Tips for Successful Migration:</h4>
-                                <ul style="margin: 10px 0 0 20px;">
-                                    <li>Use the provided template format</li>
-                                    <li>Ensure all required fields are filled</li>
-                                    <li>Check for duplicate entries</li>
-                                    <li>Backup your current data first</li>
-                                </ul>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Study the Structure</h4>
+                                    <p>Understand the 12 sheets and their relationships:</p>
+                                    <ul>
+                                        <li><strong>Core Tables:</strong> Company, Warehouses, Products, Categories</li>
+                                        <li><strong>Relational Tables:</strong> Product-Supplier-Warehouse, Opening Stock</li>
+                                        <li><strong>Pricing Tables:</strong> Purchase Price, Sale Price</li>
+                                        <li><strong>Marketplace Tables:</strong> dim_Marketplace, marketplace_fee_components</li>
+                                    </ul>
+                                </div>
                             </div>
+                            
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Fill Your Data</h4>
+                                    <p>Carefully fill in your data following the exact format</p>
+                                    <div class="alert alert-info" style="background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 10px; border-radius: 5px;">
+                                        <strong>Important:</strong> Don't change sheet names or column headers
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Upload & Validate</h4>
+                                    <p>Upload your filled template for validation</p>
+                                    <div style="text-align: center; margin: 20px 0;">
+                                        <button class="btn-secondary" id="uploadMigrationFile" style="padding: 12px 24px;">
+                                            <i class="fas fa-upload"></i> Upload Filled Template
+                                        </button>
+                                        <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
+                                    </div>
+                                    <div id="uploadStatus"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-tips" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4><i class="fas fa-lightbulb"></i> Quick Tips for Success:</h4>
+                            <ol>
+                                <li>Start with small data first (5-10 products)</li>
+                                <li>Ensure IDs are consistent across sheets</li>
+                                <li>Use the same date format: YYYY-MM-DD HH:MM:SS</li>
+                                <li>Keep a backup of your original data</li>
+                                <li>Test with the template that includes example data first</li>
+                            </ol>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <style>
+                .migration-steps {
+                    counter-reset: step-counter;
+                }
+                
+                .step {
+                    display: flex;
+                    margin-bottom: 30px;
+                    padding-bottom: 30px;
+                    border-bottom: 1px dashed #dee2e6;
+                }
+                
+                .step:last-child {
+                    border-bottom: none;
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                }
+                
+                .step-number {
+                    width: 40px;
+                    height: 40px;
+                    background: #19BEBB;
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin-right: 20px;
+                    flex-shrink: 0;
+                }
+                
+                .step-content {
+                    flex: 1;
+                }
+                
+                .step-content h4 {
+                    margin-top: 0;
+                    color: #333;
+                }
+                
+                .step-content ul, .step-content ol {
+                    margin: 10px 0 10px 20px;
+                }
+                
+                .step-content li {
+                    margin-bottom: 5px;
+                }
+            </style>
         `;
     }
 
@@ -411,8 +499,11 @@ class SetupWizard {
                             <button class="btn-secondary" id="restoreDataBtn">
                                 <i class="fas fa-history"></i> Restore Backup
                             </button>
-                            <button class="btn-secondary" id="resetDataBtn" style="color: #ef4444;">
-                                <i class="fas fa-trash-alt"></i> Reset All Data
+                            <button class="btn-secondary" id="resetSetupBtn" style="color: #f59e0b;">
+                                <i class="fas fa-redo"></i> Reset Setup
+                            </button>
+                            <button class="btn-secondary" id="fullResetBtn" style="color: #ef4444;">
+                                <i class="fas fa-trash-alt"></i> Full Reset
                             </button>
                         </div>
                         <input type="file" id="uploadData" accept=".xlsx,.xls,.csv" style="display: none;">
@@ -494,7 +585,7 @@ class SetupWizard {
         }
         
         // Handle migration file upload
-        const uploadBtn = document.getElementById('uploadTemplateBtn');
+        const uploadBtn = document.getElementById('uploadMigrationFile');
         const fileInput = document.getElementById('migrationFile');
         
         if (uploadBtn && fileInput) {
@@ -527,13 +618,19 @@ class SetupWizard {
             });
         }
         
-        // Reset data confirmation
-        const resetBtn = document.getElementById('resetBtn') || document.getElementById('resetDataBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                if (confirm('⚠️ WARNING: This will delete ALL your data!\n\nThis includes:\n• Company information\n• Products\n• Suppliers\n• Customers\n• All transaction history\n\nAre you sure you want to reset all data?')) {
-                    this.resetAllData();
-                }
+        // Reset Setup button (partial reset)
+        const resetSetupBtn = document.getElementById('resetSetupBtn');
+        if (resetSetupBtn) {
+            resetSetupBtn.addEventListener('click', () => {
+                this.resetAllData(false); // Reset setup only
+            });
+        }
+        
+        // Full Reset button (complete reset)
+        const fullResetBtn = document.getElementById('fullResetBtn');
+        if (fullResetBtn) {
+            fullResetBtn.addEventListener('click', () => {
+                this.resetAllData(true); // Complete reset
             });
         }
         
@@ -562,51 +659,50 @@ class SetupWizard {
         }
     }
 
-    // Di bagian handleCompanyForm() - GANTI dengan ini:
-handleCompanyForm() {
-    const companyName = document.getElementById('companyName').value;
-    const companyTaxId = document.getElementById('companyTaxId').value;
-    const companyAddress = document.getElementById('companyAddress').value;
-    const companyPhone = document.getElementById('companyPhone')?.value || '';
-    const companyEmail = document.getElementById('companyEmail')?.value || '';
-    const businessType = document.getElementById('businessType')?.value || '';
-    const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
-    
-    if (!companyName) {
-        this.showNotification('Company name is required', 'error');
-        return;
+    handleCompanyForm() {
+        const companyName = document.getElementById('companyName').value;
+        const companyTaxId = document.getElementById('companyTaxId').value;
+        const companyAddress = document.getElementById('companyAddress').value;
+        const companyPhone = document.getElementById('companyPhone')?.value || '';
+        const companyEmail = document.getElementById('companyEmail')?.value || '';
+        const businessType = document.getElementById('businessType')?.value || '';
+        const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
+        
+        if (!companyName) {
+            this.showNotification('Company name is required', 'error');
+            return;
+        }
+        
+        if (!agreeTerms) {
+            this.showNotification('You must agree to the Terms of Service', 'error');
+            return;
+        }
+        
+        // Simpan data perusahaan
+        const companyData = {
+            id: 1,
+            name: companyName,
+            taxId: companyTaxId,
+            address: companyAddress,
+            phone: companyPhone,
+            email: companyEmail,
+            businessType: businessType,
+            setupDate: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_company', JSON.stringify(companyData));
+        localStorage.setItem('stockmint_setup_completed', 'true');
+        
+        this.showNotification('✅ Company information saved! Setup completed.', 'success');
+        
+        setTimeout(() => {
+            window.location.hash = '#dashboard';
+            window.location.reload();
+        }, 1500);
     }
-    
-    if (!agreeTerms) {
-        this.showNotification('You must agree to the Terms of Service', 'error');
-        return;
-    }
-    
-    // Simpan data perusahaan
-    const companyData = {
-        id: 1,
-        name: companyName,
-        taxId: companyTaxId,
-        address: companyAddress,
-        phone: companyPhone,
-        email: companyEmail,
-        businessType: businessType,
-        setupDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    
-    // Simpan ke localStorage
-    localStorage.setItem('stockmint_company', JSON.stringify(companyData));
-    localStorage.setItem('stockmint_setup_current_step', 'warehouse'); // Set step berikutnya
-    
-    this.showNotification('✅ Company information saved! Moving to next step...', 'success');
-    
-    // Redirect ke step warehouse
-    setTimeout(() => {
-        window.location.hash = '#setup/warehouse';
-    }, 1000);
-}
     
     handleFileUpload(file) {
         const reader = new FileReader();
@@ -717,35 +813,46 @@ handleCompanyForm() {
         }, 2000);
     }
 
-    resetAllData() {
-        // Clear all data
-        localStorage.removeItem('stockmint_setup_completed');
-        localStorage.removeItem('stockmint_data_migrated');
-        localStorage.removeItem('stockmint_company');
-        localStorage.removeItem('stockmint_products');
-        localStorage.removeItem('stockmint_suppliers');
-        localStorage.removeItem('stockmint_customers');
-        localStorage.removeItem('stockmint_warehouses');
-        localStorage.removeItem('stockmint_categories');
+    resetAllData(completeReset = false) {
+        const confirmation = completeReset ? 
+            '⚠️ WARNING: This will delete ALL your data including:\n\n• Company Information\n• All Products\n• All Suppliers\n• All Customers\n• All Categories\n• All Transaction History\n• All Settings\n\nAre you sure you want to reset ALL data?' :
+            '⚠️ This will delete your setup data so you can start over. Your user account will be preserved.\n\nAre you sure?';
         
-        // Keep user and plan data
-        const userData = localStorage.getItem('stockmint_user');
-        const planData = localStorage.getItem('stockmint_plan');
-        
-        // Clear all other stockmint data
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('stockmint_'));
-        keys.forEach(key => {
-            if (!['stockmint_user', 'stockmint_plan'].includes(key)) {
-                localStorage.removeItem(key);
+        if (confirm(confirmation)) {
+            if (completeReset) {
+                // Clear ALL stockmint data
+                const keys = Object.keys(localStorage).filter(key => key.startsWith('stockmint_'));
+                keys.forEach(key => localStorage.removeItem(key));
+                
+                // Reset user to demo
+                localStorage.setItem('stockmint_user', JSON.stringify({ name: 'Guest', isDemo: true }));
+                localStorage.setItem('stockmint_plan', 'demo');
+                
+                this.showNotification('✅ All data has been completely reset. You are now in DEMO mode.', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                // Clear only setup data
+                localStorage.removeItem('stockmint_setup_completed');
+                localStorage.removeItem('stockmint_setup_current_step');
+                localStorage.removeItem('stockmint_company');
+                localStorage.removeItem('stockmint_warehouses');
+                localStorage.removeItem('stockmint_suppliers');
+                localStorage.removeItem('stockmint_customers');
+                localStorage.removeItem('stockmint_categories');
+                localStorage.removeItem('stockmint_products');
+                localStorage.removeItem('stockmint_data_migrated');
+                
+                this.showNotification('✅ Setup data has been reset. You can start setup again.', 'success');
+                
+                setTimeout(() => {
+                    window.location.hash = '#setup/start-new';
+                    window.location.reload();
+                }, 1000);
             }
-        });
-        
-        this.showNotification('✅ All data has been reset', 'success');
-        
-        setTimeout(() => {
-            window.location.hash = '#master-data';
-            window.location.reload();
-        }, 1000);
+        }
     }
 
     createBackup() {
