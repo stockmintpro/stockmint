@@ -424,10 +424,11 @@ class StockMintApp {
         return this.getMasterDataContent();
     }
     
-    // Setup pages - gunakan SetupWizardMulti
+    // Setup pages - PERBAIKI DI SINI! 
     if (page.startsWith('setup/')) {
-        const setupWizard = new SetupWizardMulti();
-        return setupWizard.render();
+        // Gunakan SetupWizard biasa untuk halaman migrasi dan start-new
+        const wizard = new SetupWizard();
+        return wizard.render();
     }
     
     // Other pages
