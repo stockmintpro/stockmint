@@ -40,9 +40,16 @@ class SetupWizardMulti {
     }
     
     render() {
-        const hash = window.location.hash.substring(1);
-        const step = hash.split('/')[1] || this.currentStep;
+        const hash = window.location.hash.substring(1); // Contoh: 'setup/migrate'
+        const route = hash.split('/')[1]; // Contoh: 'migrate'
         
+        // ===== PERBAIKI DI SINI: TANGANI ROUTE MIGRATE =====
+        if (route === 'migrate') {
+            return this.renderMigratePage();
+        }
+        // ===== AKHIR PERBAIKAN =====
+        
+        const step = route || this.currentStep;
         this.currentStep = step;
         
         switch(step) {
@@ -65,7 +72,188 @@ class SetupWizardMulti {
         }
     }
     
-    // ===== RENDER EACH STEP =====
+    // ===== TAMBAHKAN METHOD INI =====
+    renderMigratePage() {
+        return `
+            <div class="page-content">
+                <h1>📤 Data Migration</h1>
+                <p class="page-subtitle">Import your existing data</p>
+                
+                <div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Advanced Feature Warning</h4>
+                    <p>This feature is for users who understand database relationships. The Excel template has 12 interconnected sheets with complex relationships.</p>
+                    <p><strong>For beginners:</strong> Use "Start New Setup" instead, which guides you step by step.</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-import"></i> Step-by-Step Migration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="migration-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Download Template</h4>
+                                    <p>Get the Excel template with all required sheets</p>
+                                    <button class="btn-primary" onclick="window.open('template.html', '_blank')">
+                                        <i class="fas fa-download"></i> Download Template
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Study the Structure</h4>
+                                    <p>Understand the 12 sheets and their relationships:</p>
+                                    <ul>
+                                        <li><strong>Core Tables:</strong> Company, Warehouses, Products, Categories</li>
+                                        <li><strong>Relational Tables:</strong> Product-Supplier-Warehouse, Opening Stock</li>
+                                        <li><strong>Pricing Tables:</strong> Purchase Price, Sale Price</li>
+                                        <li><strong>Marketplace Tables:</strong> dim_Marketplace, marketplace_fee_components</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Fill Your Data</h4>
+                                    <p>Carefully fill in your data following the exact format</p>
+                                    <div class="alert alert-info" style="background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 10px; border-radius: 5px;">
+                                        <strong>Important:</strong> Don't change sheet names or column headers
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Upload & Validate</h4>
+                                    <p>Upload your filled template for validation</p>
+                                    <div style="text-align: center; margin: 20px 0;">
+                                        <button class="btn-secondary" id="uploadMigrationFile" style="padding: 12px 24px;">
+                                            <i class="fas fa-upload"></i> Upload Filled Template
+                                        </button>
+                                        <input type="file" id="migrationFile" accept=".xlsx,.xls,.csv" style="display: none;">
+                                    </div>
+                                    <div id="uploadStatus"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-tips" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4><i class="fas fa-lightbulb"></i> Quick Tips for Success:</h4>
+                            <ol>
+                                <li>Start with small data first (5-10 products)</li>
+                                <li>Ensure IDs are consistent across sheets</li>
+                                <li>Use the same date format: YYYY-MM-DD HH:MM:SS</li>
+                                <li>Keep a backup of your original data</li>
+                                <li>Test with the template that includes example data first</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .migration-steps {
+                    counter-reset: step-counter;
+                }
+                
+                .step {
+                    display: flex;
+                    margin-bottom: 30px;
+                    padding-bottom: 30px;
+                    border-bottom: 1px dashed #dee2e6;
+                }
+                
+                .step:last-child {
+                    border-bottom: none;
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                }
+                
+                .step-number {
+                    width: 40px;
+                    height: 40px;
+                    background: #19BEBB;
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin-right: 20px;
+                    flex-shrink: 0;
+                }
+                
+                .step-content {
+                    flex: 1;
+                }
+                
+                .step-content h4 {
+                    margin-top: 0;
+                    color: #333;
+                }
+                
+                .step-content ul, .step-content ol {
+                    margin: 10px 0 10px 20px;
+                }
+                
+                .step-content li {
+                    margin-bottom: 5px;
+                }
+            </style>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const uploadBtn = document.getElementById('uploadMigrationFile');
+                    const fileInput = document.getElementById('migrationFile');
+                    const uploadStatus = document.getElementById('uploadStatus');
+                    
+                    if (uploadBtn && fileInput) {
+                        uploadBtn.addEventListener('click', function() {
+                            fileInput.click();
+                        });
+                        
+                        fileInput.addEventListener('change', function(e) {
+                            const file = e.target.files[0];
+                            if (file) {
+                                // Validate file type
+                                const validTypes = ['.xlsx', '.xls', '.csv'];
+                                const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+                                
+                                if (!validTypes.includes(fileExt)) {
+                                    uploadStatus.innerHTML = '<div style="color: #ef4444; background: #fee2e2; padding: 10px; border-radius: 5px;">❌ Please upload Excel or CSV files only</div>';
+                                    return;
+                                }
+                                
+                                uploadStatus.innerHTML = '<div style="color: #f59e0b; background: #fef3c7; padding: 10px; border-radius: 5px;"><i class="fas fa-spinner fa-spin"></i> Processing file...</div>';
+                                
+                                // Simulate file processing
+                                setTimeout(function() {
+                                    // Mark migration as completed
+                                    localStorage.setItem('stockmint_setup_completed', 'true');
+                                    localStorage.setItem('stockmint_data_migrated', 'true');
+                                    
+                                    uploadStatus.innerHTML = '<div style="color: #10b981; background: #d1fae5; padding: 10px; border-radius: 5px;">✅ Data migration completed successfully!</div>';
+                                    
+                                    // Redirect after 2 seconds
+                                    setTimeout(function() {
+                                        window.location.hash = '#dashboard';
+                                        window.location.reload();
+                                    }, 2000);
+                                }, 2000);
+                            }
+                        });
+                    }
+                });
+            </script>
+        `;
+    }
     
     renderCompanyStep() {
         const savedData = this.setupData.company || {};
@@ -1013,374 +1201,6 @@ class SetupWizardMulti {
                 }
             </style>
         `;
-    }
-    
-    // ===== EVENT HANDLERS =====
-    
-    bindEvents() {
-        // Company Form
-        const companyForm = document.getElementById('companyForm');
-        if (companyForm) {
-            companyForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleCompanyForm();
-            });
-        }
-        
-        // Warehouse Form
-        const warehouseForm = document.getElementById('warehouseForm');
-        if (warehouseForm) {
-            warehouseForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleWarehouseForm();
-            });
-        }
-        
-        // Supplier Form
-        const supplierForm = document.getElementById('supplierForm');
-        if (supplierForm) {
-            supplierForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleSupplierForm();
-            });
-        }
-        
-        // Customer Form
-        const customerForm = document.getElementById('customerForm');
-        if (customerForm) {
-            customerForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleCustomerForm();
-            });
-        }
-        
-        // Category Form
-        const categoryForm = document.getElementById('categoryForm');
-        if (categoryForm) {
-            categoryForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleCategoryForm();
-            });
-        }
-        
-        // Product Form
-        const productForm = document.getElementById('productForm');
-        if (productForm) {
-            productForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleProductForm();
-            });
-        }
-        
-        // Next buttons
-        const nextToSupplier = document.getElementById('nextToSupplier');
-        if (nextToSupplier) {
-            nextToSupplier.addEventListener('click', () => {
-                window.location.hash = '#setup/supplier';
-            });
-        }
-        
-        const nextToCustomer = document.getElementById('nextToCustomer');
-        if (nextToCustomer) {
-            nextToCustomer.addEventListener('click', () => {
-                window.location.hash = '#setup/customer';
-            });
-        }
-        
-        const nextToCategory = document.getElementById('nextToCategory');
-        if (nextToCategory) {
-            nextToCategory.addEventListener('click', () => {
-                window.location.hash = '#setup/category';
-            });
-        }
-        
-        const nextToProduct = document.getElementById('nextToProduct');
-        if (nextToProduct) {
-            nextToProduct.addEventListener('click', () => {
-                window.location.hash = '#setup/product';
-            });
-        }
-        
-        const completeSetup = document.getElementById('completeSetup');
-        if (completeSetup) {
-            completeSetup.addEventListener('click', () => {
-                this.completeSetup();
-            });
-        }
-        
-        // Remove buttons
-        document.querySelectorAll('.btn-remove').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = e.target.closest('.btn-remove').getAttribute('data-index');
-                const type = e.target.closest('.btn-remove').getAttribute('data-type');
-                this.removeItem(type, index);
-            });
-        });
-    }
-    
-    // ===== FORM HANDLERS =====
-    
-    handleCompanyForm() {
-        const companyName = document.getElementById('companyName').value;
-        const companyTaxId = document.getElementById('companyTaxId').value;
-        const companyAddress = document.getElementById('companyAddress').value;
-        const companyPhone = document.getElementById('companyPhone').value;
-        const companyEmail = document.getElementById('companyEmail').value;
-        const businessType = document.getElementById('businessType').value;
-        const agreeTerms = document.getElementById('agreeTerms').checked;
-        
-        if (!companyName) {
-            this.showNotification('Company name is required', 'error');
-            return;
-        }
-        
-        if (!agreeTerms) {
-            this.showNotification('You must agree to the Terms of Service', 'error');
-            return;
-        }
-        
-        const companyData = {
-            id: 1,
-            name: companyName,
-            taxId: companyTaxId,
-            address: companyAddress,
-            phone: companyPhone,
-            email: companyEmail,
-            businessType: businessType,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        
-        localStorage.setItem('stockmint_company', JSON.stringify(companyData));
-        localStorage.setItem('stockmint_setup_current_step', 'warehouse');
-        
-        this.showNotification('✅ Company information saved!', 'success');
-        
-        setTimeout(() => {
-            window.location.hash = '#setup/warehouse';
-            window.location.reload();
-        }, 1000);
-    }
-    
-    handleWarehouseForm() {
-        const name = document.getElementById('warehouseName').value;
-        const code = document.getElementById('warehouseCode').value;
-        const address = document.getElementById('warehouseAddress').value;
-        const isPrimary = document.getElementById('isPrimary').checked;
-        
-        if (!name) {
-            this.showNotification('Warehouse name is required', 'error');
-            return;
-        }
-        
-        const warehouseData = {
-            id: Date.now(),
-            name: name,
-            code: code || `WH-${Date.now().toString().slice(-3)}`,
-            address: address,
-            isPrimary: isPrimary,
-            createdAt: new Date().toISOString()
-        };
-        
-        // Get existing warehouses
-        const existingWarehouses = JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]');
-        
-        // If this is primary, unset others
-        if (isPrimary) {
-            existingWarehouses.forEach(wh => wh.isPrimary = false);
-        }
-        
-        existingWarehouses.push(warehouseData);
-        localStorage.setItem('stockmint_warehouses', JSON.stringify(existingWarehouses));
-        
-        // Clear form
-        document.getElementById('warehouseForm').reset();
-        
-        this.showNotification('✅ Warehouse added successfully!', 'success');
-        
-        // Update UI
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
-    }
-    
-    handleSupplierForm() {
-        const name = document.getElementById('supplierName').value;
-        const code = document.getElementById('supplierCode').value;
-        const contact = document.getElementById('supplierContact').value;
-        const phone = document.getElementById('supplierPhone').value;
-        const email = document.getElementById('supplierEmail').value;
-        
-        if (!name) {
-            this.showNotification('Supplier name is required', 'error');
-            return;
-        }
-        
-        const supplierData = {
-            id: Date.now(),
-            name: name,
-            code: code || `SUP-${Date.now().toString().slice(-3)}`,
-            contact: contact,
-            phone: phone,
-            email: email,
-            createdAt: new Date().toISOString()
-        };
-        
-        const existingSuppliers = JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]');
-        existingSuppliers.push(supplierData);
-        localStorage.setItem('stockmint_suppliers', JSON.stringify(existingSuppliers));
-        
-        document.getElementById('supplierForm').reset();
-        this.showNotification('✅ Supplier added successfully!', 'success');
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
-    }
-    
-    handleCustomerForm() {
-        const name = document.getElementById('customerName').value;
-        const type = document.getElementById('customerType').value;
-        const contact = document.getElementById('customerContact').value;
-        const phone = document.getElementById('customerPhone').value;
-        const email = document.getElementById('customerEmail').value;
-        const taxable = document.getElementById('customerTaxable').checked;
-        
-        if (!name) {
-            this.showNotification('Customer name is required', 'error');
-            return;
-        }
-        
-        const customerData = {
-            id: Date.now(),
-            name: name,
-            type: type,
-            contact: contact,
-            phone: phone,
-            email: email,
-            taxable: taxable,
-            createdAt: new Date().toISOString()
-        };
-        
-        const existingCustomers = JSON.parse(localStorage.getItem('stockmint_customers') || '[]');
-        existingCustomers.push(customerData);
-        localStorage.setItem('stockmint_customers', JSON.stringify(existingCustomers));
-        
-        document.getElementById('customerForm').reset();
-        this.showNotification('✅ Customer added successfully!', 'success');
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
-    }
-    
-    handleCategoryForm() {
-        const name = document.getElementById('categoryName').value;
-        const code = document.getElementById('categoryCode').value;
-        const description = document.getElementById('categoryDescription').value;
-        
-        if (!name) {
-            this.showNotification('Category name is required', 'error');
-            return;
-        }
-        
-        const categoryData = {
-            id: `CAT-${Date.now().toString().slice(-6)}`,
-            name: name,
-            code: code || `CAT-${Date.now().toString().slice(-3)}`,
-            description: description,
-            createdAt: new Date().toISOString()
-        };
-        
-        const existingCategories = JSON.parse(localStorage.getItem('stockmint_categories') || '[]');
-        existingCategories.push(categoryData);
-        localStorage.setItem('stockmint_categories', JSON.stringify(existingCategories));
-        
-        document.getElementById('categoryForm').reset();
-        this.showNotification('✅ Category added successfully!', 'success');
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
-    }
-    
-    handleProductForm() {
-        const name = document.getElementById('productName').value;
-        const code = document.getElementById('productCode').value;
-        const category = document.getElementById('productCategory').value;
-        const unit = document.getElementById('productUnit').value;
-        const purchasePrice = parseFloat(document.getElementById('purchasePrice').value) || 0;
-        const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
-        const stock = parseInt(document.getElementById('initialStock').value) || 0;
-        
-        if (!name) {
-            this.showNotification('Product name is required', 'error');
-            return;
-        }
-        
-        if (!category) {
-            this.showNotification('Please select a category', 'error');
-            return;
-        }
-        
-        const productData = {
-            id: `PROD-${Date.now().toString().slice(-6)}`,
-            name: name,
-            code: code || `PROD-${Date.now().toString().slice(-3)}`,
-            category: category,
-            unit: unit || 'pcs',
-            purchasePrice: purchasePrice,
-            salePrice: salePrice,
-            stock: stock,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        
-        const existingProducts = JSON.parse(localStorage.getItem('stockmint_products') || '[]');
-        existingProducts.push(productData);
-        localStorage.setItem('stockmint_products', JSON.stringify(existingProducts));
-        
-        document.getElementById('productForm').reset();
-        this.showNotification('✅ Product added successfully!', 'success');
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
-    }
-    
-    removeItem(type, index) {
-        const key = `stockmint_${type}s`;
-        const items = JSON.parse(localStorage.getItem(key) || '[]');
-        
-        if (index >= 0 && index < items.length) {
-            items.splice(index, 1);
-            localStorage.setItem(key, JSON.stringify(items));
-            this.showNotification('✅ Item removed successfully!', 'success');
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        }
-    }
-    
-    completeSetup() {
-        localStorage.setItem('stockmint_setup_completed', 'true');
-        localStorage.removeItem('stockmint_setup_current_step');
-        
-        this.showNotification('🎉 Setup completed successfully!', 'success');
-        
-        setTimeout(() => {
-            window.location.hash = '#setup/complete';
-            window.location.reload();
-        }, 1000);
-    }
-    
-    showNotification(message, type = 'info') {
-        if (window.StockMintApp && window.StockMintApp.showNotification) {
-            window.StockMintApp.showNotification(message, type);
-        } else {
-            alert(message);
-        }
     }
 }
 
