@@ -408,6 +408,7 @@ class StockMintApp {
   }
   
   // Get page content - UPDATE untuk handle multi-step setup
+  // Get page content - UPDATE untuk handle multi-step setup
   getPageContent(page) {
     // Feature locked page for demo users
     if (page === 'feature-locked') {
@@ -424,29 +425,47 @@ class StockMintApp {
         return this.getMasterDataContent();
     }
     
-    // Setup pages
+    // Setup pages - PERBAIKAN DI SINI
     if (page.startsWith('setup/')) {
-      // Gunakan SetupWizardMulti untuk semua halaman setup
-      const wizard = new SetupWizardMulti();
-      const hash = window.location.hash.substring(1); // Contoh: 'setup/start-new'
-      const route = hash.split('/')[1]; // Contoh: 'start-new'
+      // Cek apakah SetupWizardMulti sudah ada
+      if (typeof SetupWizardMulti === 'undefined') {
+        console.error('❌ SetupWizardMulti not loaded!');
+        return '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
+      }
       
-      // Render berdasarkan route
-      let html;
-      if (route === 'migrate') {
+      try {
+        // Buat instance wizard
+        const wizard = new SetupWizardMulti();
+        
+        // Simpan instance ke global agar bisa diakses dari event handler
+        window.currentWizard = wizard;
+        
+        // Render berdasarkan route
+        const hash = window.location.hash.substring(1);
+        const route = hash.split('/')[1];
+        
+        let html;
+        if (route === 'migrate') {
           html = wizard.renderMigratePage();
-      } else {
+        } else {
           // Set current step berdasarkan route
           wizard.currentStep = route || wizard.currentStep;
           html = wizard.render();
+        }
+        
+        // IMPORTANT: Bind events setelah timeout untuk memastikan DOM sudah dirender
+        setTimeout(() => {
+          if (window.currentWizard && window.currentWizard.bindEvents) {
+            window.currentWizard.bindEvents();
+            console.log('✅ Setup wizard events bound');
+          }
+        }, 200);
+        
+        return html;
+      } catch (error) {
+        console.error('❌ Error rendering setup wizard:', error);
+        return `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
       }
-      
-      // Bind events setelah konten dimuat
-      setTimeout(() => {
-          wizard.bindEvents();
-      }, 100);
-      
-      return html;
     }
     
     // Other pages
