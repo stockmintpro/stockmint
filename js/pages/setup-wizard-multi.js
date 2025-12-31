@@ -6,6 +6,13 @@ class SetupWizardMulti {
             this.totalSteps = 6;
             this.setupData = this.loadSavedData();
             this.autoSaveInterval = null;
+            
+            // Initialize Google Sheets API jika user bukan demo
+            this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+            if (!this.user.isDemo) {
+                this.googleSheets = new GoogleSheetsAPI();
+            }
+            
             this.initializeAutoSave();
         } catch (error) {
             console.error('Failed to initialize SetupWizard:', error);
