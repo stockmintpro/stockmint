@@ -494,15 +494,7 @@ loadPage(page) {
           wizard.currentStep = route || wizard.currentStep;
           html = wizard.render();
         }
-        
-        // IMPORTANT: Bind events setelah timeout untuk memastikan DOM sudah dirender
-        setTimeout(() => {
-          if (window.currentWizard && window.currentWizard.bindEvents) {
-            window.currentWizard.bindEvents();
-            console.log('✅ Setup wizard events bound');
-          }
-        }, 200);
-        
+      
         return html;
       } catch (error) {
         console.error('❌ Error rendering setup wizard:', error);
