@@ -401,7 +401,7 @@ class SetupWizardMulti {
         }, 'Failed to save company data');
     }
     
-    saveWarehouseData() {
+        saveWarehouseData() {
         return this.safeExecute(() => {
             const name = document.getElementById('warehouseName')?.value.trim();
             const code = document.getElementById('warehouseCode')?.value.trim() || `WH${Date.now()}`;
@@ -410,6 +410,15 @@ class SetupWizardMulti {
             
             if (!name) {
                 throw new Error('Warehouse name is required');
+            }
+            
+            // Check plan restrictions
+            if (this.userPlan === 'basic' && this.setupData.warehouses?.length >= 1) {
+                throw new Error('BASIC plan only allows 1 warehouse. Upgrade to PRO for multiple warehouses.');
+            }
+            
+            if (this.userPlan === 'pro' && this.setupData.warehouses?.length >= 3) {
+                throw new Error('PRO plan allows maximum 3 warehouses. Upgrade to ADVANCE for unlimited.');
             }
             
             const warehouse = {
@@ -436,18 +445,28 @@ class SetupWizardMulti {
             // Simpan ke localStorage
             localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
             
-            // Reset form
+            // Reset form dan langsung update list
             const form = document.getElementById('warehouseForm');
             if (form) form.reset();
+            
+            // Update UI immediately
+            this.updateWarehouseList();
+            
+            // Auto-enable next button jika sudah ada minimal 1 warehouse
+            setTimeout(() => {
+                const nextBtn = document.getElementById('nextToSupplier');
+                if (nextBtn && this.setupData.warehouses.length > 0) {
+                    nextBtn.disabled = false;
+                }
+            }, 100);
             
             return true;
         }, 'Failed to save warehouse data');
     }
-    
-    saveSupplierData() {
+
+        saveSupplierData() {
         return this.safeExecute(() => {
             const name = document.getElementById('supplierName')?.value.trim();
-            const code = document.getElementById('supplierCode')?.value.trim() || `SUP${Date.now()}`;
             const contact = document.getElementById('supplierContact')?.value.trim() || '';
             const phone = document.getElementById('supplierPhone')?.value.trim() || '';
             const email = document.getElementById('supplierEmail')?.value.trim() || '';
@@ -460,8 +479,16 @@ class SetupWizardMulti {
                 throw new Error('Please enter a valid email address');
             }
             
+            // Auto-generate supplier code jika tidak diisi
+            const codeInput = document.getElementById('supplierCode');
+            let code = codeInput?.value.trim();
+            if (!code) {
+                code = `SUP${Date.now().toString().slice(-6)}`;
+                if (codeInput) codeInput.value = code; // Tampilkan di form
+            }
+            
             const supplier = {
-                id: `SUP${Date.now()}`,
+                id: code, // Gunakan code sebagai ID
                 name,
                 code,
                 contact,
@@ -481,15 +508,32 @@ class SetupWizardMulti {
             // Simpan ke localStorage
             localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
             
-            // Reset form
+            // Reset form dan update list
             const form = document.getElementById('supplierForm');
-            if (form) form.reset();
+            if (form) {
+                // Jangan reset code field karena sudah diisi otomatis
+                form.querySelector('#supplierName').value = '';
+                form.querySelector('#supplierContact').value = '';
+                form.querySelector('#supplierPhone').value = '';
+                form.querySelector('#supplierEmail').value = '';
+            }
+            
+            // Update UI immediately
+            this.updateSupplierList();
+            
+            // Auto-enable next button
+            setTimeout(() => {
+                const nextBtn = document.getElementById('nextToCustomer');
+                if (nextBtn && this.setupData.suppliers.length > 0) {
+                    nextBtn.disabled = false;
+                }
+            }, 100);
             
             return true;
         }, 'Failed to save supplier data');
     }
     
-    saveCustomerData() {
+        saveCustomerData() {
         return this.safeExecute(() => {
             const name = document.getElementById('customerName')?.value.trim();
             const type = document.getElementById('customerType')?.value || 'retail';
@@ -506,8 +550,11 @@ class SetupWizardMulti {
                 throw new Error('Please enter a valid email address');
             }
             
+            // Auto-generate customer ID
+            const customerId = `CUST${Date.now().toString().slice(-6)}`;
+            
             const customer = {
-                id: `CUST${Date.now()}`,
+                id: customerId,
                 name,
                 type,
                 contact,
@@ -528,9 +575,20 @@ class SetupWizardMulti {
             // Simpan ke localStorage
             localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
             
-            // Reset form
+            // Reset form dan update list
             const form = document.getElementById('customerForm');
             if (form) form.reset();
+            
+            // Update UI immediately
+            this.updateCustomerList();
+            
+            // Auto-enable next button
+            setTimeout(() => {
+                const nextBtn = document.getElementById('nextToCategory');
+                if (nextBtn && this.setupData.customers.length > 0) {
+                    nextBtn.disabled = false;
+                }
+            }, 100);
             
             return true;
         }, 'Failed to save customer data');
@@ -1643,176 +1701,133 @@ class SetupWizardMulti {
     // yang ditangani di bindNavigationEvents()
     
     renderWarehouseStep() {
-        // Kode render warehouse step (TIDAK DIUBAH dari versi sebelumnya)
-        // Hanya perlu mengupdate button untuk menggunakan data-action
-        const savedWarehouses = this.setupData.warehouses || [];
-        const completion = this.getCompletionPercentage();
-        
-        return `
-            <div class="page-content">
-                <div class="setup-header">
-                    <h1>🏭 Warehouse Setup</h1>
-                    <p class="page-subtitle">Step 2 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
-                    
-                    <div class="setup-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(2/this.totalSteps)*100}%"></div>
-                        </div>
-                        <div class="progress-steps">
-                            <span class="step completed">✓</span>
-                            <span class="step active">2</span>
-                            <span class="step">3</span>
-                            <span class="step">4</span>
-                            <span class="step">5</span>
-                            <span class="step">6</span>
-                        </div>
-                    </div>
-                </div>
+    const savedWarehouses = this.setupData.warehouses || [];
+    const completion = this.getCompletionPercentage();
+    const warehouseLimit = this.userPlan === 'basic' ? 1 : 
+                          this.userPlan === 'pro' ? 3 : 
+                          Infinity;
+    
+    return `
+        <div class="page-content">
+            <div class="setup-header">
+                <h1>🏭 Warehouse Setup</h1>
+                <p class="page-subtitle">Step 2 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
                 
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-warehouse"></i> Add Warehouse</h3>
-                        <p>Warehouses are where you store your inventory. Add at least one warehouse.</p>
+                ${this.userPlan === 'basic' ? `
+                    <div class="plan-restriction" style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px 15px; border-radius: 8px; margin: 10px 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-info-circle"></i>
+                        <span><strong>BASIC Plan:</strong> Only 1 warehouse allowed. Upgrade to PRO for multiple warehouses.</span>
                     </div>
-                    <div class="card-body">
-                        <form id="warehouseForm">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="warehouseName">Warehouse Name *</label>
-                                    <input type="text" id="warehouseName" class="form-control" required 
-                                           placeholder="e.g., Main Warehouse">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="warehouseCode">Warehouse Code</label>
-                                    <input type="text" id="warehouseCode" class="form-control" 
-                                           placeholder="e.g., WH-001">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="warehouseAddress">Address</label>
-                                <textarea id="warehouseAddress" class="form-control" rows="2" 
-                                          placeholder="Warehouse address (optional)"></textarea>
-                            </div>
-                            
-                            <div class="form-check" style="margin: 15px 0;">
-                                <input type="checkbox" id="isPrimary" class="form-check-input" checked>
-                                <label for="isPrimary" class="form-check-label">
-                                    Set as primary warehouse (default storage location)
-                                </label>
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i> Add Warehouse
-                            </button>
-                        </form>
-                        
-                        ${savedWarehouses.length > 0 ? `
-                            <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Warehouses (${savedWarehouses.length})</h4>
-                                <div class="items-list">
-                                    ${savedWarehouses.map((wh, index) => `
-                                        <div class="item-card">
-                                            <div class="item-header">
-                                                <strong>${wh.name}</strong>
-                                                ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
-                                            </div>
-                                            <div class="item-details">
-                                                ${wh.code ? `Code: ${wh.code}` : ''}
-                                                ${wh.address ? `<br>${wh.address}` : ''}
-                                            </div>
-                                            <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="setup-actions">
-                            <button type="button" class="btn-secondary" data-action="back" data-step="company">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            <button type="button" class="btn-primary" id="nextToSupplier" 
-                                    ${savedWarehouses.length === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-right"></i> Next: Add Supplier
-                            </button>
-                        </div>
+                ` : ''}
+                
+                ${this.userPlan === 'pro' ? `
+                    <div class="plan-restriction" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 10px 15px; border-radius: 8px; margin: 10px 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-info-circle"></i>
+                        <span><strong>PRO Plan:</strong> Maximum 3 warehouses allowed.</span>
+                    </div>
+                ` : ''}
+                
+                <div class="setup-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${(2/this.totalSteps)*100}%"></div>
+                    </div>
+                    <div class="progress-steps">
+                        <span class="step completed">✓</span>
+                        <span class="step active">2</span>
+                        <span class="step">3</span>
+                        <span class="step">4</span>
+                        <span class="step">5</span>
+                        <span class="step">6</span>
                     </div>
                 </div>
             </div>
             
-            <style>
-                .saved-items {
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    padding: 20px;
-                }
-                
-                .items-list {
-                    margin-top: 15px;
-                }
-                
-                .item-card {
-                    background: white;
-                    border: 1px solid #dee2e6;
-                    border-radius: 6px;
-                    padding: 15px;
-                    margin-bottom: 10px;
-                    position: relative;
-                }
-                
-                .item-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 8px;
-                }
-                
-                .badge-primary {
-                    background: #19BEBB;
-                    color: white;
-                    padding: 3px 8px;
-                    border-radius: 12px;
-                    font-size: 12px;
-                }
-                
-                .item-details {
-                    color: #666;
-                    font-size: 14px;
-                }
-                
-                .btn-remove {
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    background: #fee2e2;
-                    border: none;
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50%;
-                    color: #dc2626;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: background 0.2s;
-                }
-                
-                .btn-remove:hover {
-                    background: #fecaca;
-                }
-                
-                .step.completed {
-                    background: #10b981;
-                    color: white;
-                }
-            </style>
-        `;
-    }
-
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-warehouse"></i> Add Warehouse</h3>
+                    <p>Warehouses are where you store your inventory. ${this.userPlan === 'basic' ? 'BASIC plan allows 1 warehouse.' : this.userPlan === 'pro' ? 'PRO plan allows up to 3 warehouses.' : 'ADVANCE plan allows unlimited warehouses.'}</p>
+                </div>
+                <div class="card-body">
+                    <form id="warehouseForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="warehouseName">Warehouse Name *</label>
+                                <input type="text" id="warehouseName" class="form-control" required 
+                                       placeholder="e.g., Main Warehouse">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="warehouseCode">Warehouse Code</label>
+                                <input type="text" id="warehouseCode" class="form-control" 
+                                       placeholder="e.g., WH-001">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="warehouseAddress">Address</label>
+                            <textarea id="warehouseAddress" class="form-control" rows="2" 
+                                      placeholder="Warehouse address (optional)"></textarea>
+                        </div>
+                        
+                        <div class="form-check" style="margin: 15px 0;">
+                            <input type="checkbox" id="isPrimary" class="form-check-input" ${savedWarehouses.length === 0 ? 'checked' : ''}>
+                            <label for="isPrimary" class="form-check-label">
+                                Set as primary warehouse (default storage location)
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary" ${savedWarehouses.length >= warehouseLimit ? 'disabled' : ''}>
+                            <i class="fas fa-plus"></i> ${savedWarehouses.length >= warehouseLimit ? 'Warehouse Limit Reached' : 'Add Warehouse'}
+                        </button>
+                        
+                        ${savedWarehouses.length >= warehouseLimit ? `
+                            <p style="color: #ef4444; margin-top: 10px; font-size: 14px;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                You have reached the maximum number of warehouses for your plan (${warehouseLimit}).
+                                ${this.userPlan !== 'advance' ? 'Upgrade your plan to add more warehouses.' : ''}
+                            </p>
+                        ` : ''}
+                    </form>
+                    
+                    ${savedWarehouses.length > 0 ? `
+                        <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Warehouses (${savedWarehouses.length}/${warehouseLimit})</h4>
+                            <div class="items-list">
+                                ${savedWarehouses.map((wh, index) => `
+                                    <div class="item-card">
+                                        <div class="item-header">
+                                            <strong>${wh.name}</strong>
+                                            ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
+                                        </div>
+                                        <div class="item-details">
+                                            ${wh.code ? `Code: ${wh.code}` : ''}
+                                            ${wh.address ? `<br>${wh.address}` : ''}
+                                        </div>
+                                        ${savedWarehouses.length > 1 ? `
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="setup-actions">
+                        <button type="button" class="btn-secondary" data-action="back" data-step="company">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="button" class="btn-primary" id="nextToSupplier" 
+                                ${savedWarehouses.length === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-right"></i> Next: Add Supplier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
         renderSupplierStep() {
         const savedSuppliers = this.setupData.suppliers || [];
         const completion = this.getCompletionPercentage();
