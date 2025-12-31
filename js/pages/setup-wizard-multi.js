@@ -356,6 +356,31 @@ class SetupWizardMulti {
             }
         });
     }
+
+        // Fix untuk event binding yang tidak bekerja
+    forceBindEvents() {
+        console.log('🔧 Force binding events for step:', this.currentStep);
+        
+        // Hapus semua event listeners yang ada
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+        });
+        
+        // Bind ulang semua events
+        this.bindFormEvents();
+        this.bindNavigationEvents();
+        
+        // Update semua lists
+        this.updateWarehouseList();
+        this.updateSupplierList();
+        this.updateCustomerList();
+        this.updateCategoryList();
+        this.updateProductList();
+        
+        console.log('✅ Events force-bound successfully');
+    }
     
     // ===== DATA SAVING METHODS =====
     
