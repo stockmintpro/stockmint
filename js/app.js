@@ -424,30 +424,29 @@ class StockMintApp {
         return this.getMasterDataContent();
     }
     
-    // Setup pages - PERBAIKI DI SINI! 
-    // app.js - di dalam method getPageContent()
+    // Setup pages
     if (page.startsWith('setup/')) {
-    // Gunakan SetupWizardMulti untuk semua halaman setup
-    const wizard = new SetupWizardMulti();
-    const hash = window.location.hash.substring(1); // Contoh: 'setup/start-new'
-    const route = hash.split('/')[1]; // Contoh: 'start-new'
-    
-    // Render berdasarkan route
-    let html;
-    if (route === 'migrate') {
-        html = wizard.renderMigratePage();
-    } else {
-        // Set current step berdasarkan route
-        wizard.currentStep = route || wizard.currentStep;
-        html = wizard.render();
-    }
-    
-    // Bind events setelah konten dimuat
-    setTimeout(() => {
-        wizard.bindEvents();
-    }, 100);
-    
-    return html;
+      // Gunakan SetupWizardMulti untuk semua halaman setup
+      const wizard = new SetupWizardMulti();
+      const hash = window.location.hash.substring(1); // Contoh: 'setup/start-new'
+      const route = hash.split('/')[1]; // Contoh: 'start-new'
+      
+      // Render berdasarkan route
+      let html;
+      if (route === 'migrate') {
+          html = wizard.renderMigratePage();
+      } else {
+          // Set current step berdasarkan route
+          wizard.currentStep = route || wizard.currentStep;
+          html = wizard.render();
+      }
+      
+      // Bind events setelah konten dimuat
+      setTimeout(() => {
+          wizard.bindEvents();
+      }, 100);
+      
+      return html;
     }
     
     // Other pages
@@ -659,7 +658,7 @@ class StockMintApp {
     `;
   }
   
-  // Master Data content with plan restrictions
+  // Master Data content with plan restrictions DAN RESET FUNCTIONALITY
   getMasterDataContent() {
     const isDemo = this.currentPlan === 'demo';
     const isBasic = this.currentPlan === 'basic';
@@ -782,6 +781,23 @@ class StockMintApp {
               '<span class="feature-access">✅ Available</span>'}
           </div>
         </div>
+        
+        <!-- RESET DATA SECTION -->
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <h4><i class="fas fa-redo"></i> Reset Data</h4>
+            <p>Reset your setup data or perform a full reset to demo mode.</p>
+            
+            <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn-warning" id="resetSetupBtn" style="background: #f59e0b; color: white;">
+                    <i class="fas fa-undo"></i> Reset Setup Only
+                </button>
+                <button class="btn-danger" id="fullResetBtn" style="background: #ef4444; color: white;">
+                    <i class="fas fa-trash"></i> Full Reset (Back to Demo)
+                </button>
+            </div>
+            
+            <div id="resetStatus" style="margin-top: 10px;"></div>
+        </div>
       </div>
       
       <style>
@@ -823,11 +839,93 @@ class StockMintApp {
           gap: 10px;
           color: #856404;
         }
+        
+        .btn-warning, .btn-danger {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706 !important;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626 !important;
+            transform: translateY(-2px);
+        }
       </style>
+      
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset Setup Only (data setup saja)
+            const resetSetupBtn = document.getElementById('resetSetupBtn');
+            if (resetSetupBtn) {
+                resetSetupBtn.addEventListener('click', function() {
+                    if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
+                        const resetStatus = document.getElementById('resetStatus');
+                        resetStatus.innerHTML = '<div style="color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> Resetting setup data...</div>';
+                        
+                        setTimeout(() => {
+                            // Hapus semua data setup
+                            localStorage.removeItem('stockmint_setup_completed');
+                            localStorage.removeItem('stockmint_company');
+                            localStorage.removeItem('stockmint_warehouses');
+                            localStorage.removeItem('stockmint_suppliers');
+                            localStorage.removeItem('stockmint_customers');
+                            localStorage.removeItem('stockmint_categories');
+                            localStorage.removeItem('stockmint_products');
+                            localStorage.removeItem('stockmint_opening_stocks');
+                            localStorage.removeItem('stockmint_setup_current_step');
+                            
+                            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Setup data reset successfully! Redirecting to setup page...</div>';
+                            
+                            setTimeout(() => {
+                                window.location.hash = '#setup/start-new';
+                                window.location.reload();
+                            }, 1500);
+                        }, 1000);
+                    }
+                });
+            }
+            
+            // Full Reset (kembali ke demo)
+            const fullResetBtn = document.getElementById('fullResetBtn');
+            if (fullResetBtn) {
+                fullResetBtn.addEventListener('click', function() {
+                    if (confirm('FULL RESET: This will delete ALL data and return to demo mode. Are you absolutely sure?')) {
+                        const resetStatus = document.getElementById('resetStatus');
+                        resetStatus.innerHTML = '<div style="color: #ef4444;"><i class="fas fa-spinner fa-spin"></i> Performing full reset...</div>';
+                        
+                        setTimeout(() => {
+                            // Hapus SEMUA data
+                            localStorage.clear();
+                            
+                            // Set plan ke demo
+                            localStorage.setItem('stockmint_plan', 'demo');
+                            
+                            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Full reset completed! Redirecting to login...</div>';
+                            
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 1500);
+                        }, 1000);
+                    }
+                });
+            }
+        });
+      </script>
     `;
   }
   
-  // Get setup wizard content
+  // Get setup wizard content (tidak digunakan lagi, diganti dengan SetupWizardMulti)
   getSetupWizardContent(type) {
     if (type === 'start-new') {
         return `
@@ -1293,6 +1391,8 @@ class StockMintApp {
   initPageScripts(page) {
     if (page === 'dashboard') {
       this.initDashboard();
+    } else if (page === 'master-data') {
+      this.initMasterData();
     }
   }
   
@@ -1303,6 +1403,65 @@ class StockMintApp {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         this.showNotification('Dashboard refreshed!', 'success');
+      });
+    }
+  }
+  
+  // Initialize master data page
+  initMasterData() {
+    // Reset Setup Only (data setup saja)
+    const resetSetupBtn = document.getElementById('resetSetupBtn');
+    if (resetSetupBtn) {
+      resetSetupBtn.addEventListener('click', () => {
+        if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
+          const resetStatus = document.getElementById('resetStatus');
+          resetStatus.innerHTML = '<div style="color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> Resetting setup data...</div>';
+          
+          setTimeout(() => {
+            // Hapus semua data setup
+            localStorage.removeItem('stockmint_setup_completed');
+            localStorage.removeItem('stockmint_company');
+            localStorage.removeItem('stockmint_warehouses');
+            localStorage.removeItem('stockmint_suppliers');
+            localStorage.removeItem('stockmint_customers');
+            localStorage.removeItem('stockmint_categories');
+            localStorage.removeItem('stockmint_products');
+            localStorage.removeItem('stockmint_opening_stocks');
+            localStorage.removeItem('stockmint_setup_current_step');
+            
+            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Setup data reset successfully! Redirecting to setup page...</div>';
+            
+            setTimeout(() => {
+              window.location.hash = '#setup/start-new';
+              window.location.reload();
+            }, 1500);
+          }, 1000);
+        }
+      });
+    }
+    
+    // Full Reset (kembali ke demo)
+    const fullResetBtn = document.getElementById('fullResetBtn');
+    if (fullResetBtn) {
+      fullResetBtn.addEventListener('click', () => {
+        if (confirm('FULL RESET: This will delete ALL data and return to demo mode. Are you absolutely sure?')) {
+          const resetStatus = document.getElementById('resetStatus');
+          resetStatus.innerHTML = '<div style="color: #ef4444;"><i class="fas fa-spinner fa-spin"></i> Performing full reset...</div>';
+          
+          setTimeout(() => {
+            // Hapus SEMUA data
+            localStorage.clear();
+            
+            // Set plan ke demo
+            localStorage.setItem('stockmint_plan', 'demo');
+            
+            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Full reset completed! Redirecting to login...</div>';
+            
+            setTimeout(() => {
+              window.location.href = 'index.html';
+            }, 1500);
+          }, 1000);
+        }
       });
     }
   }
