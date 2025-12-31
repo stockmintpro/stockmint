@@ -95,18 +95,48 @@ class SetupWizardMulti {
         }
     }
     
-    bindCompanyForm() {
+        bindCompanyForm() {
         const form = document.getElementById('companyForm');
+        console.log('🔄 Binding company form...', form);
+        
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listeners
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            const updatedForm = document.getElementById('companyForm');
+            
+            updatedForm.addEventListener('submit', (e) => {
                 e.preventDefault();
+                console.log('📝 Company form submitted - preventDefault called');
+                
                 try {
+                    console.log('💾 Calling saveCompanyData...');
                     this.saveCompanyData();
+                    console.log('✅ Company data saved, redirecting to warehouse...');
+                    
+                    // Force hash change
                     window.location.hash = '#setup/warehouse';
+                    console.log('🔗 Hash changed to:', window.location.hash);
+                    
                 } catch (error) {
-                    console.error('Error saving company:', error);
+                    console.error('❌ Error saving company:', error);
+                    this.showError(error.message, 'error');
                 }
             });
+            
+            console.log('✅ Company form events bound');
+        } else {
+            console.error('❌ Company form not found!');
+            
+            // Coba cari lagi setelah delay
+            setTimeout(() => {
+                const formRetry = document.getElementById('companyForm');
+                if (formRetry) {
+                    console.log('🔄 Found form on retry, binding...');
+                    this.bindCompanyForm();
+                }
+            }, 500);
         }
     }
     
