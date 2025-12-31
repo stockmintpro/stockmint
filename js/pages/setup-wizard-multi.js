@@ -2214,6 +2214,158 @@ class SetupWizardMulti {
         `;
     }
     
+        renderCompleteStep() {
+        const completion = 100; // Setup selesai
+        
+        return `
+            <div class="page-content">
+                <div class="setup-complete">
+                    <div class="complete-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h1>🎉 Setup Complete!</h1>
+                    <p class="page-subtitle">Your StockMint account is ready to use (Progress: ${completion}%)</p>
+                    
+                    <div class="summary-card">
+                        <h3><i class="fas fa-clipboard-check"></i> Setup Summary</h3>
+                        <div class="summary-items">
+                            <div class="summary-item">
+                                <i class="fas fa-building"></i>
+                                <div>
+                                    <strong>Company</strong>
+                                    <span>${this.setupData.company?.name || 'Not set'}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <i class="fas fa-warehouse"></i>
+                                <div>
+                                    <strong>Warehouses</strong>
+                                    <span>${this.setupData.warehouses?.length || 0} added</span>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <i class="fas fa-truck"></i>
+                                <div>
+                                    <strong>Suppliers</strong>
+                                    <span>${this.setupData.suppliers?.length || 0} added</span>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <i class="fas fa-users"></i>
+                                <div>
+                                    <strong>Customers</strong>
+                                    <span>${this.setupData.customers?.length || 0} added</span>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <i class="fas fa-tags"></i>
+                                <div>
+                                    <strong>Categories</strong>
+                                    <span>${this.setupData.categories?.length || 0} added</span>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <i class="fas fa-box"></i>
+                                <div>
+                                    <strong>Products</strong>
+                                    <span>${this.setupData.products?.length || 0} added</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="complete-actions">
+                        <button class="btn-primary" onclick="window.location.hash='#dashboard'">
+                            <i class="fas fa-rocket"></i> Go to Dashboard
+                        </button>
+                        <button class="btn-secondary" onclick="window.location.hash='#master-data'">
+                            <i class="fas fa-cog"></i> Manage Data
+                        </button>
+                        <button class="btn-secondary" onclick="window.setupWizard.exportSetupData()">
+                            <i class="fas fa-download"></i> Export Backup
+                        </button>
+                    </div>
+                    
+                    <div class="tips" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h4><i class="fas fa-lightbulb"></i> Next Steps:</h4>
+                        <ul>
+                            <li>Add more products using the Products page</li>
+                            <li>Set up your tax rates in Master Data</li>
+                            <li>Configure user permissions if you have a team</li>
+                            <li>Connect your bank account for payments</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .setup-complete {
+                    text-align: center;
+                    padding: 40px 20px;
+                }
+                
+                .complete-icon {
+                    font-size: 80px;
+                    color: #10b981;
+                    margin-bottom: 20px;
+                }
+                
+                .summary-card {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 25px;
+                    margin: 30px auto;
+                    max-width: 600px;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+                }
+                
+                .summary-items {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+                
+                .summary-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    padding: 15px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    text-align: left;
+                }
+                
+                .summary-item i {
+                    font-size: 24px;
+                    color: #19BEBB;
+                }
+                
+                .summary-item strong {
+                    display: block;
+                    margin-bottom: 5px;
+                }
+                
+                .summary-item span {
+                    color: #666;
+                    font-size: 14px;
+                }
+                
+                .complete-actions {
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                    margin: 30px 0;
+                    flex-wrap: wrap;
+                }
+            </style>
+        `;
+    }
     
     // NOTE: Render methods untuk supplier, customer, category, product, dan complete
     // perlu diupdate dengan cara yang sama seperti warehouse:
