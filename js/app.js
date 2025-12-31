@@ -172,26 +172,40 @@ class StockMintApp {
     }
   }
   
-  // Setup routing and navigation
-  setupRouting() {
+ // Setup routing and navigation
+    setupRouting() {
     console.log('📍 Setting up routing...');
     
     // Handle hash changes
     window.addEventListener('hashchange', () => {
+      console.log('🔗 Hash changed to:', window.location.hash);
       this.handleRouteChange();
     });
     
-    // Initial route handling
+    // Juga listen untuk popstate (back/forward buttons)
+    window.addEventListener('popstate', () => {
+      console.log('⏪ Popstate triggered');
+      setTimeout(() => this.handleRouteChange(), 100);
+    });
+    
+    // Initial route handling - beri delay untuk memastikan DOM siap
     setTimeout(() => {
+      console.log('🚀 Initial route handling...');
       this.handleRouteChange();
-    }, 200);
+    }, 300);
   }
   
-  // Handle route changes
+    // Handle route changes
   handleRouteChange() {
     try {
       const hash = window.location.hash.substring(1) || 'dashboard';
-      console.log('➡️ Navigating to:', hash);
+      console.log('➡️ Navigating to:', hash, 'Current page:', this.currentPage);
+      
+      // Jika sudah di halaman yang sama, skip
+      if (hash === this.currentPage) {
+        console.log('⏭️ Already on this page, skipping...');
+        return;
+      }
       
       // Check if feature is allowed for current plan
       if (!this.isPageAllowedForPlan(hash)) {
@@ -219,6 +233,8 @@ class StockMintApp {
       
       // Update document title
       document.title = `StockMint - ${this.getPageTitle(hash)}`;
+      
+      console.log('✅ Page navigation completed');
       
     } catch (error) {
       console.error('❌ Error handling route change:', error);
@@ -281,13 +297,15 @@ class StockMintApp {
     this.loadPage(hash);
   }
   
-  // Load page content
+    // Load page content
   loadPage(page) {
     const contentArea = document.getElementById('contentArea');
     if (!contentArea) {
       console.error('❌ Content area not found');
       return;
     }
+    
+    console.log('📄 Loading page:', page);
     
     // Show loading
     contentArea.innerHTML = `
@@ -300,12 +318,82 @@ class StockMintApp {
     // Update navbar title
     this.updateNavbarTitle(page);
     
-    // Load actual content after delay
+    // Load actual content - beri delay sedikit
     setTimeout(() => {
       try {
-        contentArea.innerHTML = this.getPageContent(page);
+        const html = this.getPageContent(page);
+        contentArea.innerHTML = html;
+        
+        // SPECIAL HANDLING UNTUK SETUP WIZARD
+        if (page.startsWith('setup/')) {
+          console.log('🔧 Setting up wizard events for:', page);
+          
+          // Tunggu sedikit untuk memastikan DOM sudah dirender
+          setTimeout(() => {
+            // Coba bind events dengan beberapa cara
+            
+            // Cara 1: Jika ada global instance
+            if (window.currentWizard && window.currentWizard.bindEvents) {
+              console.log('✅ Binding wizard events from global instance');
+              window.currentWizard.bindEvents();
+            }
+            
+            // Cara 2: Coba buat instance baru
+            else if (typeof SetupWizardMulti !== 'undefined') {
+              try {
+                console.log('🔄 Creating new wizard instance');
+                const wizard = new SetupWizardMulti();
+                window.currentWizard = wizard;
+                
+                // Coba bind events setelah delay
+                setTimeout(() => {
+                  if (wizard.bindEvents) {
+                    wizard.bindEvents();
+                    console.log('✅ Wizard events bound (new instance)');
+                  }
+                }, 200);
+              } catch (wizardError) {
+                console.error('❌ Failed to create wizard:', wizardError);
+              }
+            }
+            
+            // Cara 3: Cari form dan bind manual
+            setTimeout(() => {
+              const forms = contentArea.querySelectorAll('form');
+              console.log('📋 Found forms:', forms.length);
+              
+              forms.forEach(form => {
+                console.log('Form ID:', form.id);
+                
+                // Bind company form
+                if (form.id === 'companyForm') {
+                  form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    console.log('🏢 Company form submitted');
+                    
+                    // Coba simpan data dan redirect
+                    if (window.currentWizard && window.currentWizard.saveCompanyData) {
+                      try {
+                        window.currentWizard.saveCompanyData();
+                        window.location.hash = '#setup/warehouse';
+                      } catch (error) {
+                        console.error('Error saving company:', error);
+                        alert('Error: ' + error.message);
+                      }
+                    } else {
+                      console.error('Wizard method not available');
+                      alert('Setup wizard not initialized properly');
+                    }
+                  });
+                }
+              });
+            }, 300);
+          }, 100);
+        }
+        
         this.initPageScripts(page);
         console.log(`✅ Page "${page}" loaded`);
+        
       } catch (error) {
         console.error(`❌ Error loading page "${page}":`, error);
         contentArea.innerHTML = this.getErrorPage(page, error);
