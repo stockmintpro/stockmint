@@ -1759,6 +1759,461 @@ class SetupWizardMulti {
             </style>
         `;
     }
+
+        renderSupplierStep() {
+        const savedSuppliers = this.setupData.suppliers || [];
+        const completion = this.getCompletionPercentage();
+        
+        return `
+            <div class="page-content">
+                <div class="setup-header">
+                    <h1>🤝 Supplier Setup</h1>
+                    <p class="page-subtitle">Step 3 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
+                    
+                    <div class="setup-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(3/this.totalSteps)*100}%"></div>
+                        </div>
+                        <div class="progress-steps">
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step active">3</span>
+                            <span class="step">4</span>
+                            <span class="step">5</span>
+                            <span class="step">6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-truck"></i> Add Supplier</h3>
+                        <p>Suppliers are companies that provide you with products. Add at least one supplier.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="supplierForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="supplierName">Supplier Name *</label>
+                                    <input type="text" id="supplierName" class="form-control" required 
+                                           placeholder="e.g., PT. Supplier Maju">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="supplierCode">Supplier Code</label>
+                                    <input type="text" id="supplierCode" class="form-control" 
+                                           placeholder="e.g., SUP-001">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="supplierContact">Contact Person</label>
+                                <input type="text" id="supplierContact" class="form-control" 
+                                       placeholder="e.g., John Doe">
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="supplierPhone">Phone Number</label>
+                                    <input type="tel" id="supplierPhone" class="form-control" 
+                                       placeholder="e.g., 08123456789">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="supplierEmail">Email</label>
+                                    <input type="email" id="supplierEmail" class="form-control" 
+                                           placeholder="e.g., supplier@email.com">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Supplier
+                            </button>
+                        </form>
+                        
+                        ${savedSuppliers.length > 0 ? `
+                            <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${savedSuppliers.length})</h4>
+                                <div class="items-list">
+                                    ${savedSuppliers.map((sup, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${sup.name}</strong>
+                                            </div>
+                                            <div class="item-details">
+                                                ${sup.contact ? `Contact: ${sup.contact}` : ''}
+                                                ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
+                                                ${sup.code ? `<br>Code: ${sup.code}` : ''}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="warehouse">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn-primary" id="nextToCustomer" 
+                                    ${savedSuppliers.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Customer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+        renderCustomerStep() {
+        const savedCustomers = this.setupData.customers || [];
+        const completion = this.getCompletionPercentage();
+        
+        return `
+            <div class="page-content">
+                <div class="setup-header">
+                    <h1>👥 Customer Setup</h1>
+                    <p class="page-subtitle">Step 4 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
+                    
+                    <div class="setup-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(4/this.totalSteps)*100}%"></div>
+                        </div>
+                        <div class="progress-steps">
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step active">4</span>
+                            <span class="step">5</span>
+                            <span class="step">6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Add Customer</h3>
+                        <p>Customers are who buy products from you. Add at least one customer.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="customerForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="customerName">Customer Name *</label>
+                                    <input type="text" id="customerName" class="form-control" required 
+                                           placeholder="e.g., PT. Pelanggan Setia">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="customerType">Customer Type</label>
+                                    <select id="customerType" class="form-control">
+                                        <option value="retail">Retail</option>
+                                        <option value="wholesale">Wholesale</option>
+                                        <option value="corporate">Corporate</option>
+                                        <option value="individual">Individual</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customerContact">Contact Person</label>
+                                <input type="text" id="customerContact" class="form-control" 
+                                       placeholder="e.g., Jane Smith">
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="customerPhone">Phone Number</label>
+                                    <input type="tel" id="customerPhone" class="form-control" 
+                                           placeholder="e.g., 08123456789">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="customerEmail">Email</label>
+                                    <input type="email" id="customerEmail" class="form-control" 
+                                           placeholder="e.g., customer@email.com">
+                                </div>
+                            </div>
+                            
+                            <div class="form-check" style="margin: 15px 0;">
+                                <input type="checkbox" id="customerTaxable" class="form-check-input" checked>
+                                <label for="customerTaxable" class="form-check-label">
+                                    This customer is taxable
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Customer
+                            </button>
+                        </form>
+                        
+                        ${savedCustomers.length > 0 ? `
+                            <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${savedCustomers.length})</h4>
+                                <div class="items-list">
+                                    ${savedCustomers.map((cust, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${cust.name}</strong>
+                                                <span class="badge-customer">${cust.type || 'retail'}</span>
+                                            </div>
+                                            <div class="item-details">
+                                                ${cust.contact ? `Contact: ${cust.contact}` : ''}
+                                                ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
+                                                ${cust.email ? `<br>Email: ${cust.email}` : ''}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="supplier">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn-primary" id="nextToCategory" 
+                                    ${savedCustomers.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Category
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+        renderCategoryStep() {
+        const savedCategories = this.setupData.categories || [];
+        const completion = this.getCompletionPercentage();
+        
+        return `
+            <div class="page-content">
+                <div class="setup-header">
+                    <h1>🏷️ Category Setup</h1>
+                    <p class="page-subtitle">Step 5 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
+                    
+                    <div class="setup-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(5/this.totalSteps)*100}%"></div>
+                        </div>
+                        <div class="progress-steps">
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step active">5</span>
+                            <span class="step">6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tags"></i> Add Product Category</h3>
+                        <p>Categories help organize your products. Add at least one category.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="categoryForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="categoryName">Category Name *</label>
+                                    <input type="text" id="categoryName" class="form-control" required 
+                                           placeholder="e.g., Electronics">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="categoryCode">Category Code</label>
+                                    <input type="text" id="categoryCode" class="form-control" 
+                                           placeholder="e.g., CAT-001">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="categoryDescription">Description</label>
+                                <textarea id="categoryDescription" class="form-control" rows="2" 
+                                          placeholder="Category description (optional)"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </form>
+                        
+                        ${savedCategories.length > 0 ? `
+                            <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${savedCategories.length})</h4>
+                                <div class="items-list">
+                                    ${savedCategories.map((cat, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${cat.name}</strong>
+                                                ${cat.code ? `<span>${cat.code}</span>` : ''}
+                                            </div>
+                                            <div class="item-details">
+                                                ${cat.description || 'No description'}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="category">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="customer">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn-primary" id="nextToProduct" 
+                                    ${savedCategories.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+        renderProductStep() {
+        const savedProducts = this.setupData.products || [];
+        const categories = this.setupData.categories || [];
+        const completion = this.getCompletionPercentage();
+        
+        return `
+            <div class="page-content">
+                <div class="setup-header">
+                    <h1>📦 Product Setup</h1>
+                    <p class="page-subtitle">Step 6 of ${this.totalSteps} - Setup Progress: ${completion}%</p>
+                    
+                    <div class="setup-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(6/this.totalSteps)*100}%"></div>
+                        </div>
+                        <div class="progress-steps">
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step completed">✓</span>
+                            <span class="step active">6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-box"></i> Add Product</h3>
+                        <p>Add your first product to complete the setup. You can add more later.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="productForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="productName">Product Name *</label>
+                                    <input type="text" id="productName" class="form-control" required 
+                                           placeholder="e.g., Laptop Dell Inspiron">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="productCode">Product Code (SKU)</label>
+                                    <input type="text" id="productCode" class="form-control" 
+                                           placeholder="e.g., PROD-001">
+                                </div>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="productCategory">Category *</label>
+                                    <select id="productCategory" class="form-control" required>
+                                        <option value="">Select Category</option>
+                                        ${categories.map(cat => `
+                                            <option value="${cat.id || cat.name}">${cat.name}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="productUnit">Unit</label>
+                                    <input type="text" id="productUnit" class="form-control" 
+                                           value="pcs" placeholder="e.g., pcs, kg, box">
+                                </div>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="purchasePrice">Purchase Price (Rp)</label>
+                                    <input type="number" id="purchasePrice" class="form-control" 
+                                           min="0" step="100" value="0">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="salePrice">Sale Price (Rp)</label>
+                                    <input type="number" id="salePrice" class="form-control" 
+                                           min="0" step="100" value="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="initialStock">Initial Stock Quantity</label>
+                                <input type="number" id="initialStock" class="form-control" 
+                                       min="0" step="1" value="0">
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
+                        </form>
+                        
+                        ${savedProducts.length > 0 ? `
+                            <div class="saved-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${savedProducts.length})</h4>
+                                <div class="items-list">
+                                    ${savedProducts.map((prod, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${prod.name}</strong>
+                                                ${prod.code ? `<span>${prod.code}</span>` : ''}
+                                            </div>
+                                            <div class="item-details">
+                                                Category: ${prod.category || 'Uncategorized'}<br>
+                                                Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
+                                                Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
+                                                Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="product">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="category">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn-primary" id="completeSetup" 
+                                    ${savedProducts.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-check"></i> Complete Setup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     
     // NOTE: Render methods untuk supplier, customer, category, product, dan complete
     // perlu diupdate dengan cara yang sama seperti warehouse:
