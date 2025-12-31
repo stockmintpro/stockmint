@@ -7,6 +7,9 @@ class SetupWizardMulti {
             this.setupData = this.loadSavedData();
             this.autoSaveInterval = null;
             
+            // Get user plan
+            this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
+            
             // Initialize Google Sheets API jika user bukan demo
             this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             if (!this.user.isDemo) {
@@ -18,7 +21,7 @@ class SetupWizardMulti {
             console.error('Failed to initialize SetupWizard:', error);
             this.handleInitializationError(error);
         }
-    }
+    }  
     
     getCurrentStep() {
         const savedStep = localStorage.getItem('stockmint_setup_current_step');
