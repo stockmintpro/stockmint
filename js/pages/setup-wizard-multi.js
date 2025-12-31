@@ -1,4 +1,4 @@
-// setup-wizard-multi.js - Multi-step setup wizard
+// setup-wizard-multi.js - Multi-step setup wizard COMPLETE VERSION
 class SetupWizardMulti {
     constructor() {
         this.currentStep = this.getCurrentStep();
@@ -38,6 +38,808 @@ class SetupWizardMulti {
             products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
         };
     }
+    
+    // ===== EVENT BINDING METHODS =====
+    
+    bindEvents() {
+        console.log('🔧 Binding setup wizard events...');
+        
+        // Bind berdasarkan current step
+        setTimeout(() => {
+            this.bindFormEvents();
+            this.bindNavigationEvents();
+            this.bindActionEvents();
+        }, 200);
+    }
+    
+    bindFormEvents() {
+        const step = this.currentStep;
+        
+        switch(step) {
+            case 'company':
+                this.bindCompanyForm();
+                break;
+            case 'warehouse':
+                this.bindWarehouseForm();
+                break;
+            case 'supplier':
+                this.bindSupplierForm();
+                break;
+            case 'customer':
+                this.bindCustomerForm();
+                break;
+            case 'category':
+                this.bindCategoryForm();
+                break;
+            case 'product':
+                this.bindProductForm();
+                break;
+            case 'complete':
+                this.bindCompleteActions();
+                break;
+        }
+    }
+    
+    bindCompanyForm() {
+        const form = document.getElementById('companyForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveCompanyData();
+                window.location.hash = '#setup/warehouse';
+            });
+        }
+    }
+    
+    bindWarehouseForm() {
+        const form = document.getElementById('warehouseForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveWarehouseData();
+                this.updateWarehouseList();
+            });
+        }
+        
+        // Tombol next to supplier
+        const nextBtn = document.getElementById('nextToSupplier');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const warehouses = this.setupData.warehouses || [];
+                if (warehouses.length === 0) {
+                    alert('Please add at least one warehouse');
+                    return;
+                }
+                window.location.hash = '#setup/supplier';
+            });
+        }
+        
+        // Tombol remove warehouse
+        document.querySelectorAll('.btn-remove[data-index]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                this.removeWarehouse(index);
+            });
+        });
+    }
+    
+    bindSupplierForm() {
+        const form = document.getElementById('supplierForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveSupplierData();
+                this.updateSupplierList();
+            });
+        }
+        
+        // Tombol next to customer
+        const nextBtn = document.getElementById('nextToCustomer');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const suppliers = this.setupData.suppliers || [];
+                if (suppliers.length === 0) {
+                    alert('Please add at least one supplier');
+                    return;
+                }
+                window.location.hash = '#setup/customer';
+            });
+        }
+        
+        // Tombol remove supplier
+        document.querySelectorAll('.btn-remove[data-type="supplier"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                this.removeSupplier(index);
+            });
+        });
+    }
+    
+    bindCustomerForm() {
+        const form = document.getElementById('customerForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveCustomerData();
+                this.updateCustomerList();
+            });
+        }
+        
+        // Tombol next to category
+        const nextBtn = document.getElementById('nextToCategory');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const customers = this.setupData.customers || [];
+                if (customers.length === 0) {
+                    alert('Please add at least one customer');
+                    return;
+                }
+                window.location.hash = '#setup/category';
+            });
+        }
+        
+        // Tombol remove customer
+        document.querySelectorAll('.btn-remove[data-type="customer"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                this.removeCustomer(index);
+            });
+        });
+    }
+    
+    bindCategoryForm() {
+        const form = document.getElementById('categoryForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveCategoryData();
+                this.updateCategoryList();
+            });
+        }
+        
+        // Tombol next to product
+        const nextBtn = document.getElementById('nextToProduct');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const categories = this.setupData.categories || [];
+                if (categories.length === 0) {
+                    alert('Please add at least one category');
+                    return;
+                }
+                window.location.hash = '#setup/product';
+            });
+        }
+        
+        // Tombol remove category
+        document.querySelectorAll('.btn-remove[data-type="category"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                this.removeCategory(index);
+            });
+        });
+    }
+    
+    bindProductForm() {
+        const form = document.getElementById('productForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveProductData();
+                this.updateProductList();
+            });
+        }
+        
+        // Tombol complete setup
+        const completeBtn = document.getElementById('completeSetup');
+        if (completeBtn) {
+            completeBtn.addEventListener('click', () => {
+                const products = this.setupData.products || [];
+                if (products.length === 0) {
+                    alert('Please add at least one product');
+                    return;
+                }
+                this.completeSetup();
+            });
+        }
+        
+        // Tombol remove product
+        document.querySelectorAll('.btn-remove[data-type="product"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                this.removeProduct(index);
+            });
+        });
+    }
+    
+    bindCompleteActions() {
+        // Event untuk tombol di halaman complete
+    }
+    
+    bindNavigationEvents() {
+        // Back buttons
+        document.querySelectorAll('[onclick*="window.location.hash"]').forEach(btn => {
+            const oldHandler = btn.getAttribute('onclick');
+            btn.removeAttribute('onclick');
+            btn.addEventListener('click', () => {
+                eval(oldHandler);
+            });
+        });
+    }
+    
+    bindActionEvents() {
+        // Cancel setup button
+        const cancelBtn = document.querySelector('[onclick*="#dashboard"]');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to cancel setup? All progress will be lost.')) {
+                    window.location.hash = '#dashboard';
+                }
+            });
+        }
+    }
+    
+    // ===== DATA SAVING METHODS =====
+    
+    saveCompanyData() {
+        const name = document.getElementById('companyName')?.value;
+        const taxId = document.getElementById('companyTaxId')?.value || '';
+        const address = document.getElementById('companyAddress')?.value || '';
+        const phone = document.getElementById('companyPhone')?.value || '';
+        const email = document.getElementById('companyEmail')?.value || '';
+        const businessType = document.getElementById('businessType')?.value || '';
+        const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
+        
+        if (!name) {
+            alert('Company name is required');
+            throw new Error('Company name is required');
+        }
+        
+        if (!agreeTerms) {
+            alert('You must agree to the Terms of Service and Privacy Policy');
+            throw new Error('Terms agreement required');
+        }
+        
+        this.setupData.company = {
+            id: 'COMP001',
+            name,
+            taxId,
+            address,
+            phone,
+            email,
+            businessType,
+            setupDate: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        };
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
+        localStorage.setItem('stockmint_setup_current_step', 'warehouse');
+        
+        return true;
+    }
+    
+    saveWarehouseData() {
+        const name = document.getElementById('warehouseName')?.value;
+        const code = document.getElementById('warehouseCode')?.value || `WH${Date.now()}`;
+        const address = document.getElementById('warehouseAddress')?.value || '';
+        const isPrimary = document.getElementById('isPrimary')?.checked || false;
+        
+        if (!name) {
+            alert('Warehouse name is required');
+            throw new Error('Warehouse name is required');
+        }
+        
+        const warehouse = {
+            id: `WH${Date.now()}`,
+            name,
+            code,
+            address,
+            isPrimary,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Tambahkan ke array warehouses
+        if (!this.setupData.warehouses) {
+            this.setupData.warehouses = [];
+        }
+        
+        // Jika ini primary, set yang lain menjadi non-primary
+        if (isPrimary) {
+            this.setupData.warehouses.forEach(wh => wh.isPrimary = false);
+        }
+        
+        this.setupData.warehouses.push(warehouse);
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+        
+        // Reset form
+        document.getElementById('warehouseForm').reset();
+        
+        return true;
+    }
+    
+    saveSupplierData() {
+        const name = document.getElementById('supplierName')?.value;
+        const code = document.getElementById('supplierCode')?.value || `SUP${Date.now()}`;
+        const contact = document.getElementById('supplierContact')?.value || '';
+        const phone = document.getElementById('supplierPhone')?.value || '';
+        const email = document.getElementById('supplierEmail')?.value || '';
+        
+        if (!name) {
+            alert('Supplier name is required');
+            throw new Error('Supplier name is required');
+        }
+        
+        const supplier = {
+            id: `SUP${Date.now()}`,
+            name,
+            code,
+            contact,
+            phone,
+            email,
+            isActive: true,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Tambahkan ke array suppliers
+        if (!this.setupData.suppliers) {
+            this.setupData.suppliers = [];
+        }
+        
+        this.setupData.suppliers.push(supplier);
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
+        
+        // Reset form
+        document.getElementById('supplierForm').reset();
+        
+        return true;
+    }
+    
+    saveCustomerData() {
+        const name = document.getElementById('customerName')?.value;
+        const type = document.getElementById('customerType')?.value || 'retail';
+        const contact = document.getElementById('customerContact')?.value || '';
+        const phone = document.getElementById('customerPhone')?.value || '';
+        const email = document.getElementById('customerEmail')?.value || '';
+        const taxable = document.getElementById('customerTaxable')?.checked || false;
+        
+        if (!name) {
+            alert('Customer name is required');
+            throw new Error('Customer name is required');
+        }
+        
+        const customer = {
+            id: `CUST${Date.now()}`,
+            name,
+            type,
+            contact,
+            phone,
+            email,
+            taxable,
+            isActive: true,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Tambahkan ke array customers
+        if (!this.setupData.customers) {
+            this.setupData.customers = [];
+        }
+        
+        this.setupData.customers.push(customer);
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
+        
+        // Reset form
+        document.getElementById('customerForm').reset();
+        
+        return true;
+    }
+    
+    saveCategoryData() {
+        const name = document.getElementById('categoryName')?.value;
+        const code = document.getElementById('categoryCode')?.value || `CAT${Date.now()}`;
+        const description = document.getElementById('categoryDescription')?.value || '';
+        
+        if (!name) {
+            alert('Category name is required');
+            throw new Error('Category name is required');
+        }
+        
+        const category = {
+            id: code,
+            name,
+            code,
+            description,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Tambahkan ke array categories
+        if (!this.setupData.categories) {
+            this.setupData.categories = [];
+        }
+        
+        this.setupData.categories.push(category);
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
+        
+        // Reset form
+        document.getElementById('categoryForm').reset();
+        
+        return true;
+    }
+    
+    saveProductData() {
+        const name = document.getElementById('productName')?.value;
+        const code = document.getElementById('productCode')?.value || `PROD${Date.now()}`;
+        const category = document.getElementById('productCategory')?.value;
+        const unit = document.getElementById('productUnit')?.value || 'pcs';
+        const purchasePrice = parseFloat(document.getElementById('purchasePrice')?.value || 0);
+        const salePrice = parseFloat(document.getElementById('salePrice')?.value || 0);
+        const initialStock = parseInt(document.getElementById('initialStock')?.value || 0);
+        
+        if (!name) {
+            alert('Product name is required');
+            throw new Error('Product name is required');
+        }
+        
+        if (!category) {
+            alert('Please select a category');
+            throw new Error('Category is required');
+        }
+        
+        const product = {
+            id: code,
+            name,
+            code,
+            categoryId: category,
+            category: this.setupData.categories?.find(c => c.id === category)?.name || category,
+            unit,
+            purchasePrice,
+            salePrice,
+            stock: initialStock,
+            isActive: true,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Tambahkan ke array products
+        if (!this.setupData.products) {
+            this.setupData.products = [];
+        }
+        
+        this.setupData.products.push(product);
+        
+        // Simpan ke localStorage
+        localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
+        
+        // Reset form
+        document.getElementById('productForm').reset();
+        
+        return true;
+    }
+    
+    // ===== UPDATE LIST METHODS =====
+    
+    updateWarehouseList() {
+        const savedItems = document.querySelector('.saved-items');
+        if (savedItems) {
+            const warehouses = this.setupData.warehouses || [];
+            savedItems.innerHTML = `
+                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Warehouses (${warehouses.length})</h4>
+                <div class="items-list">
+                    ${warehouses.map((wh, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${wh.name}</strong>
+                                ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
+                            </div>
+                            <div class="item-details">
+                                ${wh.code ? `Code: ${wh.code}` : ''}
+                                ${wh.address ? `<br>${wh.address}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Re-bind remove buttons
+            document.querySelectorAll('.btn-remove[data-index]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                    this.removeWarehouse(index);
+                });
+            });
+            
+            // Update next button state
+            const nextBtn = document.getElementById('nextToSupplier');
+            if (nextBtn) {
+                nextBtn.disabled = warehouses.length === 0;
+            }
+        }
+    }
+    
+    updateSupplierList() {
+        const savedItems = document.querySelector('.saved-items');
+        if (savedItems) {
+            const suppliers = this.setupData.suppliers || [];
+            savedItems.innerHTML = `
+                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${suppliers.length})</h4>
+                <div class="items-list">
+                    ${suppliers.map((sup, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${sup.name}</strong>
+                            </div>
+                            <div class="item-details">
+                                ${sup.contact ? `Contact: ${sup.contact}` : ''}
+                                ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
+                                ${sup.code ? `<br>Code: ${sup.code}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Re-bind remove buttons
+            document.querySelectorAll('.btn-remove[data-type="supplier"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                    this.removeSupplier(index);
+                });
+            });
+            
+            // Update next button state
+            const nextBtn = document.getElementById('nextToCustomer');
+            if (nextBtn) {
+                nextBtn.disabled = suppliers.length === 0;
+            }
+        }
+    }
+    
+    updateCustomerList() {
+        const savedItems = document.querySelector('.saved-items');
+        if (savedItems) {
+            const customers = this.setupData.customers || [];
+            savedItems.innerHTML = `
+                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${customers.length})</h4>
+                <div class="items-list">
+                    ${customers.map((cust, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${cust.name}</strong>
+                                <span class="badge-customer">${cust.type || 'retail'}</span>
+                            </div>
+                            <div class="item-details">
+                                ${cust.contact ? `Contact: ${cust.contact}` : ''}
+                                ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
+                                ${cust.email ? `<br>Email: ${cust.email}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Re-bind remove buttons
+            document.querySelectorAll('.btn-remove[data-type="customer"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                    this.removeCustomer(index);
+                });
+            });
+            
+            // Update next button state
+            const nextBtn = document.getElementById('nextToCategory');
+            if (nextBtn) {
+                nextBtn.disabled = customers.length === 0;
+            }
+        }
+    }
+    
+    updateCategoryList() {
+        const savedItems = document.querySelector('.saved-items');
+        if (savedItems) {
+            const categories = this.setupData.categories || [];
+            savedItems.innerHTML = `
+                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${categories.length})</h4>
+                <div class="items-list">
+                    ${categories.map((cat, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${cat.name}</strong>
+                                ${cat.code ? `<span>${cat.code}</span>` : ''}
+                            </div>
+                            <div class="item-details">
+                                ${cat.description || 'No description'}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="category">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Re-bind remove buttons
+            document.querySelectorAll('.btn-remove[data-type="category"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                    this.removeCategory(index);
+                });
+            });
+            
+            // Update next button state
+            const nextBtn = document.getElementById('nextToProduct');
+            if (nextBtn) {
+                nextBtn.disabled = categories.length === 0;
+            }
+            
+            // Update dropdown di product form
+            this.updateProductCategoryDropdown();
+        }
+    }
+    
+    updateProductList() {
+        const savedItems = document.querySelector('.saved-items');
+        if (savedItems) {
+            const products = this.setupData.products || [];
+            savedItems.innerHTML = `
+                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${products.length})</h4>
+                <div class="items-list">
+                    ${products.map((prod, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${prod.name}</strong>
+                                ${prod.code ? `<span>${prod.code}</span>` : ''}
+                            </div>
+                            <div class="item-details">
+                                Category: ${prod.category || 'Uncategorized'}<br>
+                                Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
+                                Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
+                                Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="product">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Re-bind remove buttons
+            document.querySelectorAll('.btn-remove[data-type="product"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('.btn-remove').dataset.index);
+                    this.removeProduct(index);
+                });
+            });
+            
+            // Update complete button state
+            const completeBtn = document.getElementById('completeSetup');
+            if (completeBtn) {
+                completeBtn.disabled = products.length === 0;
+            }
+        }
+    }
+    
+    updateProductCategoryDropdown() {
+        const dropdown = document.getElementById('productCategory');
+        if (dropdown) {
+            const categories = this.setupData.categories || [];
+            dropdown.innerHTML = `
+                <option value="">Select Category</option>
+                ${categories.map(cat => `
+                    <option value="${cat.id || cat.name}">${cat.name}</option>
+                `).join('')}
+            `;
+        }
+    }
+    
+    // ===== REMOVE ITEM METHODS =====
+    
+    removeWarehouse(index) {
+        if (confirm('Are you sure you want to remove this warehouse?')) {
+            this.setupData.warehouses.splice(index, 1);
+            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+            this.updateWarehouseList();
+        }
+    }
+    
+    removeSupplier(index) {
+        if (confirm('Are you sure you want to remove this supplier?')) {
+            this.setupData.suppliers.splice(index, 1);
+            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
+            this.updateSupplierList();
+        }
+    }
+    
+    removeCustomer(index) {
+        if (confirm('Are you sure you want to remove this customer?')) {
+            this.setupData.customers.splice(index, 1);
+            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
+            this.updateCustomerList();
+        }
+    }
+    
+    removeCategory(index) {
+        if (confirm('Are you sure you want to remove this category?')) {
+            this.setupData.categories.splice(index, 1);
+            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
+            this.updateCategoryList();
+        }
+    }
+    
+    removeProduct(index) {
+        if (confirm('Are you sure you want to remove this product?')) {
+            this.setupData.products.splice(index, 1);
+            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
+            this.updateProductList();
+        }
+    }
+    
+    // ===== COMPLETE SETUP METHODS =====
+    
+    completeSetup() {
+        // Tandai setup sebagai selesai
+        localStorage.setItem('stockmint_setup_completed', 'true');
+        
+        // Simpan timestamp setup
+        localStorage.setItem('stockmint_setup_date', new Date().toISOString());
+        
+        // Hapus step tracker
+        localStorage.removeItem('stockmint_setup_current_step');
+        
+        // Simpan opening stock
+        this.createOpeningStock();
+        
+        // Show success notification
+        alert('🎉 Setup completed successfully! You will be redirected to dashboard.');
+        
+        // Redirect ke dashboard
+        setTimeout(() => {
+            window.location.hash = '#dashboard';
+            window.location.reload();
+        }, 1000);
+    }
+    
+    createOpeningStock() {
+        const warehouses = this.setupData.warehouses || [];
+        const products = this.setupData.products || [];
+        
+        if (warehouses.length === 0 || products.length === 0) {
+            return;
+        }
+        
+        const openingStocks = products.map(product => {
+            return {
+                productId: product.id,
+                productName: product.name,
+                warehouseId: warehouses[0].id,
+                warehouseName: warehouses[0].name,
+                quantity: product.stock || 0,
+                cost: product.purchasePrice || 0,
+                date: new Date().toISOString(),
+                type: 'opening',
+                createdAt: new Date().toISOString()
+            };
+        });
+        
+        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+    }
+    
+    // ===== RENDER METHODS (TIDAK BERUBAH) =====
     
     render() {
         const hash = window.location.hash.substring(1); // Contoh: 'setup/migrate'
@@ -646,7 +1448,7 @@ class SetupWizardMulti {
                                 <div class="form-group">
                                     <label for="supplierPhone">Phone Number</label>
                                     <input type="tel" id="supplierPhone" class="form-control" 
-                                           placeholder="e.g., 08123456789">
+                                       placeholder="e.g., 08123456789">
                                 </div>
                                 
                                 <div class="form-group">
