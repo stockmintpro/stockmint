@@ -2000,3 +2000,60 @@ class StockMintApp {
 // Create global instance
 window.StockMintApp = new StockMintApp();
 console.log('✅ StockMintApp instance created');
+
+// ===== TEMPORARY PATCH FOR SETUP WIZARD =====
+// Ini akan memastikan setup wizard berfungsi meskipun routing bermasalah
+// TARUH DI SINI - SETELAH CLASS DEFINITION
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔧 Applying setup wizard patch...');
+  
+  // Listen untuk semua klik di halaman
+  document.addEventListener('click', function(e) {
+    // Cek jika klik pada tombol submit form company
+    const submitBtn = e.target.closest('button[type="submit"]');
+    if (submitBtn) {
+      const form = submitBtn.closest('form');
+      if (form && form.id === 'companyForm') {
+        console.log('🏢 Manual detection: Company form submit clicked');
+        e.preventDefault();
+        
+        // Coba simpan data
+        if (window.currentWizard && window.currentWizard.saveCompanyData) {
+          try {
+            window.currentWizard.saveCompanyData();
+            alert('✅ Company data saved! Redirecting to warehouse...');
+            window.location.hash = '#setup/warehouse';
+          } catch (error) {
+            alert('Error: ' + error.message);
+          }
+        }
+      }
+    }
+    
+    // Cek jika klik pada tombol next (non-submit)
+    if (e.target.closest('#nextToSupplier') || 
+        e.target.closest('#nextToCustomer') ||
+        e.target.closest('#nextToCategory') ||
+        e.target.closest('#nextToProduct') ||
+        e.target.closest('#completeSetup')) {
+      console.log('➡️ Manual detection: Next button clicked');
+      // Biarkan event handler asli yang menangani
+    }
+  });
+  
+  // Juga handle hash changes secara manual
+  window.addEventListener('hashchange', function() {
+    console.log('🔗 Manual hash change detected:', window.location.hash);
+    
+    // Jika di halaman setup, coba render ulang
+    if (window.location.hash.includes('#setup/')) {
+      setTimeout(function() {
+        if (window.StockMintApp && window.StockMintApp.loadPage) {
+          const page = window.location.hash.substring(1);
+          window.StockMintApp.loadPage(page);
+        }
+      }, 100);
+    }
+  });
+});
