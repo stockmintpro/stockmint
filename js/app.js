@@ -297,109 +297,63 @@ class StockMintApp {
     this.loadPage(hash);
   }
   
-    // Load page content
-  loadPage(page) {
+  // Load page content
+loadPage(page) {
     const contentArea = document.getElementById('contentArea');
     if (!contentArea) {
-      console.error('❌ Content area not found');
-      return;
+        console.error('❌ Content area not found');
+        return;
     }
     
     console.log('📄 Loading page:', page);
     
     // Show loading
     contentArea.innerHTML = `
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Loading ${this.getPageTitle(page)}...</p>
-      </div>
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Loading ${this.getPageTitle(page)}...</p>
+        </div>
     `;
     
     // Update navbar title
     this.updateNavbarTitle(page);
     
-    // Load actual content - beri delay sedikit
+    // Load actual content
     setTimeout(() => {
-      try {
-        const html = this.getPageContent(page);
-        contentArea.innerHTML = html;
-        
-        // SPECIAL HANDLING UNTUK SETUP WIZARD
-        if (page.startsWith('setup/')) {
-          console.log('🔧 Setting up wizard events for:', page);
-          
-          // Tunggu sedikit untuk memastikan DOM sudah dirender
-          setTimeout(() => {
-            // Coba bind events dengan beberapa cara
+        try {
+            const html = this.getPageContent(page);
+            contentArea.innerHTML = html;
             
-            // Cara 1: Jika ada global instance
-            if (window.currentWizard && window.currentWizard.bindEvents) {
-              console.log('✅ Binding wizard events from global instance');
-              window.currentWizard.bindEvents();
-            }
-            
-            // Cara 2: Coba buat instance baru
-            else if (typeof SetupWizardMulti !== 'undefined') {
-              try {
-                console.log('🔄 Creating new wizard instance');
-                const wizard = new SetupWizardMulti();
-                window.currentWizard = wizard;
+            // SPECIAL HANDLING FOR SETUP WIZARD
+            if (page.startsWith('setup/')) {
+                console.log('🔧 Setting up wizard events for:', page);
                 
-                // Coba bind events setelah delay
+                // Tunggu untuk memastikan DOM dirender
                 setTimeout(() => {
-                  if (wizard.bindEvents) {
-                    wizard.bindEvents();
-                    console.log('✅ Wizard events bound (new instance)');
-                  }
-                }, 200);
-              } catch (wizardError) {
-                console.error('❌ Failed to create wizard:', wizardError);
-              }
+                    if (window.currentWizard) {
+                        // Priority: Gunakan forceBindEvents jika ada
+                        if (window.currentWizard.forceBindEvents) {
+                            console.log('🔧 Using forceBindEvents');
+                            window.currentWizard.forceBindEvents();
+                        }
+                        // Fallback: Gunakan bindEvents biasa
+                        else if (window.currentWizard.bindEvents) {
+                            console.log('🔧 Using regular bindEvents');
+                            window.currentWizard.bindEvents();
+                        }
+                    }
+                }, 300);
             }
             
-            // Cara 3: Cari form dan bind manual
-            setTimeout(() => {
-              const forms = contentArea.querySelectorAll('form');
-              console.log('📋 Found forms:', forms.length);
-              
-              forms.forEach(form => {
-                console.log('Form ID:', form.id);
-                
-                // Bind company form
-                if (form.id === 'companyForm') {
-                  form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    console.log('🏢 Company form submitted');
-                    
-                    // Coba simpan data dan redirect
-                    if (window.currentWizard && window.currentWizard.saveCompanyData) {
-                      try {
-                        window.currentWizard.saveCompanyData();
-                        window.location.hash = '#setup/warehouse';
-                      } catch (error) {
-                        console.error('Error saving company:', error);
-                        alert('Error: ' + error.message);
-                      }
-                    } else {
-                      console.error('Wizard method not available');
-                      alert('Setup wizard not initialized properly');
-                    }
-                  });
-                }
-              });
-            }, 300);
-          }, 100);
+            this.initPageScripts(page);
+            console.log(`✅ Page "${page}" loaded`);
+            
+        } catch (error) {
+            console.error(`❌ Error loading page "${page}":`, error);
+            contentArea.innerHTML = this.getErrorPage(page, error);
         }
-        
-        this.initPageScripts(page);
-        console.log(`✅ Page "${page}" loaded`);
-        
-      } catch (error) {
-        console.error(`❌ Error loading page "${page}":`, error);
-        contentArea.innerHTML = this.getErrorPage(page, error);
-      }
     }, 300);
-  }
+}
   
   // Update navbar title
   updateNavbarTitle(page) {
