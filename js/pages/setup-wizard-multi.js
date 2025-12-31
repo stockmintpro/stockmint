@@ -843,27 +843,40 @@ class SetupWizardMulti {
     
     // ===== COMPLETE SETUP METHODS =====
     
-    async completeSetup() {
-        // Tandai setup sebagai selesai
-        localStorage.setItem('stockmint_setup_completed', 'true');
-        
-        // Simpan timestamp setup
-        localStorage.setItem('stockmint_setup_date', new Date().toISOString());
-        
-        // Hapus step tracker
-        localStorage.removeItem('stockmint_setup_current_step');
-        
-        // Simpan opening stock
-        this.createOpeningStock();
-        
-        // Show success notification
-        this.showError('🎉 Setup completed successfully! You will be redirected to dashboard.', 'success');
-        
-        // Redirect ke dashboard
-        setTimeout(() => {
-            window.location.hash = '#dashboard';
-            window.location.reload();
-        }, 2000);
+        async completeSetup() {
+        try {
+            // Simpan ke localStorage dulu
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
+            localStorage.removeItem('stockmint_setup_current_step');
+            this.createOpeningStock();
+            
+            // Coba save ke Google Sheets jika user bukan demo
+            if (!this.user.isDemo && this.googleSheets) {
+                try {
+                    this.showError('📤 Saving data to Google Sheets...', 'info');
+                    await this.googleSheets.saveSetupData(this.setupData);
+                    this.showError('✅ Data saved to Google Sheets!', 'success');
+                } catch (sheetsError) {
+                    console.error('Failed to save to Google Sheets:', sheetsError);
+                    // Tetap lanjut meskipun gagal save ke Google Sheets
+                    this.showError('⚠️ Data saved locally. Google Sheets save failed.', 'warning');
+                }
+            }
+            
+            // Show success notification
+            this.showError('🎉 Setup completed successfully! You will be redirected to dashboard.', 'success');
+            
+            // Redirect ke dashboard
+            setTimeout(() => {
+                window.location.hash = '#dashboard';
+                window.location.reload();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error completing setup:', error);
+            this.showError(`Failed to complete setup: ${error.message}`, 'error');
+        }
     }
     
     createOpeningStock() {
