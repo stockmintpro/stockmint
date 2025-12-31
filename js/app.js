@@ -425,19 +425,30 @@ class StockMintApp {
     }
     
     // Setup pages - PERBAIKI DI SINI! 
-    // Di app.js - di dalam method getPageContent()
+    // app.js - di dalam method getPageContent()
     if (page.startsWith('setup/')) {
-       // Buat instance SetupWizard dan render
-        const wizard = new SetupWizard();
-        const html = wizard.render();
+    // Gunakan SetupWizardMulti untuk semua halaman setup
+    const wizard = new SetupWizardMulti();
+    const hash = window.location.hash.substring(1); // Contoh: 'setup/start-new'
+    const route = hash.split('/')[1]; // Contoh: 'start-new'
     
-       // Setelah konten dimuat, bind events
-        setTimeout(() => {
+    // Render berdasarkan route
+    let html;
+    if (route === 'migrate') {
+        html = wizard.renderMigratePage();
+    } else {
+        // Set current step berdasarkan route
+        wizard.currentStep = route || wizard.currentStep;
+        html = wizard.render();
+    }
+    
+    // Bind events setelah konten dimuat
+    setTimeout(() => {
         wizard.bindEvents();
-        }, 100);
+    }, 100);
     
-        return html;
-     }
+    return html;
+    }
     
     // Other pages
     return this.getDefaultPageContent(page);
