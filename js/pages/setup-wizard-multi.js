@@ -381,12 +381,40 @@ class SetupWizardMulti {
         this.bindFormEvents();
         this.bindNavigationEvents();
         
-        // Update semua lists
+        // Update ALL lists untuk memastikan UI sync dengan data
         this.updateWarehouseList();
         this.updateSupplierList();
         this.updateCustomerList();
         this.updateCategoryList();
         this.updateProductList();
+        
+        // Force update next buttons berdasarkan data yang ada
+        setTimeout(() => {
+            // Update semua next buttons
+            const warehouseNext = document.getElementById('nextToSupplier');
+            const supplierNext = document.getElementById('nextToCustomer');
+            const customerNext = document.getElementById('nextToCategory');
+            const categoryNext = document.getElementById('nextToProduct');
+            const completeBtn = document.getElementById('completeSetup');
+            
+            if (warehouseNext) {
+                warehouseNext.disabled = !(this.setupData.warehouses?.length > 0);
+            }
+            if (supplierNext) {
+                supplierNext.disabled = !(this.setupData.suppliers?.length > 0);
+            }
+            if (customerNext) {
+                customerNext.disabled = !(this.setupData.customers?.length > 0);
+            }
+            if (categoryNext) {
+                categoryNext.disabled = !(this.setupData.categories?.length > 0);
+            }
+            if (completeBtn) {
+                completeBtn.disabled = !(this.setupData.products?.length > 0);
+            }
+            
+            console.log('✅ Force bind completed');
+        }, 200);
         
         console.log('✅ Events force-bound successfully');
     }
@@ -618,15 +646,17 @@ class SetupWizardMulti {
         }, 'Failed to save customer data');
     }
     
-    saveCategoryData() {
+        saveCategoryData() {
         return this.safeExecute(() => {
             const name = document.getElementById('categoryName')?.value.trim();
-            const code = document.getElementById('categoryCode')?.value.trim() || `CAT${Date.now()}`;
             const description = document.getElementById('categoryDescription')?.value.trim() || '';
             
             if (!name) {
                 throw new Error('Category name is required');
             }
+            
+            // Auto-generate category code
+            const code = `CAT${Date.now().toString().slice(-6)}`;
             
             const category = {
                 id: code,
@@ -647,8 +677,22 @@ class SetupWizardMulti {
             localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
             
             // Reset form
-            const form = document.getElementById('categoryForm');
-            if (form) form.reset();
+            document.getElementById('categoryForm').reset();
+            
+            // Update UI immediately - INI YANG PENTING
+            this.updateCategoryList();
+            
+            // Juga update product category dropdown
+            this.updateProductCategoryDropdown();
+            
+            // Auto-enable next button - PASTIKAN INI DIPANGGIL
+            setTimeout(() => {
+                const nextBtn = document.getElementById('nextToProduct');
+                if (nextBtn && this.setupData.categories.length > 0) {
+                    nextBtn.disabled = false;
+                    console.log('✅ Next button enabled for categories');
+                }
+            }, 100);
             
             return true;
         }, 'Failed to save category data');
