@@ -405,22 +405,23 @@
                     [3, "Pasar Cuan", "", "", "Jakarta", "Indonesia", "", "Bambang", "081843135155", "", "", "", "", "", "", "", 1]
                 ]
             },
-            {
-                name: "dim_Customers",
-                description: "Data pelanggan",
-                exampleRows: 7,
-                columns: 18,
-                headers: ["CUSTOMER_ID", "CUSTOMER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "CUSTOMER_TYPE", "CREDIT_LIMIT", "IS_ACTIVE"],
-                exampleData: [
-                    [1, "Adipati Dolken", "Jl. Backstreet 123", "15325", "Bogor", "Indonesia", "", "", "08889191919", "", "", "", "", "", "", "RETAIL", "", 1],
-                    [2, "Shopee Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 1],
-                    [3, "Tiktok Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 1],
-                    [4, "Tokopedia Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 1],
-                    [5, "Blibli Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 1],
-                    [6, "Resto Pagi Siang", "", "", "Bandung", "Indonesia", "", "James", "08783113085", "", "", "", "", "", "", "WHOLESALE", "", 1],
-                    [7, "Warung Emak", "", "", "Bekasi", "Indonesia", "", "Putri", "021-30517510", "", "", "", "", "", "", "RETAIL", 1000000, 1]
-                ]
-            },
+            <!-- Tambahkan di bagian sheet dim_Customers (sekitar line 130) -->
+{
+    name: "dim_Customers",
+    description: "Data pelanggan",
+    exampleRows: 7,
+    columns: 19, // Diubah dari 18 menjadi 19
+    headers: ["CUSTOMER_ID", "CUSTOMER_NAME", "STREET", "ZIP_CODE", "CITY", "COUNTRY", "ADDITIONAL_ADDRESS", "CONTACT_PERSON", "PHONE1", "PHONE2", "FAX", "EMAIL", "TAX_NO", "FISCAL_CODE", "WEBSITE", "CUSTOMER_TYPE", "CREDIT_LIMIT", "MARKETPLACE_ID", "IS_ACTIVE"], // Tambah MARKETPLACE_ID
+    exampleData: [
+        [1, "Jay Idzes", "Jl. Backstreet 123", "15325", "Bogor", "Indonesia", "", "", "08889191919", "", "", "", "", "", "", "RETAIL", "", null, 1],
+        [2, "Shopee Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 1, 1], // MARKETPLACE_ID: 1 untuk Shopee
+        [3, "Tiktok Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 3, 1], // MARKETPLACE_ID: 3 untuk TikTok Shop
+        [4, "Tokopedia Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 2, 1], // MARKETPLACE_ID: 2 untuk Tokopedia
+        [5, "Blibli Customers", "", "", "", "Indonesia", "", "", "", "", "", "", "", "", "", "RETAIL", "", 4, 1], // MARKETPLACE_ID: 4 untuk Blibli
+        [6, "Resto Pagi Siang", "", "", "Bandung", "Indonesia", "", "James", "08783113085", "", "", "", "", "", "", "WHOLESALE", "", null, 1],
+        [7, "Warung Emak", "", "", "Bekasi", "Indonesia", "", "Putri", "021-30517510", "", "", "", "", "", "", "RETAIL", "", null, 1]
+    ]
+},
             {
                 name: "dim_Warehouses",
                 description: "Data gudang/penyimpanan",
