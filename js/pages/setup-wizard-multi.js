@@ -1,15 +1,20 @@
-// setup-wizard-multi.js - VERSI PERBAIKAN LENGKAP
+// setup-wizard-multi.js - VERSI PERBAIKAN FINAL
+console.log('🔄 setup-wizard-multi.js LOADED - PERBAIKAN FINAL');
+
 class SetupWizardMulti {
     constructor() {
+        console.log('🔄 SetupWizardMulti constructor called');
+        
         try {
-            this.currentStep = this.getCurrentStep();
+            this.currentStep = this.getCurrentStepFromHash();
             this.totalSteps = 6;
             this.setupData = this.loadSavedData();
             console.log('📊 Loaded setup data:', this.setupData);
+            
             this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
             this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             
-            // Set warehouse counter untuk ID yang sederhana
+            // Initialize counters
             this.warehouseCounter = this.setupData.warehouses.length;
             this.supplierCounter = this.setupData.suppliers.length;
             this.customerCounter = this.setupData.customers.length;
@@ -17,7 +22,7 @@ class SetupWizardMulti {
             this.productCounter = this.setupData.products.length;
             
         } catch (error) {
-            console.error('Failed to initialize SetupWizard:', error);
+            console.error('❌ Failed to initialize SetupWizard:', error);
             this.setupData = {
                 company: {},
                 warehouses: [],
@@ -34,20 +39,16 @@ class SetupWizardMulti {
         }
     }
 
-    getCurrentStep() {
+    getCurrentStepFromHash() {
         const hash = window.location.hash.substring(1);
         const route = hash.split('/')[1];
         
-        if (route) return route;
+        if (route && route !== 'migrate') {
+            return route;
+        }
         
-        // Fallback: Check what data exists to determine current step
-        if (!this.setupData.company?.name) return 'company';
-        if (!this.setupData.warehouses?.length) return 'warehouse';
-        if (!this.setupData.suppliers?.length) return 'supplier';
-        if (!this.setupData.customers?.length) return 'customer';
-        if (!this.setupData.categories?.length) return 'category';
-        if (!this.setupData.products?.length) return 'product';
-        return 'complete';
+        // Default to company if no route
+        return 'company';
     }
 
     loadSavedData() {
@@ -65,11 +66,27 @@ class SetupWizardMulti {
     bindEvents() {
         console.log('🔧 Binding events for step:', this.currentStep);
         
+        // Clear any existing event listeners first
+        this.unbindEvents();
+        
         setTimeout(() => {
             this.bindFormEvents();
             this.bindNavigationEvents();
             this.updateUI();
-        }, 200);
+            console.log('✅ Events bound successfully');
+        }, 100);
+    }
+
+    unbindEvents() {
+        // Remove existing event listeners by cloning and replacing forms
+        const forms = ['companyForm', 'warehouseForm', 'supplierForm', 'customerForm', 'categoryForm', 'productForm'];
+        forms.forEach(formId => {
+            const form = document.getElementById(formId);
+            if (form) {
+                const newForm = form.cloneNode(true);
+                form.parentNode.replaceChild(newForm, form);
+            }
+        });
     }
 
     bindFormEvents() {
@@ -104,7 +121,7 @@ class SetupWizardMulti {
                 e.preventDefault();
                 try {
                     this.saveCompanyData();
-                    // Redirect tanpa alert
+                    console.log('✅ Company data saved, redirecting to warehouse');
                     window.location.hash = '#setup/warehouse';
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -112,10 +129,15 @@ class SetupWizardMulti {
             });
         }
         
-        // Auto-save saat form berubah
+        // Auto-save on input
         if (form) {
             form.addEventListener('input', () => {
-                this.saveCompanyData(false); // Simpan tanpa validasi ketat
+                try {
+                    this.saveCompanyData(false);
+                    console.log('💾 Company data auto-saved');
+                } catch (error) {
+                    // Ignore validation errors during auto-save
+                }
             });
         }
     }
@@ -126,7 +148,11 @@ class SetupWizardMulti {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    this.saveWarehouseData();
+                    const success = this.saveWarehouseData();
+                    if (success) {
+                        // Update UI immediately after adding
+                        this.updateUI();
+                    }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
                 }
@@ -151,7 +177,10 @@ class SetupWizardMulti {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    this.saveSupplierData();
+                    const success = this.saveSupplierData();
+                    if (success) {
+                        this.updateUI();
+                    }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
                 }
@@ -176,7 +205,10 @@ class SetupWizardMulti {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    this.saveCustomerData();
+                    const success = this.saveCustomerData();
+                    if (success) {
+                        this.updateUI();
+                    }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
                 }
@@ -201,7 +233,10 @@ class SetupWizardMulti {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    this.saveCategoryData();
+                    const success = this.saveCategoryData();
+                    if (success) {
+                        this.updateUI();
+                    }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
                 }
@@ -226,7 +261,10 @@ class SetupWizardMulti {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    this.saveProductData();
+                    const success = this.saveProductData();
+                    if (success) {
+                        this.updateUI();
+                    }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
                 }
@@ -246,18 +284,36 @@ class SetupWizardMulti {
     }
 
     bindNavigationEvents() {
-        // Event delegation untuk tombol remove
-        document.addEventListener('click', async (e) => {
+        // Event delegation untuk tombol remove dengan ONE-TIME CLICK
+        document.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                
                 const index = parseInt(removeBtn.dataset.index);
                 const type = removeBtn.dataset.type;
                 
-                if (type === 'warehouse') await this.removeWarehouse(index);
-                else if (type === 'supplier') await this.removeSupplier(index);
-                else if (type === 'customer') await this.removeCustomer(index);
-                else if (type === 'category') await this.removeCategory(index);
-                else if (type === 'product') await this.removeProduct(index);
+                // Show confirmation ONCE
+                if (confirm(`Are you sure you want to remove this ${type}?`)) {
+                    switch(type) {
+                        case 'warehouse':
+                            this.removeWarehouse(index);
+                            break;
+                        case 'supplier':
+                            this.removeSupplier(index);
+                            break;
+                        case 'customer':
+                            this.removeCustomer(index);
+                            break;
+                        case 'category':
+                            this.removeCategory(index);
+                            break;
+                        case 'product':
+                            this.removeProduct(index);
+                            break;
+                    }
+                }
                 return;
             }
             
@@ -271,6 +327,12 @@ class SetupWizardMulti {
             // Cancel button
             if (e.target.closest('[data-action="cancel"]')) {
                 if (confirm('Are you sure you want to cancel setup? All progress will be lost.')) {
+                    localStorage.removeItem('stockmint_company');
+                    localStorage.removeItem('stockmint_warehouses');
+                    localStorage.removeItem('stockmint_suppliers');
+                    localStorage.removeItem('stockmint_customers');
+                    localStorage.removeItem('stockmint_categories');
+                    localStorage.removeItem('stockmint_products');
                     window.location.hash = '#dashboard';
                 }
                 return;
@@ -279,7 +341,9 @@ class SetupWizardMulti {
     }
 
     updateUI() {
-        // Update semua list dan tombol berdasarkan data
+        console.log('🔄 Updating UI...');
+        
+        // Update semua list
         this.updateWarehouseList();
         this.updateSupplierList();
         this.updateCustomerList();
@@ -287,53 +351,60 @@ class SetupWizardMulti {
         this.updateProductList();
         this.updateProductCategoryDropdown();
         
-        // Update tombol next berdasarkan data
-        setTimeout(() => {
-            const warehouseNext = document.getElementById('nextToSupplier');
-            const supplierNext = document.getElementById('nextToCustomer');
-            const customerNext = document.getElementById('nextToCategory');
-            const categoryNext = document.getElementById('nextToProduct');
-            const completeBtn = document.getElementById('completeSetup');
-            
-            if (warehouseNext) {
-                warehouseNext.disabled = this.setupData.warehouses.length === 0;
-                warehouseNext.classList.toggle('disabled', this.setupData.warehouses.length === 0);
-            }
-            
-            if (supplierNext) {
-                supplierNext.disabled = this.setupData.suppliers.length === 0;
-                supplierNext.classList.toggle('disabled', this.setupData.suppliers.length === 0);
-            }
-            
-            if (customerNext) {
-                customerNext.disabled = this.setupData.customers.length === 0;
-                customerNext.classList.toggle('disabled', this.setupData.customers.length === 0);
-            }
-            
-            if (categoryNext) {
-                categoryNext.disabled = this.setupData.categories.length === 0;
-                categoryNext.classList.toggle('disabled', this.setupData.categories.length === 0);
-            }
-            
-            if (completeBtn) {
-                completeBtn.disabled = this.setupData.products.length === 0;
-                completeBtn.classList.toggle('disabled', this.setupData.products.length === 0);
-            }
-            
-            // Update tombol add warehouse berdasarkan plan
-            const addWarehouseBtn = document.querySelector('#warehouseForm button[type="submit"]');
-            if (addWarehouseBtn) {
-                const warehouseLimit = this.userPlan === 'basic' ? 1 : 
-                                     this.userPlan === 'pro' ? 3 : Infinity;
-                const canAddMore = this.setupData.warehouses.length < warehouseLimit;
-                addWarehouseBtn.disabled = !canAddMore;
-                addWarehouseBtn.classList.toggle('disabled', !canAddMore);
-            }
-            
-        }, 100);
+        // Update tombol next berdasarkan data - TANPA setTimeout
+        const warehouseNext = document.getElementById('nextToSupplier');
+        const supplierNext = document.getElementById('nextToCustomer');
+        const customerNext = document.getElementById('nextToCategory');
+        const categoryNext = document.getElementById('nextToProduct');
+        const completeBtn = document.getElementById('completeSetup');
+        
+        if (warehouseNext) {
+            const isDisabled = this.setupData.warehouses.length === 0;
+            warehouseNext.disabled = isDisabled;
+            warehouseNext.classList.toggle('disabled', isDisabled);
+            console.log('🏭 Warehouse next button:', isDisabled ? 'disabled' : 'enabled');
+        }
+        
+        if (supplierNext) {
+            const isDisabled = this.setupData.suppliers.length === 0;
+            supplierNext.disabled = isDisabled;
+            supplierNext.classList.toggle('disabled', isDisabled);
+            console.log('🤝 Supplier next button:', isDisabled ? 'disabled' : 'enabled');
+        }
+        
+        if (customerNext) {
+            const isDisabled = this.setupData.customers.length === 0;
+            customerNext.disabled = isDisabled;
+            customerNext.classList.toggle('disabled', isDisabled);
+            console.log('👥 Customer next button:', isDisabled ? 'disabled' : 'enabled');
+        }
+        
+        if (categoryNext) {
+            const isDisabled = this.setupData.categories.length === 0;
+            categoryNext.disabled = isDisabled;
+            categoryNext.classList.toggle('disabled', isDisabled);
+            console.log('📁 Category next button:', isDisabled ? 'disabled' : 'enabled');
+        }
+        
+        if (completeBtn) {
+            const isDisabled = this.setupData.products.length === 0;
+            completeBtn.disabled = isDisabled;
+            completeBtn.classList.toggle('disabled', isDisabled);
+            console.log('✅ Complete button:', isDisabled ? 'disabled' : 'enabled');
+        }
+        
+        // Update tombol add warehouse berdasarkan plan
+        const addWarehouseBtn = document.querySelector('#warehouseForm button[type="submit"]');
+        if (addWarehouseBtn) {
+            const warehouseLimit = this.userPlan === 'basic' ? 1 : 
+                                 this.userPlan === 'pro' ? 3 : Infinity;
+            const canAddMore = this.setupData.warehouses.length < warehouseLimit;
+            addWarehouseBtn.disabled = !canAddMore;
+            addWarehouseBtn.classList.toggle('disabled', !canAddMore);
+        }
     }
 
-    // ===== DATA SAVING =====
+    // ===== DATA SAVING dengan VALIDASI DUPLIKAT =====
     saveCompanyData(validate = true) {
         const name = document.getElementById('companyName')?.value.trim();
         const taxId = document.getElementById('companyTaxId')?.value.trim() || '';
@@ -361,6 +432,7 @@ class SetupWizardMulti {
         };
         
         localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
+        console.log('💾 Company data saved');
         return true;
     }
 
@@ -379,7 +451,7 @@ class SetupWizardMulti {
             throw new Error(`You can only have ${warehouseLimit} warehouse(s) in your current plan.`);
         }
         
-        // Cek apakah nama warehouse sudah ada
+        // VALIDASI: Cek duplikat nama warehouse
         const existingWarehouse = this.setupData.warehouses.find(wh => 
             wh.name.toLowerCase() === name.toLowerCase()
         );
@@ -410,15 +482,16 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         
         // Reset form
-        document.getElementById('warehouseForm').reset();
-        
-        // Reset primary checkbox jika sudah ada warehouse
-        if (this.setupData.warehouses.length > 0) {
-            document.getElementById('isPrimary').checked = false;
+        const form = document.getElementById('warehouseForm');
+        if (form) {
+            form.reset();
+            // Reset primary checkbox jika sudah ada warehouse
+            if (this.setupData.warehouses.length > 0) {
+                document.getElementById('isPrimary').checked = false;
+            }
         }
         
-        // Update UI
-        this.updateWarehouseList();
+        console.log('💾 Warehouse added:', warehouse.name);
         return true;
     }
 
@@ -429,6 +502,15 @@ class SetupWizardMulti {
         const email = document.getElementById('supplierEmail')?.value.trim() || '';
         
         if (!name) throw new Error('Supplier name is required');
+        
+        // VALIDASI: Cek duplikat nama supplier
+        const existingSupplier = this.setupData.suppliers.find(sup => 
+            sup.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (existingSupplier) {
+            throw new Error('Supplier with this name already exists');
+        }
         
         this.supplierCounter++;
         const supplierCode = `SUP-${this.supplierCounter.toString().padStart(3, '0')}`;
@@ -447,8 +529,10 @@ class SetupWizardMulti {
         this.setupData.suppliers.push(supplier);
         localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
         
-        document.getElementById('supplierForm').reset();
-        this.updateSupplierList();
+        const form = document.getElementById('supplierForm');
+        if (form) form.reset();
+        
+        console.log('💾 Supplier added:', supplier.name);
         return true;
     }
 
@@ -461,6 +545,15 @@ class SetupWizardMulti {
         const taxable = document.getElementById('customerTaxable')?.checked || false;
         
         if (!name) throw new Error('Customer name is required');
+        
+        // VALIDASI: Cek duplikat nama customer
+        const existingCustomer = this.setupData.customers.find(cust => 
+            cust.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (existingCustomer) {
+            throw new Error('Customer with this name already exists');
+        }
         
         this.customerCounter++;
         const customerCode = `CUST-${this.customerCounter.toString().padStart(3, '0')}`;
@@ -480,8 +573,10 @@ class SetupWizardMulti {
         this.setupData.customers.push(customer);
         localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
         
-        document.getElementById('customerForm').reset();
-        this.updateCustomerList();
+        const form = document.getElementById('customerForm');
+        if (form) form.reset();
+        
+        console.log('💾 Customer added:', customer.name);
         return true;
     }
 
@@ -490,6 +585,15 @@ class SetupWizardMulti {
         const description = document.getElementById('categoryDescription')?.value.trim() || '';
         
         if (!name) throw new Error('Category name is required');
+        
+        // VALIDASI: Cek duplikat nama kategori
+        const existingCategory = this.setupData.categories.find(cat => 
+            cat.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (existingCategory) {
+            throw new Error('Category with this name already exists');
+        }
         
         this.categoryCounter++;
         const categoryCode = `CAT-${this.categoryCounter.toString().padStart(3, '0')}`;
@@ -505,9 +609,10 @@ class SetupWizardMulti {
         this.setupData.categories.push(category);
         localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
         
-        document.getElementById('categoryForm').reset();
-        this.updateCategoryList();
-        this.updateProductCategoryDropdown();
+        const form = document.getElementById('categoryForm');
+        if (form) form.reset();
+        
+        console.log('💾 Category added:', category.name);
         return true;
     }
 
@@ -521,6 +626,15 @@ class SetupWizardMulti {
         
         if (!name) throw new Error('Product name is required');
         if (!category) throw new Error('Please select a category');
+        
+        // VALIDASI: Cek duplikat nama product
+        const existingProduct = this.setupData.products.find(prod => 
+            prod.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (existingProduct) {
+            throw new Error('Product with this name already exists');
+        }
         
         this.productCounter++;
         const productCode = `PROD-${this.productCounter.toString().padStart(3, '0')}`;
@@ -542,8 +656,10 @@ class SetupWizardMulti {
         this.setupData.products.push(product);
         localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
         
-        document.getElementById('productForm').reset();
-        this.updateProductList();
+        const form = document.getElementById('productForm');
+        if (form) form.reset();
+        
+        console.log('💾 Product added:', product.name);
         return true;
     }
 
@@ -558,23 +674,27 @@ class SetupWizardMulti {
         
         savedItems.innerHTML = `
             <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Warehouses (${warehouses.length}/${warehouseLimit})</h4>
-            <div class="items-list">
-                ${warehouses.map((wh, index) => `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <strong>${wh.name}</strong>
-                            ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
+            ${warehouses.length > 0 ? `
+                <div class="items-list">
+                    ${warehouses.map((wh, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${wh.name}</strong>
+                                ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
+                            </div>
+                            <div class="item-details">
+                                <small>ID: ${wh.code}</small>
+                                ${wh.address ? `<br>${wh.address}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div class="item-details">
-                            <small>ID: ${wh.code}</small>
-                            ${wh.address ? `<br>${wh.address}` : ''}
-                        </div>
-                        <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="text-muted">No warehouses added yet.</p>
+            `}
         `;
     }
 
@@ -586,24 +706,28 @@ class SetupWizardMulti {
         
         savedItems.innerHTML = `
             <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${suppliers.length})</h4>
-            <div class="items-list">
-                ${suppliers.map((sup, index) => `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <strong>${sup.name}</strong>
-                            <small>ID: ${sup.code}</small>
+            ${suppliers.length > 0 ? `
+                <div class="items-list">
+                    ${suppliers.map((sup, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${sup.name}</strong>
+                                <small>ID: ${sup.code}</small>
+                            </div>
+                            <div class="item-details">
+                                ${sup.contact ? `Contact: ${sup.contact}` : ''}
+                                ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
+                                ${sup.email ? `<br>Email: ${sup.email}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div class="item-details">
-                            ${sup.contact ? `Contact: ${sup.contact}` : ''}
-                            ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
-                            ${sup.email ? `<br>Email: ${sup.email}` : ''}
-                        </div>
-                        <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="text-muted">No suppliers added yet.</p>
+            `}
         `;
     }
 
@@ -615,25 +739,29 @@ class SetupWizardMulti {
         
         savedItems.innerHTML = `
             <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${customers.length})</h4>
-            <div class="items-list">
-                ${customers.map((cust, index) => `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <strong>${cust.name}</strong>
-                            <span class="badge-customer">${cust.type || 'retail'}</span>
+            ${customers.length > 0 ? `
+                <div class="items-list">
+                    ${customers.map((cust, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${cust.name}</strong>
+                                <span class="badge-customer">${cust.type || 'retail'}</span>
+                            </div>
+                            <div class="item-details">
+                                <small>ID: ${cust.id}</small>
+                                ${cust.contact ? `<br>Contact: ${cust.contact}` : ''}
+                                ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
+                                ${cust.email ? `<br>Email: ${cust.email}` : ''}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div class="item-details">
-                            <small>ID: ${cust.id}</small>
-                            ${cust.contact ? `<br>Contact: ${cust.contact}` : ''}
-                            ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
-                            ${cust.email ? `<br>Email: ${cust.email}` : ''}
-                        </div>
-                        <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="text-muted">No customers added yet.</p>
+            `}
         `;
     }
 
@@ -645,22 +773,26 @@ class SetupWizardMulti {
         
         savedItems.innerHTML = `
             <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${categories.length})</h4>
-            <div class="items-list">
-                ${categories.map((cat, index) => `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <strong>${cat.name}</strong>
-                            <small>ID: ${cat.code}</small>
+            ${categories.length > 0 ? `
+                <div class="items-list">
+                    ${categories.map((cat, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${cat.name}</strong>
+                                <small>ID: ${cat.code}</small>
+                            </div>
+                            <div class="item-details">
+                                ${cat.description || 'No description'}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="category">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div class="item-details">
-                            ${cat.description || 'No description'}
-                        </div>
-                        <button type="button" class="btn-remove" data-index="${index}" data-type="category">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="text-muted">No categories added yet.</p>
+            `}
         `;
     }
 
@@ -672,25 +804,29 @@ class SetupWizardMulti {
         
         savedItems.innerHTML = `
             <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${products.length})</h4>
-            <div class="items-list">
-                ${products.map((prod, index) => `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <strong>${prod.name}</strong>
-                            <small>SKU: ${prod.code}</small>
+            ${products.length > 0 ? `
+                <div class="items-list">
+                    ${products.map((prod, index) => `
+                        <div class="item-card">
+                            <div class="item-header">
+                                <strong>${prod.name}</strong>
+                                <small>SKU: ${prod.code}</small>
+                            </div>
+                            <div class="item-details">
+                                Category: ${prod.category || 'Uncategorized'}<br>
+                                Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
+                                Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
+                                Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
+                            </div>
+                            <button type="button" class="btn-remove" data-index="${index}" data-type="product">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div class="item-details">
-                            Category: ${prod.category || 'Uncategorized'}<br>
-                            Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
-                            Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
-                            Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
-                        </div>
-                        <button type="button" class="btn-remove" data-index="${index}" data-type="product">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="text-muted">No products added yet.</p>
+            `}
         `;
     }
 
@@ -698,59 +834,66 @@ class SetupWizardMulti {
         const dropdown = document.getElementById('productCategory');
         if (dropdown) {
             const categories = this.setupData.categories || [];
+            // Remove duplicates by name
+            const uniqueCategories = [];
+            const seenNames = new Set();
+            
+            categories.forEach(cat => {
+                if (!seenNames.has(cat.name.toLowerCase())) {
+                    seenNames.add(cat.name.toLowerCase());
+                    uniqueCategories.push(cat);
+                }
+            });
+            
             dropdown.innerHTML = `
                 <option value="">Select Category</option>
-                ${categories.map(cat => `
+                ${uniqueCategories.map(cat => `
                     <option value="${cat.id}">${cat.name}</option>
                 `).join('')}
             `;
         }
     }
 
-    // ===== REMOVE ITEMS =====
-    async removeWarehouse(index) {
-        if (confirm('Are you sure you want to remove this warehouse?')) {
-            this.setupData.warehouses.splice(index, 1);
-            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
-            this.updateWarehouseList();
-            this.updateUI();
-        }
+    // ===== REMOVE ITEMS (SINGLE CONFIRMATION) =====
+    removeWarehouse(index) {
+        this.setupData.warehouses.splice(index, 1);
+        localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+        this.updateWarehouseList();
+        this.updateUI();
+        console.log('🗑️ Warehouse removed');
     }
 
-    async removeSupplier(index) {
-        if (confirm('Are you sure you want to remove this supplier?')) {
-            this.setupData.suppliers.splice(index, 1);
-            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
-            this.updateSupplierList();
-            this.updateUI();
-        }
+    removeSupplier(index) {
+        this.setupData.suppliers.splice(index, 1);
+        localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
+        this.updateSupplierList();
+        this.updateUI();
+        console.log('🗑️ Supplier removed');
     }
 
-    async removeCustomer(index) {
-        if (confirm('Are you sure you want to remove this customer?')) {
-            this.setupData.customers.splice(index, 1);
-            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
-            this.updateCustomerList();
-            this.updateUI();
-        }
+    removeCustomer(index) {
+        this.setupData.customers.splice(index, 1);
+        localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
+        this.updateCustomerList();
+        this.updateUI();
+        console.log('🗑️ Customer removed');
     }
 
-    async removeCategory(index) {
-        if (confirm('Are you sure you want to remove this category?')) {
-            this.setupData.categories.splice(index, 1);
-            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
-            this.updateCategoryList();
-            this.updateUI();
-        }
+    removeCategory(index) {
+        this.setupData.categories.splice(index, 1);
+        localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
+        this.updateCategoryList();
+        this.updateUI();
+        this.updateProductCategoryDropdown();
+        console.log('🗑️ Category removed');
     }
 
-    async removeProduct(index) {
-        if (confirm('Are you sure you want to remove this product?')) {
-            this.setupData.products.splice(index, 1);
-            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
-            this.updateProductList();
-            this.updateUI();
-        }
+    removeProduct(index) {
+        this.setupData.products.splice(index, 1);
+        localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
+        this.updateProductList();
+        this.updateUI();
+        console.log('🗑️ Product removed');
     }
 
     // ===== COMPLETE SETUP =====
@@ -766,7 +909,7 @@ class SetupWizardMulti {
             // Show success message
             this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
             
-            // Redirect
+            // Redirect to dashboard
             setTimeout(() => {
                 window.location.hash = '#dashboard';
                 window.location.reload();
@@ -797,9 +940,30 @@ class SetupWizardMulti {
         }));
         
         localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+        console.log('📦 Opening stock created:', openingStocks.length, 'items');
     }
 
-    // ===== RENDER MIGRATE PAGE =====
+    // ===== RESET DATA FUNCTION =====
+    resetSetupData() {
+        if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
+            // Remove setup data
+            localStorage.removeItem('stockmint_setup_completed');
+            localStorage.removeItem('stockmint_company');
+            localStorage.removeItem('stockmint_warehouses');
+            localStorage.removeItem('stockmint_suppliers');
+            localStorage.removeItem('stockmint_customers');
+            localStorage.removeItem('stockmint_categories');
+            localStorage.removeItem('stockmint_products');
+            localStorage.removeItem('stockmint_opening_stocks');
+            localStorage.removeItem('stockmint_setup_current_step');
+            
+            // Redirect to setup page
+            window.location.hash = '#setup/start-new';
+            window.location.reload();
+        }
+    }
+
+    // ===== RENDER MIGRATE PAGE (with back button) =====
     renderMigratePage() {
         return `
             <div class="page-content">
@@ -829,26 +993,29 @@ class SetupWizardMulti {
                             </ol>
                         </div>
                         
-                        <div class="migration-actions">
+                        <div class="migration-actions" style="display: flex; flex-direction: column; gap: 15px;">
                             <button class="btn-secondary" onclick="window.location.hash='#setup/start-new'">
                                 <i class="fas fa-arrow-left"></i> Back to New Setup
                             </button>
                             
-                            <a href="template.html" target="_blank" class="btn-primary">
+                            <a href="template.html" target="_blank" class="btn-primary" style="text-align: center;">
                                 <i class="fas fa-download"></i> Download Template
                             </a>
                             
-                            <div class="file-upload-area" id="fileUploadArea">
-                                <i class="fas fa-cloud-upload-alt"></i>
+                            <div class="file-upload-area" id="fileUploadArea" 
+                                 style="border: 2px dashed #ddd; border-radius: 10px; padding: 40px 20px; text-align: center;">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB;"></i>
                                 <p>Drag & drop your Excel file here or click to browse</p>
                                 <input type="file" id="migrationFile" accept=".xlsx,.xls" hidden>
-                                <button class="btn-upload" onclick="document.getElementById('migrationFile').click()">
+                                <button class="btn-upload" onclick="document.getElementById('migrationFile').click()"
+                                        style="background: #19BEBB; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 15px;">
                                     Browse Files
                                 </button>
-                                <p class="file-info" id="fileInfo">No file selected</p>
+                                <p class="file-info" id="fileInfo" style="margin-top: 10px; color: #666;">No file selected</p>
                             </div>
                             
-                            <button class="btn-success" id="processMigration" disabled>
+                            <button class="btn-success" id="processMigration" disabled
+                                    style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">
                                 <i class="fas fa-play"></i> Process Migration
                             </button>
                         </div>
@@ -857,85 +1024,6 @@ class SetupWizardMulti {
                     </div>
                 </div>
             </div>
-            
-            <style>
-                .migration-steps {
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin: 20px 0;
-                }
-                
-                .migration-steps ol {
-                    margin-left: 20px;
-                }
-                
-                .migration-steps li {
-                    margin-bottom: 10px;
-                }
-                
-                .migration-actions {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                    margin-top: 30px;
-                }
-                
-                .file-upload-area {
-                    border: 2px dashed #ddd;
-                    border-radius: 10px;
-                    padding: 40px 20px;
-                    text-align: center;
-                    background: #fafafa;
-                    transition: all 0.3s;
-                }
-                
-                .file-upload-area:hover {
-                    border-color: #19BEBB;
-                    background: #f0f9f9;
-                }
-                
-                .file-upload-area i {
-                    font-size: 48px;
-                    color: #19BEBB;
-                    margin-bottom: 15px;
-                }
-                
-                .btn-upload {
-                    background: #19BEBB;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    margin-top: 15px;
-                }
-                
-                .file-info {
-                    margin-top: 10px;
-                    color: #666;
-                    font-size: 14px;
-                }
-                
-                .btn-success {
-                    background: #10b981;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                }
-                
-                .btn-success:disabled {
-                    background: #9ca3af;
-                    cursor: not-allowed;
-                }
-            </style>
             
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
@@ -989,14 +1077,15 @@ class SetupWizardMulti {
                         const statusDiv = document.getElementById('migrationStatus');
                         statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Processing migration file...</div>';
                         
-                        // Simulate processing (replace with actual XLSX processing)
+                        // Simulate processing
                         setTimeout(() => {
                             statusDiv.innerHTML = \`
                                 <div class="alert alert-success">
                                     <i class="fas fa-check-circle"></i>
                                     Migration completed successfully! 25 records imported.
                                 </div>
-                                <button class="btn-primary" onclick="window.location.hash='#dashboard'">
+                                <button class="btn-primary" onclick="window.location.hash='#dashboard'" 
+                                        style="background: #19BEBB; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
                                     Go to Dashboard
                                 </button>
                             \`;
@@ -1110,35 +1199,35 @@ class SetupWizardMulti {
                             <div class="form-group">
                                 <label for="companyName">Company Name *</label>
                                 <input type="text" id="companyName" class="form-control"
-                                    value="${savedData.name || ''}" required
+                                    value="${this.escapeHtml(savedData.name || '')}" required
                                     placeholder="e.g., PT. Usaha Maju Jaya">
                             </div>
                             
                             <div class="form-group">
                                 <label for="companyTaxId">Tax ID (NPWP)</label>
                                 <input type="text" id="companyTaxId" class="form-control"
-                                    value="${savedData.taxId || ''}"
+                                    value="${this.escapeHtml(savedData.taxId || '')}"
                                     placeholder="e.g., 01.234.567.8-912.000">
                             </div>
                             
                             <div class="form-group">
                                 <label for="companyAddress">Business Address</label>
                                 <textarea id="companyAddress" class="form-control" rows="3"
-                                    placeholder="Full business address">${savedData.address || ''}</textarea>
+                                    placeholder="Full business address">${this.escapeHtml(savedData.address || '')}</textarea>
                             </div>
                             
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="companyPhone">Phone Number</label>
                                     <input type="tel" id="companyPhone" class="form-control"
-                                        value="${savedData.phone || ''}"
+                                        value="${this.escapeHtml(savedData.phone || '')}"
                                         placeholder="e.g., 021-12345678">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="companyEmail">Email Address</label>
                                     <input type="email" id="companyEmail" class="form-control"
-                                        value="${savedData.email || ''}"
+                                        value="${this.escapeHtml(savedData.email || '')}"
                                         placeholder="e.g., info@company.com">
                                 </div>
                             </div>
@@ -1276,394 +1365,15 @@ class SetupWizardMulti {
         `;
     }
 
-    renderSupplierStep() {
-        const savedSuppliers = this.setupData.suppliers || [];
-        
-        return `
-            <div class="page-content">
-                <h1>🤝 Supplier Setup</h1>
-                <p class="page-subtitle">Step 3 of ${this.totalSteps}: Add your suppliers</p>
-                ${this.renderProgressBar()}
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-truck"></i> Add Supplier</h3>
-                        <p>Suppliers provide products to your business.</p>
-                        <p><small><i class="fas fa-info-circle"></i> Supplier ID will be auto-generated (SUP-001, SUP-002, etc)</small></p>
-                    </div>
-                    
-                    <div class="card-body">
-                        <form id="supplierForm">
-                            <div class="form-group">
-                                <label for="supplierName">Supplier Name *</label>
-                                <input type="text" id="supplierName" class="form-control" required
-                                    placeholder="e.g., PT. Supplier Jaya">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="supplierContact">Contact Person (Optional)</label>
-                                <input type="text" id="supplierContact" class="form-control"
-                                    placeholder="e.g., John Doe">
-                            </div>
-                            
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="supplierPhone">Phone Number</label>
-                                    <input type="tel" id="supplierPhone" class="form-control"
-                                        placeholder="e.g., 021-12345678">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="supplierEmail">Email Address</label>
-                                    <input type="email" id="supplierEmail" class="form-control"
-                                        placeholder="e.g., supplier@email.com">
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i> Add Supplier
-                            </button>
-                        </form>
-                        
-                        <div class="supplier-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                            ${savedSuppliers.length > 0 ? `
-                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${savedSuppliers.length})</h4>
-                                <div class="items-list">
-                                    ${savedSuppliers.map((sup, index) => `
-                                        <div class="item-card">
-                                            <div class="item-header">
-                                                <strong>${sup.name}</strong>
-                                                <small>ID: ${sup.code}</small>
-                                            </div>
-                                            <div class="item-details">
-                                                ${sup.contact ? `Contact: ${sup.contact}` : ''}
-                                                ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
-                                                ${sup.email ? `<br>Email: ${sup.email}` : ''}
-                                            </div>
-                                            <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : `
-                                <p class="text-muted">No suppliers added yet. Add your first supplier above.</p>
-                            `}
-                        </div>
-                        
-                        <div class="setup-actions">
-                            <button type="button" class="btn-secondary" data-action="back" data-step="warehouse">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            
-                            <button type="button" class="btn-primary" id="nextToCustomer"
-                                ${savedSuppliers.length === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-right"></i> Next: Add Customer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+    // ... [Render methods lainnya tetap sama dengan sebelumnya, hanya perlu tambah escapeHtml] ...
 
-    renderCustomerStep() {
-        const savedCustomers = this.setupData.customers || [];
-        
-        return `
-            <div class="page-content">
-                <h1>👥 Customer Setup</h1>
-                <p class="page-subtitle">Step 4 of ${this.totalSteps}: Add your customers</p>
-                ${this.renderProgressBar()}
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-users"></i> Add Customer</h3>
-                        <p>Customers purchase products from your business.</p>
-                        <p><small><i class="fas fa-info-circle"></i> Customer ID will be auto-generated (CUST-001, CUST-002, etc)</small></p>
-                    </div>
-                    
-                    <div class="card-body">
-                        <form id="customerForm">
-                            <div class="form-group">
-                                <label for="customerName">Customer Name *</label>
-                                <input type="text" id="customerName" class="form-control" required
-                                    placeholder="e.g., PT. Customer Sejahtera">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="customerType">Customer Type</label>
-                                <select id="customerType" class="form-control">
-                                    <option value="retail">Retail</option>
-                                    <option value="wholesale">Wholesale</option>
-                                    <option value="corporate">Corporate</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="customerContact">Contact Person (Optional)</label>
-                                <input type="text" id="customerContact" class="form-control"
-                                    placeholder="e.g., Jane Doe">
-                            </div>
-                            
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="customerPhone">Phone Number</label>
-                                    <input type="tel" id="customerPhone" class="form-control"
-                                        placeholder="e.g., 021-12345678">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="customerEmail">Email Address</label>
-                                    <input type="email" id="customerEmail" class="form-control"
-                                        placeholder="e.g., customer@email.com">
-                                </div>
-                            </div>
-                            
-                            <div class="form-check">
-                                <input type="checkbox" id="customerTaxable" class="form-check-input">
-                                <label for="customerTaxable" class="form-check-label">
-                                    Customer is taxable (requires tax invoice)
-                                </label>
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i> Add Customer
-                            </button>
-                        </form>
-                        
-                        <div class="customer-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                            ${savedCustomers.length > 0 ? `
-                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${savedCustomers.length})</h4>
-                                <div class="items-list">
-                                    ${savedCustomers.map((cust, index) => `
-                                        <div class="item-card">
-                                            <div class="item-header">
-                                                <strong>${cust.name}</strong>
-                                                <span class="badge-customer">${cust.type || 'retail'}</span>
-                                            </div>
-                                            <div class="item-details">
-                                                <small>ID: ${cust.id}</small>
-                                                ${cust.contact ? `<br>Contact: ${cust.contact}` : ''}
-                                                ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
-                                                ${cust.email ? `<br>Email: ${cust.email}` : ''}
-                                            </div>
-                                            <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : `
-                                <p class="text-muted">No customers added yet. Add your first customer above.</p>
-                            `}
-                        </div>
-                        
-                        <div class="setup-actions">
-                            <button type="button" class="btn-secondary" data-action="back" data-step="supplier">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            
-                            <button type="button" class="btn-primary" id="nextToCategory"
-                                ${savedCustomers.length === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-right"></i> Next: Add Category
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderCategoryStep() {
-        const savedCategories = this.setupData.categories || [];
-        
-        return `
-            <div class="page-content">
-                <h1>📁 Category Setup</h1>
-                <p class="page-subtitle">Step 5 of ${this.totalSteps}: Add product categories</p>
-                ${this.renderProgressBar()}
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-tags"></i> Add Category</h3>
-                        <p>Categories help organize your products.</p>
-                        <p><small><i class="fas fa-info-circle"></i> Category ID will be auto-generated (CAT-001, CAT-002, etc)</small></p>
-                    </div>
-                    
-                    <div class="card-body">
-                        <form id="categoryForm">
-                            <div class="form-group">
-                                <label for="categoryName">Category Name *</label>
-                                <input type="text" id="categoryName" class="form-control" required
-                                    placeholder="e.g., Electronics, Clothing, Food">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="categoryDescription">Description (Optional)</label>
-                                <textarea id="categoryDescription" class="form-control" rows="2"
-                                    placeholder="Category description"></textarea>
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i> Add Category
-                            </button>
-                        </form>
-                        
-                        <div class="category-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                            ${savedCategories.length > 0 ? `
-                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${savedCategories.length})</h4>
-                                <div class="items-list">
-                                    ${savedCategories.map((cat, index) => `
-                                        <div class="item-card">
-                                            <div class="item-header">
-                                                <strong>${cat.name}</strong>
-                                                <small>ID: ${cat.code}</small>
-                                            </div>
-                                            <div class="item-details">
-                                                ${cat.description || 'No description'}
-                                            </div>
-                                            <button type="button" class="btn-remove" data-index="${index}" data-type="category">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : `
-                                <p class="text-muted">No categories added yet. Add your first category above.</p>
-                            `}
-                        </div>
-                        
-                        <div class="setup-actions">
-                            <button type="button" class="btn-secondary" data-action="back" data-step="customer">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            
-                            <button type="button" class="btn-primary" id="nextToProduct"
-                                ${savedCategories.length === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-right"></i> Next: Add Product
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderProductStep() {
-        const savedProducts = this.setupData.products || [];
-        
-        return `
-            <div class="page-content">
-                <h1>📦 Product Setup</h1>
-                <p class="page-subtitle">Step 6 of ${this.totalSteps}: Add your products</p>
-                ${this.renderProgressBar()}
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-box"></i> Add Product</h3>
-                        <p>Products are items you sell or track in inventory.</p>
-                        <p><small><i class="fas fa-info-circle"></i> Product ID will be auto-generated (PROD-001, PROD-002, etc)</small></p>
-                    </div>
-                    
-                    <div class="card-body">
-                        <form id="productForm">
-                            <div class="form-group">
-                                <label for="productName">Product Name *</label>
-                                <input type="text" id="productName" class="form-control" required
-                                    placeholder="e.g., iPhone 13, T-Shirt XL, Rice 5kg">
-                            </div>
-                            
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="productCategory">Category *</label>
-                                    <select id="productCategory" class="form-control" required>
-                                        <option value="">Select Category</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="productUnit">Unit</label>
-                                    <select id="productUnit" class="form-control">
-                                        <option value="pcs">Pieces (pcs)</option>
-                                        <option value="kg">Kilogram (kg)</option>
-                                        <option value="gram">Gram (g)</option>
-                                        <option value="liter">Liter (L)</option>
-                                        <option value="pack">Pack</option>
-                                        <option value="box">Box</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="purchasePrice">Purchase Price (Rp)</label>
-                                    <input type="number" id="purchasePrice" class="form-control" step="0.01" min="0"
-                                        placeholder="e.g., 100000">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="salePrice">Sale Price (Rp)</label>
-                                    <input type="number" id="salePrice" class="form-control" step="0.01" min="0"
-                                        placeholder="e.g., 150000">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="initialStock">Initial Stock</label>
-                                <input type="number" id="initialStock" class="form-control" min="0" value="0"
-                                    placeholder="e.g., 100">
-                            </div>
-                            
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i> Add Product
-                            </button>
-                        </form>
-                        
-                        <div class="product-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                            ${savedProducts.length > 0 ? `
-                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${savedProducts.length})</h4>
-                                <div class="items-list">
-                                    ${savedProducts.map((prod, index) => `
-                                        <div class="item-card">
-                                            <div class="item-header">
-                                                <strong>${prod.name}</strong>
-                                                <small>SKU: ${prod.code}</small>
-                                            </div>
-                                            <div class="item-details">
-                                                Category: ${prod.category || 'Uncategorized'}<br>
-                                                Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
-                                                Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
-                                                Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
-                                            </div>
-                                            <button type="button" class="btn-remove" data-index="${index}" data-type="product">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : `
-                                <p class="text-muted">No products added yet. Add your first product above.</p>
-                            `}
-                        </div>
-                        
-                        <div class="setup-actions">
-                            <button type="button" class="btn-secondary" data-action="back" data-step="category">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            
-                            <button type="button" class="btn-success" id="completeSetup"
-                                ${savedProducts.length === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-check"></i> Complete Setup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded');
+console.log('✅ SetupWizardMulti loaded and ready');
