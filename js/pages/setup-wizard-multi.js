@@ -489,7 +489,7 @@ class SetupWizardMulti {
         }, 'Failed to save warehouse data');
     }
 
-        saveSupplierData() {
+            saveSupplierData() {
         return this.safeExecute(() => {
             const name = document.getElementById('supplierName')?.value.trim();
             const contact = document.getElementById('supplierContact')?.value.trim() || '';
@@ -504,18 +504,14 @@ class SetupWizardMulti {
                 throw new Error('Please enter a valid email address');
             }
             
-            // Auto-generate supplier code jika tidak diisi
-            const codeInput = document.getElementById('supplierCode');
-            let code = codeInput?.value.trim();
-            if (!code) {
-                code = `SUP${Date.now().toString().slice(-6)}`;
-                if (codeInput) codeInput.value = code; // Tampilkan di form
-            }
+            // AUTO-GENERATE supplier ID (sama seperti customer)
+            const supplierId = `SUP${Date.now().toString().slice(-6)}`;
+            const supplierCode = `SUP-${Date.now().toString().slice(-4)}`; // Contoh: SUP-1234
             
             const supplier = {
-                id: code, // Gunakan code sebagai ID
+                id: supplierId,
                 name,
-                code,
+                code: supplierCode, // Auto-generated
                 contact,
                 phone,
                 email,
@@ -533,24 +529,18 @@ class SetupWizardMulti {
             // Simpan ke localStorage
             localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
             
-            // Reset form dan update list
-            const form = document.getElementById('supplierForm');
-            if (form) {
-                // Jangan reset code field karena sudah diisi otomatis
-                form.querySelector('#supplierName').value = '';
-                form.querySelector('#supplierContact').value = '';
-                form.querySelector('#supplierPhone').value = '';
-                form.querySelector('#supplierEmail').value = '';
-            }
+            // Reset form SEMUA field
+            document.getElementById('supplierForm').reset();
             
-            // Update UI immediately
+            // Update UI immediately - INI YANG PERLU DIPASTIKAN
             this.updateSupplierList();
             
-            // Auto-enable next button
+            // Auto-enable next button - PASTIKAN INI DIPANGGIL
             setTimeout(() => {
                 const nextBtn = document.getElementById('nextToCustomer');
                 if (nextBtn && this.setupData.suppliers.length > 0) {
                     nextBtn.disabled = false;
+                    console.log('✅ Next button enabled for suppliers');
                 }
             }, 100);
             
@@ -1853,7 +1843,7 @@ class SetupWizardMulti {
         </div>
     `;
 }
-        renderSupplierStep() {
+            renderSupplierStep() {
         const savedSuppliers = this.setupData.suppliers || [];
         const completion = this.getCompletionPercentage();
         
@@ -1882,6 +1872,7 @@ class SetupWizardMulti {
                     <div class="card-header">
                         <h3><i class="fas fa-truck"></i> Add Supplier</h3>
                         <p>Suppliers are companies that provide you with products. Add at least one supplier.</p>
+                        <p><small><i class="fas fa-info-circle"></i> Supplier ID will be auto-generated</small></p>
                     </div>
                     <div class="card-body">
                         <form id="supplierForm">
@@ -1893,23 +1884,17 @@ class SetupWizardMulti {
                                 </div>
                                 
                                 <div class="form-group">
-                                    <label for="supplierCode">Supplier Code</label>
-                                    <input type="text" id="supplierCode" class="form-control" 
-                                           placeholder="e.g., SUP-001">
+                                    <label for="supplierContact">Contact Person</label>
+                                    <input type="text" id="supplierContact" class="form-control" 
+                                           placeholder="e.g., John Doe">
                                 </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="supplierContact">Contact Person</label>
-                                <input type="text" id="supplierContact" class="form-control" 
-                                       placeholder="e.g., John Doe">
                             </div>
                             
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="supplierPhone">Phone Number</label>
                                     <input type="tel" id="supplierPhone" class="form-control" 
-                                       placeholder="e.g., 08123456789">
+                                           placeholder="e.g., 08123456789">
                                 </div>
                                 
                                 <div class="form-group">
@@ -1932,11 +1917,12 @@ class SetupWizardMulti {
                                         <div class="item-card">
                                             <div class="item-header">
                                                 <strong>${sup.name}</strong>
+                                                <small>${sup.code || 'No code'}</small>
                                             </div>
                                             <div class="item-details">
                                                 ${sup.contact ? `Contact: ${sup.contact}` : ''}
                                                 ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
-                                                ${sup.code ? `<br>Code: ${sup.code}` : ''}
+                                                ${sup.email ? `<br>Email: ${sup.email}` : ''}
                                             </div>
                                             <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
                                                 <i class="fas fa-trash"></i>
