@@ -1,11 +1,20 @@
 // setup-wizard-multi.js - Multi-step setup wizard COMPLETE VERSION
 class SetupWizardMulti {
-    constructor() {
+        constructor() {
         try {
             this.currentStep = this.getCurrentStep();
             this.totalSteps = 6;
             this.setupData = this.loadSavedData();
             this.autoSaveInterval = null;
+            
+            // DEBUG: Log data yang dimuat
+            console.log('📊 Loaded setup data:', {
+                warehouses: this.setupData.warehouses?.length || 0,
+                suppliers: this.setupData.suppliers?.length || 0,
+                customers: this.setupData.customers?.length || 0,
+                categories: this.setupData.categories?.length || 0,
+                products: this.setupData.products?.length || 0
+            });
             
             // Get user plan
             this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
