@@ -923,3 +923,83 @@ body {
 .menu-item.enabled .menu-lock {
     display: none;
 }
+
+/* Tambahkan di akhir file style.css */
+
+/* Improved form spacing */
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #19BEBB;
+    box-shadow: 0 0 0 3px rgba(25, 190, 187, 0.1);
+}
+
+/* Better spacing for setup wizard */
+.setup-header {
+    margin-bottom: 30px;
+}
+
+.card {
+    margin-bottom: 25px;
+}
+
+.card-body {
+    padding: 25px;
+}
+
+/* Progress indicator responsive */
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-top: 10px;
+}
+
+.step {
+    text-align: center;
+    flex: 1;
+}
+
+.step.active {
+    color: #19BEBB;
+    font-weight: 700;
+}
+
+.step.completed {
+    color: #10b981;
+}
+
+@media (max-width: 768px) {
+    .progress-steps {
+        font-size: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+}
