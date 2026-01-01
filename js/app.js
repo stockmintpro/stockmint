@@ -450,8 +450,8 @@ loadPage(page) {
   }
   
   // Get page content - UPDATE untuk handle multi-step setup
-  // Get page content - UPDATE untuk handle multi-step setup
-  getPageContent(page) {
+  // Ganti bagian ini di method getPageContent (sekitar line 416)
+getPageContent(page) {
     // Feature locked page for demo users
     if (page === 'feature-locked') {
         return this.getFeatureLockedContent();
@@ -467,22 +467,17 @@ loadPage(page) {
         return this.getMasterDataContent();
     }
     
-    // Setup pages - PERBAIKAN DI SINI
+    // Setup pages
     if (page.startsWith('setup/')) {
-      // Cek apakah SetupWizardMulti sudah ada
       if (typeof SetupWizardMulti === 'undefined') {
         console.error('❌ SetupWizardMulti not loaded!');
         return '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
       }
       
       try {
-        // Buat instance wizard
         const wizard = new SetupWizardMulti();
-        
-        // Simpan instance ke global agar bisa diakses dari event handler
         window.currentWizard = wizard;
         
-        // Render berdasarkan route
         const hash = window.location.hash.substring(1);
         const route = hash.split('/')[1];
         
@@ -490,11 +485,17 @@ loadPage(page) {
         if (route === 'migrate') {
           html = wizard.renderMigratePage();
         } else {
-          // Set current step berdasarkan route
           wizard.currentStep = route || wizard.currentStep;
           html = wizard.render();
         }
-      
+        
+        // Bind events setelah DOM dirender
+        setTimeout(() => {
+          if (window.currentWizard && window.currentWizard.bindEvents) {
+            window.currentWizard.bindEvents();
+          }
+        }, 100);
+        
         return html;
       } catch (error) {
         console.error('❌ Error rendering setup wizard:', error);
@@ -504,7 +505,7 @@ loadPage(page) {
     
     // Other pages
     return this.getDefaultPageContent(page);
-  }
+}
   
   // Dashboard content
   getDashboardContent() {
