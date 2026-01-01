@@ -253,7 +253,7 @@ class StockMintApp {
         'purchases/deposits',
         'sales/returns',
         'sales/refunds',
-        'inventory/adjustments',
+        'inventory/transfers',
         'inventory/opname',
         'transactions/receipts',
         'transactions/journals',
