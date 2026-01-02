@@ -1,6 +1,6 @@
-// setup-wizard-multi.js - VERSI FIXED COMPLETE DENGAN PERBAIKAN MASALAH
+// setup-wizard-multi.js - VERSI FIXED DENGAN 4 PERBAIKAN
 
-console.log('🔄 setup-wizard-multi.js LOADED - VERSION FIXED WITH UPDATES');
+console.log('🔄 setup-wizard-multi.js LOADED - VERSION FIXED WITH ALL UPDATES');
 
 class SetupWizardMulti {
     constructor() {
@@ -23,6 +23,7 @@ class SetupWizardMulti {
             // Flag untuk mencegah multiple event binding
             this.eventsBound = false;
             this.navigationEventsBound = false;
+            this.migrateEventsBound = false;
             
         } catch (error) {
             console.error('❌ Failed to initialize SetupWizard:', error);
@@ -41,6 +42,7 @@ class SetupWizardMulti {
             this.productCounter = 0;
             this.eventsBound = false;
             this.navigationEventsBound = false;
+            this.migrateEventsBound = false;
         }
     }
 
@@ -69,17 +71,23 @@ class SetupWizardMulti {
     bindEvents() {
         console.log('🔧 Binding events for step:', this.currentStep);
         
-        // Cegah multiple binding
-        if (this.eventsBound) {
-            console.log('⚠️ Events already bound, skipping...');
-            return;
+        // Reset flags untuk step yang berbeda
+        if (this.currentStep === 'migrate') {
+            this.migrateEventsBound = false;
+        } else {
+            this.eventsBound = false;
         }
         
         setTimeout(() => {
             this.bindFormEvents();
             this.bindNavigationEvents();
             this.updateUI();
-            this.eventsBound = true;
+            
+            if (this.currentStep === 'migrate') {
+                this.migrateEventsBound = true;
+            } else {
+                this.eventsBound = true;
+            }
         }, 100);
     }
 
@@ -87,6 +95,8 @@ class SetupWizardMulti {
     forceBindEvents() {
         console.log('🔧 Force binding events...');
         this.eventsBound = false;
+        this.navigationEventsBound = false;
+        this.migrateEventsBound = false;
         this.bindEvents();
     }
 
@@ -130,7 +140,6 @@ class SetupWizardMulti {
                 e.preventDefault();
                 try {
                     this.saveCompanyData();
-                    // PROBLEM 2 FIXED: Hapus alert dan langsung redirect
                     window.location.hash = '#setup/warehouse';
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -289,28 +298,29 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== NAVIGATION EVENTS DIPERBAIKI (PROBLEM 3 FIXED) =====
+    // ===== NAVIGATION EVENTS DIPERBAIKI (MASALAH 3 FIXED) =====
     
     bindNavigationEvents() {
         // Cegah multiple binding
         if (this.navigationEventsBound) {
+            console.log('⚠️ Navigation events already bound, skipping...');
             return;
         }
         
         console.log('🔗 Binding navigation events...');
         
-        // Event delegation untuk tombol remove dengan satu event handler
+        // Event delegation untuk tombol remove dengan satu event handler yang stabil
         document.addEventListener('click', (e) => {
+            // Cek jika klik pada tombol remove
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
                 e.preventDefault();
-                e.stopPropagation();
                 
                 const index = parseInt(removeBtn.dataset.index);
                 const type = removeBtn.dataset.type;
                 
-                // PROBLEM 3 FIXED: Gunakan konfirmasi yang proper
-                if (confirm(`Are you sure you want to remove this ${type}?`)) {
+                // PERBAIKAN MASALAH 3: Gunakan custom modal confirm untuk menghindari multiple prompt
+                if (this.showCustomConfirm(`Are you sure you want to remove this ${type}?`)) {
                     let removed = false;
                     
                     switch(type) {
@@ -352,7 +362,7 @@ class SetupWizardMulti {
 
             // Cancel button
             if (e.target.closest('[data-action="cancel"]')) {
-                if (confirm('Are you sure you want to cancel setup? All progress will be lost.')) {
+                if (this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.')) {
                     localStorage.removeItem('stockmint_company');
                     localStorage.removeItem('stockmint_warehouses');
                     localStorage.removeItem('stockmint_suppliers');
@@ -366,6 +376,98 @@ class SetupWizardMulti {
         });
         
         this.navigationEventsBound = true;
+    }
+
+    // ===== CUSTOM CONFIRM DIALOG (UNTUK PERBAIKAN MASALAH 3) =====
+    
+    showCustomConfirm(message) {
+        return new Promise((resolve) => {
+            // Cek jika ada modal confirm yang sudah ada
+            const existingModal = document.getElementById('customConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Buat modal confirm custom
+            const modalHTML = `
+                <div id="customConfirmModal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                ">
+                    <div style="
+                        background: white;
+                        border-radius: 10px;
+                        padding: 25px;
+                        max-width: 400px;
+                        width: 90%;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                    ">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <h3 style="margin: 0 0 10px 0; color: #333;">Confirm Action</h3>
+                            <p style="color: #666; margin: 0;">${message}</p>
+                        </div>
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button id="confirmCancel" style="
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 6px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                flex: 1;
+                            ">
+                                Cancel
+                            </button>
+                            <button id="confirmOk" style="
+                                background: #f59e0b;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 6px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                flex: 1;
+                            ">
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Bind events untuk tombol
+            document.getElementById('confirmOk').addEventListener('click', () => {
+                document.getElementById('customConfirmModal').remove();
+                resolve(true);
+            });
+            
+            document.getElementById('confirmCancel').addEventListener('click', () => {
+                document.getElementById('customConfirmModal').remove();
+                resolve(false);
+            });
+            
+            // Close modal ketika klik di luar
+            document.getElementById('customConfirmModal').addEventListener('click', (e) => {
+                if (e.target.id === 'customConfirmModal') {
+                    document.getElementById('customConfirmModal').remove();
+                    resolve(false);
+                }
+            });
+        });
     }
 
     // ===== METHOD renderMigrate() YANG DIPERBARUI =====
@@ -424,11 +526,35 @@ class SetupWizardMulti {
                             <p>Upload the filled Excel file here</p>
                             <div class="upload-section">
                                 <div class="file-input-container">
-                                    <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;">
-                                    <button type="button" id="browseFileBtn" class="btn-browse">
-                                        <i class="fas fa-folder-open"></i> Browse Excel File
-                                    </button>
-                                    <span id="selectedFileName">No file selected</span>
+                                    <!-- PERBAIKAN MASALAH 2: Tambah drag & drop area -->
+                                    <div class="drop-area" id="dropArea" style="
+                                        border: 2px dashed #19BEBB;
+                                        border-radius: 10px;
+                                        padding: 30px;
+                                        text-align: center;
+                                        margin-bottom: 20px;
+                                        cursor: pointer;
+                                        transition: all 0.3s;
+                                    ">
+                                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;"></i>
+                                        <h4 style="margin: 0 0 10px 0; color: #333;">Drag & Drop Excel File Here</h4>
+                                        <p style="color: #666; margin: 0 0 15px 0;">or click to browse</p>
+                                        <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;">
+                                        <button type="button" id="browseFileBtn" class="btn-browse">
+                                            <i class="fas fa-folder-open"></i> Browse Excel File
+                                        </button>
+                                    </div>
+                                    
+                                    <div style="text-align: center;">
+                                        <span id="selectedFileName" style="
+                                            display: inline-block;
+                                            padding: 8px 15px;
+                                            background: #f8f9fa;
+                                            border-radius: 6px;
+                                            margin: 10px 0;
+                                            color: #666;
+                                        ">No file selected</span>
+                                    </div>
                                 </div>
                                 
                                 <button type="button" id="uploadFileBtn" class="btn-upload" disabled>
@@ -591,6 +717,9 @@ class SetupWizardMulti {
             background: #10b981;
             color: white;
             margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
         }
         
         .btn-upload:disabled {
@@ -622,9 +751,6 @@ class SetupWizardMulti {
         }
         
         .file-input-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
             margin: 15px 0;
         }
         
@@ -683,61 +809,143 @@ class SetupWizardMulti {
             justify-content: center;
             margin-top: 30px;
         }
+        
+        .drop-area:hover {
+            background: #f8f9fa;
+            border-color: #0fa8a6;
+        }
+        
+        .drop-area.drag-over {
+            background: #e3f2fd;
+            border-color: #19BEBB;
+            border-style: solid;
+        }
         </style>
         `;
     }
 
-    // ===== BIND EVENTS UNTUK MIGRATE PAGE (PROBLEM 5 FIXED) =====
+    // ===== BIND EVENTS UNTUK MIGRATE PAGE (PERBAIKAN MASALAH 2) =====
     
     bindMigrateEvents() {
         console.log('📤 Binding migrate events...');
+        
+        // Cegah multiple binding
+        if (this.migrateEventsBound) {
+            console.log('⚠️ Migrate events already bound, skipping...');
+            return;
+        }
         
         const browseBtn = document.getElementById('browseFileBtn');
         const fileInput = document.getElementById('excelFile');
         const uploadBtn = document.getElementById('uploadFileBtn');
         const fileNameSpan = document.getElementById('selectedFileName');
+        const dropArea = document.getElementById('dropArea');
         
+        // PERBAIKAN MASALAH 2: Event binding untuk browse button
         if (browseBtn && fileInput) {
             browseBtn.addEventListener('click', () => {
                 fileInput.click();
             });
             
             fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    fileNameSpan.textContent = file.name;
-                    uploadBtn.disabled = false;
-                } else {
-                    fileNameSpan.textContent = 'No file selected';
-                    uploadBtn.disabled = true;
-                }
+                this.handleFileSelection(e.target.files[0], fileNameSpan, uploadBtn);
             });
         }
         
+        // PERBAIKAN MASALAH 2: Drag & drop functionality
+        if (dropArea) {
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.add('drag-over');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('drag-over');
+                });
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFileSelection(files[0], fileNameSpan, uploadBtn);
+                }
+            });
+            
+            // Click on drop area also triggers file input
+            dropArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+        }
+        
+        // Upload button event
         if (uploadBtn) {
             uploadBtn.addEventListener('click', () => {
                 this.handleExcelUpload();
             });
         }
+        
+        this.migrateEventsBound = true;
     }
 
-    // ===== HANDLE EXCEL UPLOAD (PROBLEM 5 FIXED) =====
+    // Helper untuk handle file selection
+    handleFileSelection(file, fileNameSpan, uploadBtn) {
+        if (file) {
+            // Validasi ekstensi file
+            const validExtensions = ['.xlsx', '.xls'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validExtensions.includes(fileExtension)) {
+                this.showAlert('Please select a valid Excel file (.xlsx or .xls)', 'error');
+                fileNameSpan.textContent = 'Invalid file type';
+                fileNameSpan.style.color = '#ef4444';
+                uploadBtn.disabled = true;
+                return;
+            }
+            
+            // Validasi ukuran file (max 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                this.showAlert('File size exceeds 10MB limit', 'error');
+                fileNameSpan.textContent = 'File too large';
+                fileNameSpan.style.color = '#ef4444';
+                uploadBtn.disabled = true;
+                return;
+            }
+            
+            // Tampilkan nama file
+            fileNameSpan.textContent = file.name;
+            fileNameSpan.style.color = '#10b981';
+            uploadBtn.disabled = false;
+            
+            // Simpan file di instance untuk digunakan nanti
+            this.selectedFile = file;
+        } else {
+            fileNameSpan.textContent = 'No file selected';
+            fileNameSpan.style.color = '#666';
+            uploadBtn.disabled = true;
+        }
+    }
+
+    // ===== HANDLE EXCEL UPLOAD =====
     
     handleExcelUpload() {
         const fileInput = document.getElementById('excelFile');
-        const file = fileInput.files[0];
+        const file = fileInput.files[0] || this.selectedFile;
         
         if (!file) {
             this.showAlert('Please select an Excel file first', 'error');
-            return;
-        }
-        
-        // Validasi ekstensi file
-        const validExtensions = ['.xlsx', '.xls'];
-        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-        
-        if (!validExtensions.includes(fileExtension)) {
-            this.showAlert('Please select a valid Excel file (.xlsx or .xls)', 'error');
             return;
         }
         
@@ -746,9 +954,11 @@ class SetupWizardMulti {
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const resultContainer = document.getElementById('uploadResult');
+        const uploadBtn = document.getElementById('uploadFileBtn');
         
         progressContainer.style.display = 'block';
         resultContainer.style.display = 'none';
+        uploadBtn.disabled = true;
         
         // Simulasi progress
         let progress = 0;
@@ -766,10 +976,10 @@ class SetupWizardMulti {
 
     processExcelFile(file) {
         const resultContainer = document.getElementById('uploadResult');
+        const uploadBtn = document.getElementById('uploadFileBtn');
         
         try {
-            // Untuk demo, kita simulasi proses upload
-            // Dalam implementasi nyata, gunakan library XLSX
+            // Simulasi proses upload (dalam implementasi nyata, gunakan library XLSX)
             console.log('Processing Excel file:', file.name);
             
             setTimeout(() => {
@@ -790,6 +1000,18 @@ class SetupWizardMulti {
                 localStorage.setItem('stockmint_migration_completed', 'true');
                 localStorage.setItem('stockmint_migration_file', file.name);
                 localStorage.setItem('stockmint_migration_date', new Date().toISOString());
+                
+                // Reset form
+                const fileInput = document.getElementById('excelFile');
+                const fileNameSpan = document.getElementById('selectedFileName');
+                
+                if (fileInput) fileInput.value = '';
+                if (fileNameSpan) {
+                    fileNameSpan.textContent = 'No file selected';
+                    fileNameSpan.style.color = '#666';
+                }
+                
+                uploadBtn.disabled = false;
                 
                 // Redirect setelah 3 detik
                 setTimeout(() => {
@@ -817,6 +1039,7 @@ class SetupWizardMulti {
             `;
             resultContainer.className = 'result-container result-error';
             resultContainer.style.display = 'block';
+            uploadBtn.disabled = false;
         }
     }
 
@@ -867,7 +1090,7 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== DATA SAVING =====
+    // ===== DATA SAVING DIPERBAIKI (MASALAH 4 FIXED) =====
     
     saveCompanyData(validate = true) {
         const name = document.getElementById('companyName')?.value.trim();
@@ -902,7 +1125,8 @@ class SetupWizardMulti {
     saveWarehouseData() {
         const name = document.getElementById('warehouseName')?.value.trim();
         const address = document.getElementById('warehouseAddress')?.value.trim() || '';
-        const isPrimary = document.getElementById('isPrimary')?.checked || false;
+        const isPrimaryCheckbox = document.getElementById('isPrimary');
+        let isPrimary = isPrimaryCheckbox?.checked || false;
         
         if (!name) throw new Error('Warehouse name is required');
         
@@ -921,6 +1145,11 @@ class SetupWizardMulti {
         
         if (existingWarehouse) {
             throw new Error('Warehouse with this name already exists');
+        }
+        
+        // PERBAIKAN MASALAH 4: Untuk paket BASIC, warehouse pertama HARUS primary
+        if (this.userPlan === 'basic') {
+            isPrimary = true; // Force primary untuk BASIC plan
         }
         
         // Generate ID sederhana
@@ -946,6 +1175,13 @@ class SetupWizardMulti {
         
         // Reset form
         document.getElementById('warehouseForm').reset();
+        
+        // PERBAIKAN MASALAH 4: Set ulang checkbox untuk BASIC plan
+        if (this.userPlan === 'basic' && isPrimaryCheckbox) {
+            isPrimaryCheckbox.checked = true;
+            isPrimaryCheckbox.disabled = true;
+        }
+        
         return true;
     }
 
@@ -1290,8 +1526,15 @@ class SetupWizardMulti {
     
     removeWarehouse(index) {
         if (index >= 0 && index < this.setupData.warehouses.length) {
-            this.setupData.warehouses.splice(index, 1);
+            const removed = this.setupData.warehouses.splice(index, 1)[0];
             localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+            
+            // Jika warehouse yang dihapus adalah primary, set warehouse pertama sebagai primary
+            if (removed.isPrimary && this.setupData.warehouses.length > 0) {
+                this.setupData.warehouses[0].isPrimary = true;
+                localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+            }
+            
             this.updateWarehouseList();
             this.updateUI();
         }
@@ -1366,11 +1609,17 @@ class SetupWizardMulti {
         
         if (warehouses.length === 0 || products.length === 0) return;
         
+        // Temukan primary warehouse
+        let primaryWarehouse = warehouses.find(wh => wh.isPrimary);
+        if (!primaryWarehouse && warehouses.length > 0) {
+            primaryWarehouse = warehouses[0];
+        }
+        
         const openingStocks = products.map(product => ({
             productId: product.id,
             productName: product.name,
-            warehouseId: warehouses[0].id,
-            warehouseName: warehouses[0].name,
+            warehouseId: primaryWarehouse.id,
+            warehouseName: primaryWarehouse.name,
             quantity: product.stock || 0,
             cost: product.purchasePrice || 0,
             date: new Date().toISOString(),
@@ -1381,7 +1630,7 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
     }
 
-    // ===== RENDER METHODS =====
+    // ===== RENDER METHODS DIPERBAIKI (MASALAH 4) =====
     
     render() {
         const hash = window.location.hash.substring(1);
@@ -1441,7 +1690,7 @@ class SetupWizardMulti {
         `;
     }
 
-    // ===== RENDER STEP METHODS =====
+    // ===== RENDER STEP METHODS DIPERBAIKI (MASALAH 4) =====
     
     renderCompanyStep() {
         const savedData = this.setupData.company || {};
@@ -1524,12 +1773,18 @@ class SetupWizardMulti {
         const warehouseLimit = this.userPlan === 'basic' ? 1 :
             this.userPlan === 'pro' ? 3 : Infinity;
         
+        // PERBAIKAN MASALAH 4: Untuk BASIC plan, checkbox harus disabled dan checked
+        const isBasicPlan = this.userPlan === 'basic';
+        const isFirstWarehouse = savedWarehouses.length === 0;
+        const checkboxDisabled = isBasicPlan && isFirstWarehouse;
+        const checkboxChecked = isBasicPlan || isFirstWarehouse;
+        
         return `
         <div class="page-content">
             <h1>🏭 Warehouse Setup</h1>
             <p class="page-subtitle">Step 2 of ${this.totalSteps}: Add at least one warehouse</p>
             ${this.renderProgressBar()}
-            ${this.userPlan === 'basic' && savedWarehouses.length >= 1 ? `
+            ${isBasicPlan && savedWarehouses.length >= 1 ? `
             <div class="alert alert-warning">
                 <i class="fas fa-info-circle"></i>
                 <strong>BASIC Plan:</strong> Only 1 warehouse allowed. Upgrade to PRO for multiple warehouses.
@@ -1540,6 +1795,9 @@ class SetupWizardMulti {
                     <h3><i class="fas fa-warehouse"></i> Add Warehouse</h3>
                     <p>Warehouses are where you store your inventory.</p>
                     <p><small><i class="fas fa-info-circle"></i> Warehouse ID will be auto-generated (WH-001, WH-002, etc)</small></p>
+                    ${isBasicPlan && isFirstWarehouse ? `
+                    <p><small><i class="fas fa-info-circle"></i> <strong>BASIC Plan:</strong> Warehouse will automatically be set as primary</small></p>
+                    ` : ''}
                 </div>
                 <div class="card-body">
                     <form id="warehouseForm">
@@ -1554,9 +1812,12 @@ class SetupWizardMulti {
                                 placeholder="Warehouse address"></textarea>
                         </div>
                         <div class="form-check">
-                            <input type="checkbox" id="isPrimary" class="form-check-input" ${savedWarehouses.length === 0 ? 'checked' : ''}>
+                            <input type="checkbox" id="isPrimary" class="form-check-input" 
+                                ${checkboxChecked ? 'checked' : ''}
+                                ${checkboxDisabled ? 'disabled' : ''}>
                             <label for="isPrimary" class="form-check-label">
                                 Set as primary warehouse (default storage location)
+                                ${isBasicPlan && isFirstWarehouse ? '<span style="color: #f59e0b;">(Required for BASIC plan)</span>' : ''}
                             </label>
                         </div>
                         <button type="submit" class="btn-primary" ${savedWarehouses.length >= warehouseLimit ? 'disabled' : ''}>
@@ -1578,10 +1839,12 @@ class SetupWizardMulti {
                                 <div class="item-header">
                                     <strong>${wh.name}</strong>
                                     ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
+                                    ${isBasicPlan ? '<span class="badge-warning">BASIC</span>' : ''}
                                 </div>
                                 <div class="item-details">
                                     <small>ID: ${wh.code}</small>
                                     ${wh.address ? `<br>${wh.address}` : ''}
+                                    ${wh.isPrimary ? '<br><small style="color: #10b981;"><i class="fas fa-star"></i> Primary Warehouse</small>' : ''}
                                 </div>
                                 <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
                                     <i class="fas fa-trash"></i>
@@ -2079,4 +2342,4 @@ class SetupWizardMulti {
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded successfully');
+console.log('✅ SetupWizardMulti loaded successfully with all fixes');
