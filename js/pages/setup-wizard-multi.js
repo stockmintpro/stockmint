@@ -1416,9 +1416,9 @@ class SetupWizardMulti {
                 createdAt: new Date().toISOString()
             })),
             products: Array.from({length: 25}, (_, i) => ({
-                id: `PROD-${String(i+1).padStart(3, '0')}`,
+                id: `PROD-${String(i+1).padStart(5, '0')}`,
                 name: `Product ${i+1}`,
-                code: `PROD-${String(i+1).padStart(3, '0')}`,
+                code: `PROD-${String(i+1).padStart(5, '0')}`,
                 categoryId: `CAT-${String((i % 8) + 1).padStart(3, '0')}`,
                 category: `Category ${(i % 8) + 1}`,
                 unit: ['pcs', 'box', 'kg', 'liter'][i % 4],
@@ -2182,7 +2182,7 @@ class SetupWizardMulti {
                 <div class="card-header">
                     <h3><i class="fas fa-boxes"></i> Add Product</h3>
                     <p>Products are the items you sell in your business.</p>
-                    <p><small><i class="fas fa-info-circle"></i> Product ID will be auto-generated (PROD-001, PROD-002, etc)</small></p>
+                    <p><small><i class="fas fa-info-circle"></i> Product ID will be auto-generated (PROD-00001, PROD-00002, etc)</small></p>
                 </div>
                 <div class="card-body">
                     <form id="productForm">
