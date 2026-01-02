@@ -1789,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.currentWizard && window.currentWizard.saveCompanyData) {
           try {
             window.currentWizard.saveCompanyData();
-            alert('✅ Company data saved! Redirecting to warehouse...');
+            // alert('✅ Company data saved! Redirecting to warehouse...');
             window.location.hash = '#setup/warehouse';
           } catch (error) {
             alert('Error: ' + error.message);
