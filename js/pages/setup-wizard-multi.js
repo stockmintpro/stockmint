@@ -1,5 +1,5 @@
-// setup-wizard-multi.js - VERSI PERBAIKAN FINAL
-console.log('🔄 setup-wizard-multi.js LOADED - PERBAIKAN FINAL');
+// setup-wizard-multi.js - VERSI FIXED COMPLETE
+console.log('🔄 setup-wizard-multi.js LOADED - VERSION FIXED');
 
 class SetupWizardMulti {
     constructor() {
@@ -9,7 +9,7 @@ class SetupWizardMulti {
             this.currentStep = this.getCurrentStepFromHash();
             this.totalSteps = 6;
             this.setupData = this.loadSavedData();
-            console.log('📊 Loaded setup data:', this.setupData);
+            console.log('📊 Setup data loaded');
             
             this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
             this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
@@ -47,7 +47,6 @@ class SetupWizardMulti {
             return route;
         }
         
-        // Default to company if no route
         return 'company';
     }
 
@@ -66,31 +65,16 @@ class SetupWizardMulti {
     bindEvents() {
         console.log('🔧 Binding events for step:', this.currentStep);
         
-        // Clear any existing event listeners first
-        this.unbindEvents();
-        
         setTimeout(() => {
             this.bindFormEvents();
             this.bindNavigationEvents();
             this.updateUI();
-            console.log('✅ Events bound successfully');
         }, 100);
-    }
-
-    unbindEvents() {
-        // Remove existing event listeners by cloning and replacing forms
-        const forms = ['companyForm', 'warehouseForm', 'supplierForm', 'customerForm', 'categoryForm', 'productForm'];
-        forms.forEach(formId => {
-            const form = document.getElementById(formId);
-            if (form) {
-                const newForm = form.cloneNode(true);
-                form.parentNode.replaceChild(newForm, form);
-            }
-        });
     }
 
     bindFormEvents() {
         const step = this.currentStep;
+        console.log('Binding form events for:', step);
         
         switch(step) {
             case 'company':
@@ -117,26 +101,17 @@ class SetupWizardMulti {
     bindCompanyForm() {
         const form = document.getElementById('companyForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('companyForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     this.saveCompanyData();
-                    console.log('✅ Company data saved, redirecting to warehouse');
                     window.location.hash = '#setup/warehouse';
                 } catch (error) {
                     this.showAlert(error.message, 'error');
-                }
-            });
-        }
-        
-        // Auto-save on input
-        if (form) {
-            form.addEventListener('input', () => {
-                try {
-                    this.saveCompanyData(false);
-                    console.log('💾 Company data auto-saved');
-                } catch (error) {
-                    // Ignore validation errors during auto-save
                 }
             });
         }
@@ -145,12 +120,14 @@ class SetupWizardMulti {
     bindWarehouseForm() {
         const form = document.getElementById('warehouseForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('warehouseForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    const success = this.saveWarehouseData();
-                    if (success) {
-                        // Update UI immediately after adding
+                    if (this.saveWarehouseData()) {
                         this.updateUI();
                     }
                 } catch (error) {
@@ -174,11 +151,14 @@ class SetupWizardMulti {
     bindSupplierForm() {
         const form = document.getElementById('supplierForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('supplierForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    const success = this.saveSupplierData();
-                    if (success) {
+                    if (this.saveSupplierData()) {
                         this.updateUI();
                     }
                 } catch (error) {
@@ -202,11 +182,14 @@ class SetupWizardMulti {
     bindCustomerForm() {
         const form = document.getElementById('customerForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('customerForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    const success = this.saveCustomerData();
-                    if (success) {
+                    if (this.saveCustomerData()) {
                         this.updateUI();
                     }
                 } catch (error) {
@@ -230,11 +213,14 @@ class SetupWizardMulti {
     bindCategoryForm() {
         const form = document.getElementById('categoryForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('categoryForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    const success = this.saveCategoryData();
-                    if (success) {
+                    if (this.saveCategoryData()) {
                         this.updateUI();
                     }
                 } catch (error) {
@@ -258,11 +244,14 @@ class SetupWizardMulti {
     bindProductForm() {
         const form = document.getElementById('productForm');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            // Remove existing listener
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            document.getElementById('productForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
-                    const success = this.saveProductData();
-                    if (success) {
+                    if (this.saveProductData()) {
                         this.updateUI();
                     }
                 } catch (error) {
@@ -284,7 +273,7 @@ class SetupWizardMulti {
     }
 
     bindNavigationEvents() {
-        // Event delegation untuk tombol remove dengan ONE-TIME CLICK
+        // Event delegation untuk tombol remove
         document.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
@@ -294,7 +283,6 @@ class SetupWizardMulti {
                 const index = parseInt(removeBtn.dataset.index);
                 const type = removeBtn.dataset.type;
                 
-                // Show confirmation ONCE
                 if (confirm(`Are you sure you want to remove this ${type}?`)) {
                     switch(type) {
                         case 'warehouse':
@@ -351,7 +339,7 @@ class SetupWizardMulti {
         this.updateProductList();
         this.updateProductCategoryDropdown();
         
-        // Update tombol next berdasarkan data - TANPA setTimeout
+        // Update tombol next
         const warehouseNext = document.getElementById('nextToSupplier');
         const supplierNext = document.getElementById('nextToCustomer');
         const customerNext = document.getElementById('nextToCategory');
@@ -359,38 +347,23 @@ class SetupWizardMulti {
         const completeBtn = document.getElementById('completeSetup');
         
         if (warehouseNext) {
-            const isDisabled = this.setupData.warehouses.length === 0;
-            warehouseNext.disabled = isDisabled;
-            warehouseNext.classList.toggle('disabled', isDisabled);
-            console.log('🏭 Warehouse next button:', isDisabled ? 'disabled' : 'enabled');
+            warehouseNext.disabled = this.setupData.warehouses.length === 0;
         }
         
         if (supplierNext) {
-            const isDisabled = this.setupData.suppliers.length === 0;
-            supplierNext.disabled = isDisabled;
-            supplierNext.classList.toggle('disabled', isDisabled);
-            console.log('🤝 Supplier next button:', isDisabled ? 'disabled' : 'enabled');
+            supplierNext.disabled = this.setupData.suppliers.length === 0;
         }
         
         if (customerNext) {
-            const isDisabled = this.setupData.customers.length === 0;
-            customerNext.disabled = isDisabled;
-            customerNext.classList.toggle('disabled', isDisabled);
-            console.log('👥 Customer next button:', isDisabled ? 'disabled' : 'enabled');
+            customerNext.disabled = this.setupData.customers.length === 0;
         }
         
         if (categoryNext) {
-            const isDisabled = this.setupData.categories.length === 0;
-            categoryNext.disabled = isDisabled;
-            categoryNext.classList.toggle('disabled', isDisabled);
-            console.log('📁 Category next button:', isDisabled ? 'disabled' : 'enabled');
+            categoryNext.disabled = this.setupData.categories.length === 0;
         }
         
         if (completeBtn) {
-            const isDisabled = this.setupData.products.length === 0;
-            completeBtn.disabled = isDisabled;
-            completeBtn.classList.toggle('disabled', isDisabled);
-            console.log('✅ Complete button:', isDisabled ? 'disabled' : 'enabled');
+            completeBtn.disabled = this.setupData.products.length === 0;
         }
         
         // Update tombol add warehouse berdasarkan plan
@@ -398,13 +371,11 @@ class SetupWizardMulti {
         if (addWarehouseBtn) {
             const warehouseLimit = this.userPlan === 'basic' ? 1 : 
                                  this.userPlan === 'pro' ? 3 : Infinity;
-            const canAddMore = this.setupData.warehouses.length < warehouseLimit;
-            addWarehouseBtn.disabled = !canAddMore;
-            addWarehouseBtn.classList.toggle('disabled', !canAddMore);
+            addWarehouseBtn.disabled = this.setupData.warehouses.length >= warehouseLimit;
         }
     }
 
-    // ===== DATA SAVING dengan VALIDASI DUPLIKAT =====
+    // ===== DATA SAVING =====
     saveCompanyData(validate = true) {
         const name = document.getElementById('companyName')?.value.trim();
         const taxId = document.getElementById('companyTaxId')?.value.trim() || '';
@@ -432,7 +403,6 @@ class SetupWizardMulti {
         };
         
         localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
-        console.log('💾 Company data saved');
         return true;
     }
 
@@ -451,7 +421,7 @@ class SetupWizardMulti {
             throw new Error(`You can only have ${warehouseLimit} warehouse(s) in your current plan.`);
         }
         
-        // VALIDASI: Cek duplikat nama warehouse
+        // Check duplicate name
         const existingWarehouse = this.setupData.warehouses.find(wh => 
             wh.name.toLowerCase() === name.toLowerCase()
         );
@@ -460,7 +430,7 @@ class SetupWizardMulti {
             throw new Error('Warehouse with this name already exists');
         }
         
-        // Generate ID sederhana: WH-001, WH-002, dst
+        // Generate ID sederhana
         this.warehouseCounter++;
         const warehouseCode = `WH-${this.warehouseCounter.toString().padStart(3, '0')}`;
         
@@ -482,16 +452,8 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         
         // Reset form
-        const form = document.getElementById('warehouseForm');
-        if (form) {
-            form.reset();
-            // Reset primary checkbox jika sudah ada warehouse
-            if (this.setupData.warehouses.length > 0) {
-                document.getElementById('isPrimary').checked = false;
-            }
-        }
+        document.getElementById('warehouseForm').reset();
         
-        console.log('💾 Warehouse added:', warehouse.name);
         return true;
     }
 
@@ -503,7 +465,7 @@ class SetupWizardMulti {
         
         if (!name) throw new Error('Supplier name is required');
         
-        // VALIDASI: Cek duplikat nama supplier
+        // Check duplicate name
         const existingSupplier = this.setupData.suppliers.find(sup => 
             sup.name.toLowerCase() === name.toLowerCase()
         );
@@ -529,10 +491,7 @@ class SetupWizardMulti {
         this.setupData.suppliers.push(supplier);
         localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
         
-        const form = document.getElementById('supplierForm');
-        if (form) form.reset();
-        
-        console.log('💾 Supplier added:', supplier.name);
+        document.getElementById('supplierForm').reset();
         return true;
     }
 
@@ -546,7 +505,7 @@ class SetupWizardMulti {
         
         if (!name) throw new Error('Customer name is required');
         
-        // VALIDASI: Cek duplikat nama customer
+        // Check duplicate name
         const existingCustomer = this.setupData.customers.find(cust => 
             cust.name.toLowerCase() === name.toLowerCase()
         );
@@ -573,10 +532,7 @@ class SetupWizardMulti {
         this.setupData.customers.push(customer);
         localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
         
-        const form = document.getElementById('customerForm');
-        if (form) form.reset();
-        
-        console.log('💾 Customer added:', customer.name);
+        document.getElementById('customerForm').reset();
         return true;
     }
 
@@ -586,7 +542,7 @@ class SetupWizardMulti {
         
         if (!name) throw new Error('Category name is required');
         
-        // VALIDASI: Cek duplikat nama kategori
+        // Check duplicate name
         const existingCategory = this.setupData.categories.find(cat => 
             cat.name.toLowerCase() === name.toLowerCase()
         );
@@ -609,10 +565,7 @@ class SetupWizardMulti {
         this.setupData.categories.push(category);
         localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
         
-        const form = document.getElementById('categoryForm');
-        if (form) form.reset();
-        
-        console.log('💾 Category added:', category.name);
+        document.getElementById('categoryForm').reset();
         return true;
     }
 
@@ -627,7 +580,7 @@ class SetupWizardMulti {
         if (!name) throw new Error('Product name is required');
         if (!category) throw new Error('Please select a category');
         
-        // VALIDASI: Cek duplikat nama product
+        // Check duplicate name
         const existingProduct = this.setupData.products.find(prod => 
             prod.name.toLowerCase() === name.toLowerCase()
         );
@@ -656,10 +609,7 @@ class SetupWizardMulti {
         this.setupData.products.push(product);
         localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
         
-        const form = document.getElementById('productForm');
-        if (form) form.reset();
-        
-        console.log('💾 Product added:', product.name);
+        document.getElementById('productForm').reset();
         return true;
     }
 
@@ -834,33 +784,21 @@ class SetupWizardMulti {
         const dropdown = document.getElementById('productCategory');
         if (dropdown) {
             const categories = this.setupData.categories || [];
-            // Remove duplicates by name
-            const uniqueCategories = [];
-            const seenNames = new Set();
-            
-            categories.forEach(cat => {
-                if (!seenNames.has(cat.name.toLowerCase())) {
-                    seenNames.add(cat.name.toLowerCase());
-                    uniqueCategories.push(cat);
-                }
-            });
-            
             dropdown.innerHTML = `
                 <option value="">Select Category</option>
-                ${uniqueCategories.map(cat => `
+                ${categories.map(cat => `
                     <option value="${cat.id}">${cat.name}</option>
                 `).join('')}
             `;
         }
     }
 
-    // ===== REMOVE ITEMS (SINGLE CONFIRMATION) =====
+    // ===== REMOVE ITEMS =====
     removeWarehouse(index) {
         this.setupData.warehouses.splice(index, 1);
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         this.updateWarehouseList();
         this.updateUI();
-        console.log('🗑️ Warehouse removed');
     }
 
     removeSupplier(index) {
@@ -868,7 +806,6 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
         this.updateSupplierList();
         this.updateUI();
-        console.log('🗑️ Supplier removed');
     }
 
     removeCustomer(index) {
@@ -876,7 +813,6 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
         this.updateCustomerList();
         this.updateUI();
-        console.log('🗑️ Customer removed');
     }
 
     removeCategory(index) {
@@ -885,7 +821,6 @@ class SetupWizardMulti {
         this.updateCategoryList();
         this.updateUI();
         this.updateProductCategoryDropdown();
-        console.log('🗑️ Category removed');
     }
 
     removeProduct(index) {
@@ -893,7 +828,6 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
         this.updateProductList();
         this.updateUI();
-        console.log('🗑️ Product removed');
     }
 
     // ===== COMPLETE SETUP =====
@@ -909,7 +843,7 @@ class SetupWizardMulti {
             // Show success message
             this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
             
-            // Redirect to dashboard
+            // Redirect
             setTimeout(() => {
                 window.location.hash = '#dashboard';
                 window.location.reload();
@@ -940,184 +874,6 @@ class SetupWizardMulti {
         }));
         
         localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
-        console.log('📦 Opening stock created:', openingStocks.length, 'items');
-    }
-
-    // ===== RESET DATA FUNCTION =====
-    resetSetupData() {
-        if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
-            // Remove setup data
-            localStorage.removeItem('stockmint_setup_completed');
-            localStorage.removeItem('stockmint_company');
-            localStorage.removeItem('stockmint_warehouses');
-            localStorage.removeItem('stockmint_suppliers');
-            localStorage.removeItem('stockmint_customers');
-            localStorage.removeItem('stockmint_categories');
-            localStorage.removeItem('stockmint_products');
-            localStorage.removeItem('stockmint_opening_stocks');
-            localStorage.removeItem('stockmint_setup_current_step');
-            
-            // Redirect to setup page
-            window.location.hash = '#setup/start-new';
-            window.location.reload();
-        }
-    }
-
-    // ===== RENDER MIGRATE PAGE (with back button) =====
-    renderMigratePage() {
-        return `
-            <div class="page-content">
-                <h1>📊 Data Migration</h1>
-                <p class="page-subtitle">Import your existing data from Excel</p>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-database"></i> Migration Guide</h3>
-                        <p>For advanced users who understand database relationships</p>
-                    </div>
-                    
-                    <div class="card-body">
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Warning:</strong> This feature is for advanced users. 
-                            Incorrect data format may cause system errors.
-                        </div>
-                        
-                        <div class="migration-steps">
-                            <h4>Step-by-Step Migration:</h4>
-                            <ol>
-                                <li>Download the migration template</li>
-                                <li>Fill in your data following the format</li>
-                                <li>Upload the completed Excel file</li>
-                                <li>Review and confirm the import</li>
-                            </ol>
-                        </div>
-                        
-                        <div class="migration-actions" style="display: flex; flex-direction: column; gap: 15px;">
-                            <button class="btn-secondary" onclick="window.location.hash='#setup/start-new'">
-                                <i class="fas fa-arrow-left"></i> Back to New Setup
-                            </button>
-                            
-                            <a href="template.html" target="_blank" class="btn-primary" style="text-align: center;">
-                                <i class="fas fa-download"></i> Download Template
-                            </a>
-                            
-                            <div class="file-upload-area" id="fileUploadArea" 
-                                 style="border: 2px dashed #ddd; border-radius: 10px; padding: 40px 20px; text-align: center;">
-                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB;"></i>
-                                <p>Drag & drop your Excel file here or click to browse</p>
-                                <input type="file" id="migrationFile" accept=".xlsx,.xls" hidden>
-                                <button class="btn-upload" onclick="document.getElementById('migrationFile').click()"
-                                        style="background: #19BEBB; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 15px;">
-                                    Browse Files
-                                </button>
-                                <p class="file-info" id="fileInfo" style="margin-top: 10px; color: #666;">No file selected</p>
-                            </div>
-                            
-                            <button class="btn-success" id="processMigration" disabled
-                                    style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer;">
-                                <i class="fas fa-play"></i> Process Migration
-                            </button>
-                        </div>
-                        
-                        <div id="migrationStatus" style="margin-top: 20px;"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const fileInput = document.getElementById('migrationFile');
-                    const fileInfo = document.getElementById('fileInfo');
-                    const processBtn = document.getElementById('processMigration');
-                    const uploadArea = document.getElementById('fileUploadArea');
-                    
-                    // File drag and drop
-                    uploadArea.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        uploadArea.style.borderColor = '#19BEBB';
-                        uploadArea.style.background = '#f0f9f9';
-                    });
-                    
-                    uploadArea.addEventListener('dragleave', (e) => {
-                        e.preventDefault();
-                        uploadArea.style.borderColor = '#ddd';
-                        uploadArea.style.background = '#fafafa';
-                    });
-                    
-                    uploadArea.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        uploadArea.style.borderColor = '#ddd';
-                        uploadArea.style.background = '#fafafa';
-                        
-                        if (e.dataTransfer.files.length) {
-                            fileInput.files = e.dataTransfer.files;
-                            handleFileSelect();
-                        }
-                    });
-                    
-                    fileInput.addEventListener('change', handleFileSelect);
-                    
-                    function handleFileSelect() {
-                        if (fileInput.files.length) {
-                            const file = fileInput.files[0];
-                            fileInfo.textContent = \`Selected: \${file.name} (\${(file.size / 1024).toFixed(1)} KB)\`;
-                            fileInfo.style.color = '#10b981';
-                            processBtn.disabled = false;
-                        }
-                    }
-                    
-                    // Process migration button
-                    processBtn.addEventListener('click', function() {
-                        if (!fileInput.files.length) {
-                            alert('Please select a file first');
-                            return;
-                        }
-                        
-                        const statusDiv = document.getElementById('migrationStatus');
-                        statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Processing migration file...</div>';
-                        
-                        // Simulate processing
-                        setTimeout(() => {
-                            statusDiv.innerHTML = \`
-                                <div class="alert alert-success">
-                                    <i class="fas fa-check-circle"></i>
-                                    Migration completed successfully! 25 records imported.
-                                </div>
-                                <button class="btn-primary" onclick="window.location.hash='#dashboard'" 
-                                        style="background: #19BEBB; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
-                                    Go to Dashboard
-                                </button>
-                            \`;
-                        }, 2000);
-                    });
-                });
-            </script>
-        `;
-    }
-
-    // ===== UI HELPERS =====
-    showAlert(message, type = 'info') {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.alert-message');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert-message alert-${type}`;
-        alertDiv.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${message}</span>
-        `;
-        
-        const container = document.querySelector('.page-content') || document.body;
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto remove after 3 seconds
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 3000);
     }
 
     // ===== RENDER METHODS =====
@@ -1178,7 +934,7 @@ class SetupWizardMulti {
         `;
     }
 
-    // ===== RENDER STEPS =====
+    // ===== ALL RENDER STEP METHODS =====
     renderCompanyStep() {
         const savedData = this.setupData.company || {};
         
@@ -1199,35 +955,35 @@ class SetupWizardMulti {
                             <div class="form-group">
                                 <label for="companyName">Company Name *</label>
                                 <input type="text" id="companyName" class="form-control"
-                                    value="${this.escapeHtml(savedData.name || '')}" required
+                                    value="${savedData.name || ''}" required
                                     placeholder="e.g., PT. Usaha Maju Jaya">
                             </div>
                             
                             <div class="form-group">
                                 <label for="companyTaxId">Tax ID (NPWP)</label>
                                 <input type="text" id="companyTaxId" class="form-control"
-                                    value="${this.escapeHtml(savedData.taxId || '')}"
+                                    value="${savedData.taxId || ''}"
                                     placeholder="e.g., 01.234.567.8-912.000">
                             </div>
                             
                             <div class="form-group">
                                 <label for="companyAddress">Business Address</label>
                                 <textarea id="companyAddress" class="form-control" rows="3"
-                                    placeholder="Full business address">${this.escapeHtml(savedData.address || '')}</textarea>
+                                    placeholder="Full business address">${savedData.address || ''}</textarea>
                             </div>
                             
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="companyPhone">Phone Number</label>
                                     <input type="tel" id="companyPhone" class="form-control"
-                                        value="${this.escapeHtml(savedData.phone || '')}"
+                                        value="${savedData.phone || ''}"
                                         placeholder="e.g., 021-12345678">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="companyEmail">Email Address</label>
                                     <input type="email" id="companyEmail" class="form-control"
-                                        value="${this.escapeHtml(savedData.email || '')}"
+                                        value="${savedData.email || ''}"
                                         placeholder="e.g., info@company.com">
                                 </div>
                             </div>
@@ -1365,15 +1121,474 @@ class SetupWizardMulti {
         `;
     }
 
-    // ... [Render methods lainnya tetap sama dengan sebelumnya, hanya perlu tambah escapeHtml] ...
+    renderSupplierStep() {
+        const savedSuppliers = this.setupData.suppliers || [];
+        
+        return `
+            <div class="page-content">
+                <h1>🤝 Supplier Setup</h1>
+                <p class="page-subtitle">Step 3 of ${this.totalSteps}: Add your suppliers</p>
+                ${this.renderProgressBar()}
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-truck"></i> Add Supplier</h3>
+                        <p>Suppliers provide products to your business.</p>
+                        <p><small><i class="fas fa-info-circle"></i> Supplier ID will be auto-generated (SUP-001, SUP-002, etc)</small></p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <form id="supplierForm">
+                            <div class="form-group">
+                                <label for="supplierName">Supplier Name *</label>
+                                <input type="text" id="supplierName" class="form-control" required
+                                    placeholder="e.g., PT. Supplier Jaya">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="supplierContact">Contact Person (Optional)</label>
+                                <input type="text" id="supplierContact" class="form-control"
+                                    placeholder="e.g., John Doe">
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="supplierPhone">Phone Number</label>
+                                    <input type="tel" id="supplierPhone" class="form-control"
+                                        placeholder="e.g., 021-12345678">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="supplierEmail">Email Address</label>
+                                    <input type="email" id="supplierEmail" class="form-control"
+                                        placeholder="e.g., supplier@email.com">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Supplier
+                            </button>
+                        </form>
+                        
+                        <div class="supplier-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            ${savedSuppliers.length > 0 ? `
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${savedSuppliers.length})</h4>
+                                <div class="items-list">
+                                    ${savedSuppliers.map((sup, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${sup.name}</strong>
+                                                <small>ID: ${sup.code}</small>
+                                            </div>
+                                            <div class="item-details">
+                                                ${sup.contact ? `Contact: ${sup.contact}` : ''}
+                                                ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
+                                                ${sup.email ? `<br>Email: ${sup.email}` : ''}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-muted">No suppliers added yet. Add your first supplier above.</p>
+                            `}
+                        </div>
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="warehouse">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            
+                            <button type="button" class="btn-primary" id="nextToCustomer"
+                                ${savedSuppliers.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Customer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    renderCustomerStep() {
+        const savedCustomers = this.setupData.customers || [];
+        
+        return `
+            <div class="page-content">
+                <h1>👥 Customer Setup</h1>
+                <p class="page-subtitle">Step 4 of ${this.totalSteps}: Add your customers</p>
+                ${this.renderProgressBar()}
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Add Customer</h3>
+                        <p>Customers purchase products from your business.</p>
+                        <p><small><i class="fas fa-info-circle"></i> Customer ID will be auto-generated (CUST-001, CUST-002, etc)</small></p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <form id="customerForm">
+                            <div class="form-group">
+                                <label for="customerName">Customer Name *</label>
+                                <input type="text" id="customerName" class="form-control" required
+                                    placeholder="e.g., PT. Customer Sejahtera">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customerType">Customer Type</label>
+                                <select id="customerType" class="form-control">
+                                    <option value="retail">Retail</option>
+                                    <option value="wholesale">Wholesale</option>
+                                    <option value="corporate">Corporate</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customerContact">Contact Person (Optional)</label>
+                                <input type="text" id="customerContact" class="form-control"
+                                    placeholder="e.g., Jane Doe">
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="customerPhone">Phone Number</label>
+                                    <input type="tel" id="customerPhone" class="form-control"
+                                        placeholder="e.g., 021-12345678">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="customerEmail">Email Address</label>
+                                    <input type="email" id="customerEmail" class="form-control"
+                                        placeholder="e.g., customer@email.com">
+                                </div>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input type="checkbox" id="customerTaxable" class="form-check-input">
+                                <label for="customerTaxable" class="form-check-label">
+                                    Customer is taxable (requires tax invoice)
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Customer
+                            </button>
+                        </form>
+                        
+                        <div class="customer-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            ${savedCustomers.length > 0 ? `
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${savedCustomers.length})</h4>
+                                <div class="items-list">
+                                    ${savedCustomers.map((cust, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${cust.name}</strong>
+                                                <span class="badge-customer">${cust.type || 'retail'}</span>
+                                            </div>
+                                            <div class="item-details">
+                                                <small>ID: ${cust.id}</small>
+                                                ${cust.contact ? `<br>Contact: ${cust.contact}` : ''}
+                                                ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
+                                                ${cust.email ? `<br>Email: ${cust.email}` : ''}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-muted">No customers added yet. Add your first customer above.</p>
+                            `}
+                        </div>
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="supplier">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            
+                            <button type="button" class="btn-primary" id="nextToCategory"
+                                ${savedCustomers.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Category
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderCategoryStep() {
+        const savedCategories = this.setupData.categories || [];
+        
+        return `
+            <div class="page-content">
+                <h1>📁 Category Setup</h1>
+                <p class="page-subtitle">Step 5 of ${this.totalSteps}: Add product categories</p>
+                ${this.renderProgressBar()}
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tags"></i> Add Category</h3>
+                        <p>Categories help organize your products.</p>
+                        <p><small><i class="fas fa-info-circle"></i> Category ID will be auto-generated (CAT-001, CAT-002, etc)</small></p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <form id="categoryForm">
+                            <div class="form-group">
+                                <label for="categoryName">Category Name *</label>
+                                <input type="text" id="categoryName" class="form-control" required
+                                    placeholder="e.g., Electronics, Clothing, Food">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="categoryDescription">Description (Optional)</label>
+                                <textarea id="categoryDescription" class="form-control" rows="2"
+                                    placeholder="Category description"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </form>
+                        
+                        <div class="category-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            ${savedCategories.length > 0 ? `
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${savedCategories.length})</h4>
+                                <div class="items-list">
+                                    ${savedCategories.map((cat, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${cat.name}</strong>
+                                                <small>ID: ${cat.code}</small>
+                                            </div>
+                                            <div class="item-details">
+                                                ${cat.description || 'No description'}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="category">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-muted">No categories added yet. Add your first category above.</p>
+                            `}
+                        </div>
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="customer">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            
+                            <button type="button" class="btn-primary" id="nextToProduct"
+                                ${savedCategories.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i> Next: Add Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderProductStep() {
+        const savedProducts = this.setupData.products || [];
+        
+        return `
+            <div class="page-content">
+                <h1>📦 Product Setup</h1>
+                <p class="page-subtitle">Step 6 of ${this.totalSteps}: Add your products</p>
+                ${this.renderProgressBar()}
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-box"></i> Add Product</h3>
+                        <p>Products are items you sell or track in inventory.</p>
+                        <p><small><i class="fas fa-info-circle"></i> Product ID will be auto-generated (PROD-001, PROD-002, etc)</small></p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <form id="productForm">
+                            <div class="form-group">
+                                <label for="productName">Product Name *</label>
+                                <input type="text" id="productName" class="form-control" required
+                                    placeholder="e.g., iPhone 13, T-Shirt XL, Rice 5kg">
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="productCategory">Category *</label>
+                                    <select id="productCategory" class="form-control" required>
+                                        <option value="">Select Category</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="productUnit">Unit</label>
+                                    <select id="productUnit" class="form-control">
+                                        <option value="pcs">Pieces (pcs)</option>
+                                        <option value="kg">Kilogram (kg)</option>
+                                        <option value="gram">Gram (g)</option>
+                                        <option value="liter">Liter (L)</option>
+                                        <option value="pack">Pack</option>
+                                        <option value="box">Box</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="purchasePrice">Purchase Price (Rp)</label>
+                                    <input type="number" id="purchasePrice" class="form-control" step="0.01" min="0"
+                                        placeholder="e.g., 100000">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="salePrice">Sale Price (Rp)</label>
+                                    <input type="number" id="salePrice" class="form-control" step="0.01" min="0"
+                                        placeholder="e.g., 150000">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="initialStock">Initial Stock</label>
+                                <input type="number" id="initialStock" class="form-control" min="0" value="0"
+                                    placeholder="e.g., 100">
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
+                        </form>
+                        
+                        <div class="product-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            ${savedProducts.length > 0 ? `
+                                <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${savedProducts.length})</h4>
+                                <div class="items-list">
+                                    ${savedProducts.map((prod, index) => `
+                                        <div class="item-card">
+                                            <div class="item-header">
+                                                <strong>${prod.name}</strong>
+                                                <small>SKU: ${prod.code}</small>
+                                            </div>
+                                            <div class="item-details">
+                                                Category: ${prod.category || 'Uncategorized'}<br>
+                                                Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
+                                                Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
+                                                Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
+                                            </div>
+                                            <button type="button" class="btn-remove" data-index="${index}" data-type="product">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-muted">No products added yet. Add your first product above.</p>
+                            `}
+                        </div>
+                        
+                        <div class="setup-actions">
+                            <button type="button" class="btn-secondary" data-action="back" data-step="category">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                            
+                            <button type="button" class="btn-success" id="completeSetup"
+                                ${savedProducts.length === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-check"></i> Complete Setup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ===== RENDER MIGRATE PAGE =====
+    renderMigratePage() {
+        return `
+            <div class="page-content">
+                <h1>📊 Data Migration</h1>
+                <p class="page-subtitle">Import your existing data from Excel</p>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-database"></i> Migration Guide</h3>
+                        <p>For advanced users who understand database relationships</p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> This feature is for advanced users. 
+                            Incorrect data format may cause system errors.
+                        </div>
+                        
+                        <div class="migration-steps">
+                            <h4>Step-by-Step Migration:</h4>
+                            <ol>
+                                <li>Download the migration template</li>
+                                <li>Fill in your data following the format</li>
+                                <li>Upload the completed Excel file</li>
+                                <li>Review and confirm the import</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="migration-actions">
+                            <button class="btn-secondary" onclick="window.location.hash='#setup/start-new'">
+                                <i class="fas fa-arrow-left"></i> Back to New Setup
+                            </button>
+                            
+                            <a href="template.html" target="_blank" class="btn-primary">
+                                <i class="fas fa-download"></i> Download Template
+                            </a>
+                            
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Drag & drop your Excel file here or click to browse</p>
+                                <input type="file" id="migrationFile" accept=".xlsx,.xls" hidden>
+                                <button class="btn-upload" onclick="document.getElementById('migrationFile').click()">
+                                    Browse Files
+                                </button>
+                                <p class="file-info" id="fileInfo">No file selected</p>
+                            </div>
+                            
+                            <button class="btn-success" id="processMigration" disabled>
+                                <i class="fas fa-play"></i> Process Migration
+                            </button>
+                        </div>
+                        
+                        <div id="migrationStatus" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ===== UI HELPERS =====
+    showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert-message alert-${type}`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        const container = document.querySelector('.page-content') || document.body;
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
     }
 }
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded and ready');
+console.log('✅ SetupWizardMulti loaded with all render methods');
