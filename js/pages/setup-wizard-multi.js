@@ -1,6 +1,6 @@
-// setup-wizard-multi.js - VERSI FIXED DENGAN 4 PERBAIKAN
+// setup-wizard-multi.js - VERSI FIXED DENGAN SEMUA PERBAIKAN
 
-console.log('🔄 setup-wizard-multi.js LOADED - VERSION FIXED WITH ALL UPDATES');
+console.log('🔄 setup-wizard-multi.js LOADED - ALL FIXES APPLIED');
 
 class SetupWizardMulti {
     constructor() {
@@ -24,6 +24,7 @@ class SetupWizardMulti {
             this.eventsBound = false;
             this.navigationEventsBound = false;
             this.migrateEventsBound = false;
+            this.fileHandlersBound = false;
             
         } catch (error) {
             console.error('❌ Failed to initialize SetupWizard:', error);
@@ -43,6 +44,7 @@ class SetupWizardMulti {
             this.eventsBound = false;
             this.navigationEventsBound = false;
             this.migrateEventsBound = false;
+            this.fileHandlersBound = false;
         }
     }
 
@@ -97,6 +99,7 @@ class SetupWizardMulti {
         this.eventsBound = false;
         this.navigationEventsBound = false;
         this.migrateEventsBound = false;
+        this.fileHandlersBound = false;
         this.bindEvents();
     }
 
@@ -159,6 +162,7 @@ class SetupWizardMulti {
                 try {
                     if (this.saveWarehouseData()) {
                         this.updateUI();
+                        this.showAlert('Warehouse added successfully!', 'success');
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -168,12 +172,32 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToSupplier');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
+            // Hapus event listener lama
+            nextBtn.replaceWith(nextBtn.cloneNode(true));
+            const newNextBtn = document.getElementById('nextToSupplier');
+            
+            newNextBtn.addEventListener('click', () => {
                 if (this.setupData.warehouses.length === 0) {
                     this.showAlert('Please add at least one warehouse', 'error');
                     return;
                 }
                 window.location.hash = '#setup/supplier';
+            });
+        }
+        
+        // Validasi real-time untuk tombol add
+        const warehouseNameInput = document.getElementById('warehouseName');
+        if (warehouseNameInput) {
+            warehouseNameInput.addEventListener('input', () => {
+                const addBtn = document.querySelector('#warehouseForm button[type="submit"]');
+                if (addBtn) {
+                    const warehouseLimit = this.userPlan === 'basic' ? 1 :
+                        this.userPlan === 'pro' ? 3 : Infinity;
+                    const isLimitReached = this.setupData.warehouses.length >= warehouseLimit;
+                    const isEmptyName = warehouseNameInput.value.trim() === '';
+                    
+                    addBtn.disabled = isLimitReached || isEmptyName;
+                }
             });
         }
     }
@@ -189,6 +213,7 @@ class SetupWizardMulti {
                 try {
                     if (this.saveSupplierData()) {
                         this.updateUI();
+                        this.showAlert('Supplier added successfully!', 'success');
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -198,7 +223,10 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToCustomer');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
+            nextBtn.replaceWith(nextBtn.cloneNode(true));
+            const newNextBtn = document.getElementById('nextToCustomer');
+            
+            newNextBtn.addEventListener('click', () => {
                 if (this.setupData.suppliers.length === 0) {
                     this.showAlert('Please add at least one supplier', 'error');
                     return;
@@ -219,6 +247,7 @@ class SetupWizardMulti {
                 try {
                     if (this.saveCustomerData()) {
                         this.updateUI();
+                        this.showAlert('Customer added successfully!', 'success');
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -228,7 +257,10 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToCategory');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
+            nextBtn.replaceWith(nextBtn.cloneNode(true));
+            const newNextBtn = document.getElementById('nextToCategory');
+            
+            newNextBtn.addEventListener('click', () => {
                 if (this.setupData.customers.length === 0) {
                     this.showAlert('Please add at least one customer', 'error');
                     return;
@@ -249,6 +281,7 @@ class SetupWizardMulti {
                 try {
                     if (this.saveCategoryData()) {
                         this.updateUI();
+                        this.showAlert('Category added successfully!', 'success');
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -258,7 +291,10 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToProduct');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
+            nextBtn.replaceWith(nextBtn.cloneNode(true));
+            const newNextBtn = document.getElementById('nextToProduct');
+            
+            newNextBtn.addEventListener('click', () => {
                 if (this.setupData.categories.length === 0) {
                     this.showAlert('Please add at least one category', 'error');
                     return;
@@ -279,6 +315,7 @@ class SetupWizardMulti {
                 try {
                     if (this.saveProductData()) {
                         this.updateUI();
+                        this.showAlert('Product added successfully!', 'success');
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -288,7 +325,10 @@ class SetupWizardMulti {
 
         const completeBtn = document.getElementById('completeSetup');
         if (completeBtn) {
-            completeBtn.addEventListener('click', async () => {
+            completeBtn.replaceWith(completeBtn.cloneNode(true));
+            const newCompleteBtn = document.getElementById('completeSetup');
+            
+            newCompleteBtn.addEventListener('click', async () => {
                 if (this.setupData.products.length === 0) {
                     this.showAlert('Please add at least one product', 'error');
                     return;
@@ -298,7 +338,7 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== NAVIGATION EVENTS DIPERBAIKI (MASALAH 3 FIXED) =====
+    // ===== NAVIGATION EVENTS DIPERBAIKI =====
     
     bindNavigationEvents() {
         // Cegah multiple binding
@@ -309,52 +349,63 @@ class SetupWizardMulti {
         
         console.log('🔗 Binding navigation events...');
         
-        // Event delegation untuk tombol remove dengan satu event handler yang stabil
-        document.addEventListener('click', (e) => {
+        // Event delegation untuk tombol remove dengan Promise yang benar
+        document.addEventListener('click', async (e) => {
             // Cek jika klik pada tombol remove
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
                 e.preventDefault();
+                e.stopPropagation();
                 
                 const index = parseInt(removeBtn.dataset.index);
                 const type = removeBtn.dataset.type;
                 
-                // PERBAIKAN MASALAH 3: Gunakan custom modal confirm untuk menghindari multiple prompt
-                if (this.showCustomConfirm(`Are you sure you want to remove this ${type}?`)) {
-                    let removed = false;
+                try {
+                    const confirmed = await this.showCustomConfirm(`Are you sure you want to remove this ${type}?`);
                     
-                    switch(type) {
-                        case 'warehouse':
-                            this.removeWarehouse(index);
-                            removed = true;
-                            break;
-                        case 'supplier':
-                            this.removeSupplier(index);
-                            removed = true;
-                            break;
-                        case 'customer':
-                            this.removeCustomer(index);
-                            removed = true;
-                            break;
-                        case 'category':
-                            this.removeCategory(index);
-                            removed = true;
-                            break;
-                        case 'product':
-                            this.removeProduct(index);
-                            removed = true;
-                            break;
+                    if (confirmed) {
+                        let removed = false;
+                        
+                        switch(type) {
+                            case 'warehouse':
+                                this.removeWarehouse(index);
+                                removed = true;
+                                break;
+                            case 'supplier':
+                                this.removeSupplier(index);
+                                removed = true;
+                                break;
+                            case 'customer':
+                                this.removeCustomer(index);
+                                removed = true;
+                                break;
+                            case 'category':
+                                this.removeCategory(index);
+                                removed = true;
+                                break;
+                            case 'product':
+                                this.removeProduct(index);
+                                removed = true;
+                                break;
+                        }
+                        
+                        if (removed) {
+                            this.showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} removed successfully`, 'success');
+                            this.updateUI();
+                        }
+                    } else {
+                        console.log('User cancelled removal');
                     }
-                    
-                    if (removed) {
-                        this.showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} removed successfully`, 'success');
-                    }
+                } catch (error) {
+                    console.error('Error in removal process:', error);
                 }
                 return;
             }
 
             // Back buttons
             if (e.target.closest('[data-action="back"]')) {
+                e.preventDefault();
+                e.stopPropagation();
                 const step = e.target.closest('[data-action="back"]').dataset.step;
                 window.location.hash = `#setup/${step}`;
                 return;
@@ -362,14 +413,22 @@ class SetupWizardMulti {
 
             // Cancel button
             if (e.target.closest('[data-action="cancel"]')) {
-                if (this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.')) {
-                    localStorage.removeItem('stockmint_company');
-                    localStorage.removeItem('stockmint_warehouses');
-                    localStorage.removeItem('stockmint_suppliers');
-                    localStorage.removeItem('stockmint_customers');
-                    localStorage.removeItem('stockmint_categories');
-                    localStorage.removeItem('stockmint_products');
-                    window.location.hash = '#dashboard';
+                e.preventDefault();
+                e.stopPropagation();
+                
+                try {
+                    const confirmed = await this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.');
+                    if (confirmed) {
+                        localStorage.removeItem('stockmint_company');
+                        localStorage.removeItem('stockmint_warehouses');
+                        localStorage.removeItem('stockmint_suppliers');
+                        localStorage.removeItem('stockmint_customers');
+                        localStorage.removeItem('stockmint_categories');
+                        localStorage.removeItem('stockmint_products');
+                        window.location.hash = '#dashboard';
+                    }
+                } catch (error) {
+                    console.error('Error in cancel process:', error);
                 }
                 return;
             }
@@ -378,11 +437,11 @@ class SetupWizardMulti {
         this.navigationEventsBound = true;
     }
 
-    // ===== CUSTOM CONFIRM DIALOG (UNTUK PERBAIKAN MASALAH 3) =====
+    // ===== CUSTOM CONFIRM DIALOG =====
     
     showCustomConfirm(message) {
         return new Promise((resolve) => {
-            // Cek jika ada modal confirm yang sudah ada
+            // Hapus modal confirm yang sudah ada
             const existingModal = document.getElementById('customConfirmModal');
             if (existingModal) {
                 existingModal.remove();
@@ -400,7 +459,8 @@ class SetupWizardMulti {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    z-index: 9999;
+                    z-index: 10000;
+                    animation: fadeIn 0.3s ease;
                 ">
                     <div style="
                         background: white;
@@ -409,13 +469,14 @@ class SetupWizardMulti {
                         max-width: 400px;
                         width: 90%;
                         box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                        animation: slideIn 0.3s ease;
                     ">
                         <div style="text-align: center; margin-bottom: 20px;">
                             <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
                             <h3 style="margin: 0 0 10px 0; color: #333;">Confirm Action</h3>
-                            <p style="color: #666; margin: 0;">${message}</p>
+                            <p style="color: #666; margin: 0; line-height: 1.5;">${message}</p>
                         </div>
                         <div style="display: flex; gap: 15px; justify-content: center;">
                             <button id="confirmCancel" style="
@@ -427,6 +488,7 @@ class SetupWizardMulti {
                                 font-weight: 600;
                                 cursor: pointer;
                                 flex: 1;
+                                transition: background 0.2s;
                             ">
                                 Cancel
                             </button>
@@ -439,6 +501,7 @@ class SetupWizardMulti {
                                 font-weight: 600;
                                 cursor: pointer;
                                 flex: 1;
+                                transition: background 0.2s;
                             ">
                                 OK
                             </button>
@@ -449,382 +512,67 @@ class SetupWizardMulti {
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             
-            // Bind events untuk tombol
-            document.getElementById('confirmOk').addEventListener('click', () => {
-                document.getElementById('customConfirmModal').remove();
-                resolve(true);
-            });
+            // Tambah style untuk animasi
+            if (!document.querySelector('#modal-animations')) {
+                const style = document.createElement('style');
+                style.id = 'modal-animations';
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateY(-20px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                    #confirmCancel:hover { background: #5a6268 !important; }
+                    #confirmOk:hover { background: #d97706 !important; }
+                `;
+                document.head.appendChild(style);
+            }
             
-            document.getElementById('confirmCancel').addEventListener('click', () => {
-                document.getElementById('customConfirmModal').remove();
-                resolve(false);
-            });
+            // Bind events untuk tombol
+            const modal = document.getElementById('customConfirmModal');
+            const confirmOk = document.getElementById('confirmOk');
+            const confirmCancel = document.getElementById('confirmCancel');
+            
+            const handleConfirm = (result) => {
+                modal.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (modal.parentNode) {
+                        modal.remove();
+                    }
+                    resolve(result);
+                }, 300);
+            };
+            
+            confirmOk.addEventListener('click', () => handleConfirm(true));
+            confirmCancel.addEventListener('click', () => handleConfirm(false));
             
             // Close modal ketika klik di luar
-            document.getElementById('customConfirmModal').addEventListener('click', (e) => {
+            modal.addEventListener('click', (e) => {
                 if (e.target.id === 'customConfirmModal') {
-                    document.getElementById('customConfirmModal').remove();
-                    resolve(false);
+                    handleConfirm(false);
                 }
             });
+            
+            // Tambah key event untuk ESC
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    handleConfirm(false);
+                    document.removeEventListener('keydown', handleKeyDown);
+                }
+            };
+            
+            document.addEventListener('keydown', handleKeyDown);
         });
     }
 
-    // ===== METHOD renderMigrate() YANG DIPERBARUI =====
-    
-    renderMigrate() {
-        return `
-        <div class="migration-container">
-            <div class="migration-header">
-                <h2><i class="fas fa-database"></i> Data Migration</h2>
-                <p class="subtitle">Import your existing data from Excel template</p>
-            </div>
-            
-            <div class="warning-box">
-                <div class="warning-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="warning-content">
-                    <h4>Advanced Users Only</h4>
-                    <p>This migration tool is designed for users who understand database relationships. 
-                    Please ensure you have backed up your data before proceeding.</p>
-                    <p><strong>Template Complexity:</strong> High - requires understanding of multiple table relationships.</p>
-                </div>
-            </div>
-            
-            <div class="step-guide">
-                <h3><i class="fas fa-list-ol"></i> Step-by-Step Migration Guide</h3>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h4>Download Template</h4>
-                            <p>Get the Excel template with pre-defined columns</p>
-                            <a href="template.html" class="btn-download" target="_blank">
-                                <i class="fas fa-download"></i> Download Template
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h4>Fill Your Data</h4>
-                            <p>Open the template and fill in your data according to the instructions</p>
-                            <ul>
-                                <li>Don't modify column headers</li>
-                                <li>Keep sheet names unchanged</li>
-                                <li>Fill all required fields</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h4>Upload Excel File</h4>
-                            <p>Upload the filled Excel file here</p>
-                            <div class="upload-section">
-                                <div class="file-input-container">
-                                    <!-- PERBAIKAN MASALAH 2: Tambah drag & drop area -->
-                                    <div class="drop-area" id="dropArea" style="
-                                        border: 2px dashed #19BEBB;
-                                        border-radius: 10px;
-                                        padding: 30px;
-                                        text-align: center;
-                                        margin-bottom: 20px;
-                                        cursor: pointer;
-                                        transition: all 0.3s;
-                                    ">
-                                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;"></i>
-                                        <h4 style="margin: 0 0 10px 0; color: #333;">Drag & Drop Excel File Here</h4>
-                                        <p style="color: #666; margin: 0 0 15px 0;">or click to browse</p>
-                                        <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;">
-                                        <button type="button" id="browseFileBtn" class="btn-browse">
-                                            <i class="fas fa-folder-open"></i> Browse Excel File
-                                        </button>
-                                    </div>
-                                    
-                                    <div style="text-align: center;">
-                                        <span id="selectedFileName" style="
-                                            display: inline-block;
-                                            padding: 8px 15px;
-                                            background: #f8f9fa;
-                                            border-radius: 6px;
-                                            margin: 10px 0;
-                                            color: #666;
-                                        ">No file selected</span>
-                                    </div>
-                                </div>
-                                
-                                <button type="button" id="uploadFileBtn" class="btn-upload" disabled>
-                                    <i class="fas fa-upload"></i> Upload & Process
-                                </button>
-                                
-                                <div id="uploadProgress" class="progress-container" style="display: none;">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" id="progressFill"></div>
-                                    </div>
-                                    <div class="progress-text" id="progressText">0%</div>
-                                </div>
-                                
-                                <div id="uploadResult" class="result-container"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="action-buttons">
-                <button type="button" class="btn-back" onclick="window.location.hash='#setup/start-new'">
-                    <i class="fas fa-arrow-left"></i> Back to Setup Options
-                </button>
-                
-                <button type="button" class="btn-cancel" onclick="window.location.hash='#dashboard'">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-        
-        <style>
-        .migration-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .migration-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .migration-header h2 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .warning-box {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .warning-icon {
-            color: #856404;
-            font-size: 24px;
-        }
-        
-        .warning-content h4 {
-            color: #856404;
-            margin: 0 0 10px 0;
-        }
-        
-        .step-guide {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        
-        .steps {
-            margin-top: 20px;
-        }
-        
-        .step {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding-bottom: 30px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .step:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        
-        .step-number {
-            width: 40px;
-            height: 40px;
-            background: #19BEBB;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-        
-        .step-content h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        
-        .step-content ul {
-            margin: 10px 0 0 0;
-            padding-left: 20px;
-        }
-        
-        .step-content li {
-            margin-bottom: 5px;
-            color: #666;
-        }
-        
-        .btn-download, .btn-browse, .btn-upload, .btn-back, .btn-cancel {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-        
-        .btn-download {
-            background: #19BEBB;
-            color: white;
-        }
-        
-        .btn-download:hover {
-            background: #0fa8a6;
-        }
-        
-        .btn-browse {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-browse:hover {
-            background: #5a6268;
-        }
-        
-        .btn-upload {
-            background: #10b981;
-            color: white;
-            margin-top: 15px;
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-        }
-        
-        .btn-upload:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .btn-upload:hover:not(:disabled) {
-            background: #0da271;
-        }
-        
-        .btn-back {
-            background: #f8f9fa;
-            color: #333;
-            border: 1px solid #ddd;
-        }
-        
-        .btn-back:hover {
-            background: #e9ecef;
-        }
-        
-        .btn-cancel {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .btn-cancel:hover {
-            background: #dc2626;
-        }
-        
-        .file-input-container {
-            margin: 15px 0;
-        }
-        
-        #selectedFileName {
-            color: #666;
-            font-style: italic;
-        }
-        
-        .progress-container {
-            margin-top: 20px;
-        }
-        
-        .progress-bar {
-            height: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #19BEBB;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        
-        .progress-text {
-            text-align: center;
-            margin-top: 5px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .result-container {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-        
-        .result-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-        
-        .result-error {
-            background: #fee2e2;
-            color: #dc2626;
-            border: 1px solid #fca5a5;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-        
-        .drop-area:hover {
-            background: #f8f9fa;
-            border-color: #0fa8a6;
-        }
-        
-        .drop-area.drag-over {
-            background: #e3f2fd;
-            border-color: #19BEBB;
-            border-style: solid;
-        }
-        </style>
-        `;
-    }
-
-    // ===== BIND EVENTS UNTUK MIGRATE PAGE (PERBAIKAN MASALAH 2) =====
+    // ===== MIGRATE EVENTS DIPERBAIKI =====
     
     bindMigrateEvents() {
         console.log('📤 Binding migrate events...');
@@ -835,68 +583,83 @@ class SetupWizardMulti {
             return;
         }
         
-        const browseBtn = document.getElementById('browseFileBtn');
-        const fileInput = document.getElementById('excelFile');
-        const uploadBtn = document.getElementById('uploadFileBtn');
-        const fileNameSpan = document.getElementById('selectedFileName');
-        const dropArea = document.getElementById('dropArea');
-        
-        // PERBAIKAN MASALAH 2: Event binding untuk browse button
-        if (browseBtn && fileInput) {
-            browseBtn.addEventListener('click', () => {
-                fileInput.click();
+        setTimeout(() => {
+            const browseBtn = document.getElementById('browseFileBtn');
+            const fileInput = document.getElementById('excelFile');
+            const uploadBtn = document.getElementById('uploadFileBtn');
+            const fileNameSpan = document.getElementById('selectedFileName');
+            const dropArea = document.getElementById('dropArea');
+            
+            console.log('📁 File input elements found:', { 
+                browseBtn: !!browseBtn, 
+                fileInput: !!fileInput, 
+                uploadBtn: !!uploadBtn, 
+                fileNameSpan: !!fileNameSpan, 
+                dropArea: !!dropArea 
             });
             
-            fileInput.addEventListener('change', (e) => {
-                this.handleFileSelection(e.target.files[0], fileNameSpan, uploadBtn);
-            });
-        }
-        
-        // PERBAIKAN MASALAH 2: Drag & drop functionality
-        if (dropArea) {
-            // Prevent default drag behaviors
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+            // Event binding untuk browse button
+            if (browseBtn && fileInput) {
+                browseBtn.addEventListener('click', () => {
+                    console.log('📂 Browse button clicked');
+                    fileInput.click();
                 });
-            });
-            
-            // Highlight drop area when item is dragged over it
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.add('drag-over');
+                
+                fileInput.addEventListener('change', (e) => {
+                    console.log('📄 File selected via input');
+                    this.handleFileSelection(e.target.files[0], fileNameSpan, uploadBtn);
                 });
-            });
+            }
             
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.remove('drag-over');
+            // Drag & drop functionality
+            if (dropArea) {
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
                 });
-            });
+                
+                // Highlight drop area when item is dragged over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, () => {
+                        dropArea.classList.add('drag-over');
+                    });
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, () => {
+                        dropArea.classList.remove('drag-over');
+                    });
+                });
+                
+                // Handle dropped files
+                dropArea.addEventListener('drop', (e) => {
+                    const files = e.dataTransfer.files;
+                    console.log('📁 Files dropped:', files.length);
+                    if (files.length > 0) {
+                        this.handleFileSelection(files[0], fileNameSpan, uploadBtn);
+                    }
+                });
+                
+                // Click on drop area also triggers file input
+                dropArea.addEventListener('click', () => {
+                    console.log('📂 Drop area clicked');
+                    fileInput.click();
+                });
+            }
             
-            // Handle dropped files
-            dropArea.addEventListener('drop', (e) => {
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    this.handleFileSelection(files[0], fileNameSpan, uploadBtn);
-                }
-            });
+            // Upload button event
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', () => {
+                    this.handleExcelUpload();
+                });
+            }
             
-            // Click on drop area also triggers file input
-            dropArea.addEventListener('click', () => {
-                fileInput.click();
-            });
-        }
-        
-        // Upload button event
-        if (uploadBtn) {
-            uploadBtn.addEventListener('click', () => {
-                this.handleExcelUpload();
-            });
-        }
-        
-        this.migrateEventsBound = true;
+            this.migrateEventsBound = true;
+            console.log('✅ Migrate events bound successfully');
+        }, 300);
     }
 
     // Helper untuk handle file selection
@@ -938,8 +701,7 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== HANDLE EXCEL UPLOAD =====
-    
+    // Handle Excel upload
     handleExcelUpload() {
         const fileInput = document.getElementById('excelFile');
         const file = fileInput.files[0] || this.selectedFile;
@@ -979,7 +741,7 @@ class SetupWizardMulti {
         const uploadBtn = document.getElementById('uploadFileBtn');
         
         try {
-            // Simulasi proses upload (dalam implementasi nyata, gunakan library XLSX)
+            // Simulasi proses upload
             console.log('Processing Excel file:', file.name);
             
             setTimeout(() => {
@@ -1057,12 +819,15 @@ class SetupWizardMulti {
         // Update tombol next
         const warehouseNext = document.getElementById('nextToSupplier');
         const supplierNext = document.getElementById('nextToCustomer');
-        const customerNext = document.getElementById('nextToCustomer');
+        const customerNext = document.getElementById('nextToCategory');
         const categoryNext = document.getElementById('nextToProduct');
         const completeBtn = document.getElementById('completeSetup');
         
+        console.log('🔄 Checking warehouse count:', this.setupData.warehouses.length);
+        
         if (warehouseNext) {
             warehouseNext.disabled = this.setupData.warehouses.length === 0;
+            console.log(`🔄 Warehouse next button: ${warehouseNext.disabled ? 'DISABLED' : 'ENABLED'}`);
         }
         
         if (supplierNext) {
@@ -1088,9 +853,25 @@ class SetupWizardMulti {
                 this.userPlan === 'pro' ? 3 : Infinity;
             addWarehouseBtn.disabled = this.setupData.warehouses.length >= warehouseLimit;
         }
+        
+        // Update checkbox primary untuk BASIC plan
+        const isPrimaryCheckbox = document.getElementById('isPrimary');
+        if (isPrimaryCheckbox && this.userPlan === 'basic') {
+            if (this.setupData.warehouses.length === 0) {
+                isPrimaryCheckbox.checked = true;
+                isPrimaryCheckbox.disabled = true;
+            } else {
+                // Pastikan warehouse pertama adalah primary untuk BASIC plan
+                if (this.setupData.warehouses.length > 0 && !this.setupData.warehouses[0].isPrimary) {
+                    this.setupData.warehouses[0].isPrimary = true;
+                    localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+                    this.updateWarehouseList();
+                }
+            }
+        }
     }
 
-    // ===== DATA SAVING DIPERBAIKI (MASALAH 4 FIXED) =====
+    // ===== DATA SAVING METHODS =====
     
     saveCompanyData(validate = true) {
         const name = document.getElementById('companyName')?.value.trim();
@@ -1147,12 +928,12 @@ class SetupWizardMulti {
             throw new Error('Warehouse with this name already exists');
         }
         
-        // PERBAIKAN MASALAH 4: Untuk paket BASIC, warehouse pertama HARUS primary
-        if (this.userPlan === 'basic') {
-            isPrimary = true; // Force primary untuk BASIC plan
+        // Untuk paket BASIC, warehouse pertama HARUS primary
+        if (this.userPlan === 'basic' && this.setupData.warehouses.length === 0) {
+            isPrimary = true;
         }
         
-        // Generate ID sederhana
+        // Generate ID
         this.warehouseCounter++;
         const warehouseCode = `WH-${this.warehouseCounter.toString().padStart(3, '0')}`;
         
@@ -1174,9 +955,12 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         
         // Reset form
-        document.getElementById('warehouseForm').reset();
+        const warehouseForm = document.getElementById('warehouseForm');
+        if (warehouseForm) {
+            warehouseForm.reset();
+        }
         
-        // PERBAIKAN MASALAH 4: Set ulang checkbox untuk BASIC plan
+        // Update checkbox untuk BASIC plan
         if (this.userPlan === 'basic' && isPrimaryCheckbox) {
             isPrimaryCheckbox.checked = true;
             isPrimaryCheckbox.disabled = true;
@@ -1522,7 +1306,7 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== REMOVE ITEMS DIPERBAIKI =====
+    // ===== REMOVE ITEMS METHODS =====
     
     removeWarehouse(index) {
         if (index >= 0 && index < this.setupData.warehouses.length) {
@@ -1535,46 +1319,45 @@ class SetupWizardMulti {
                 localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
             }
             
-            this.updateWarehouseList();
-            this.updateUI();
+            return true;
         }
+        return false;
     }
 
     removeSupplier(index) {
         if (index >= 0 && index < this.setupData.suppliers.length) {
             this.setupData.suppliers.splice(index, 1);
             localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
-            this.updateSupplierList();
-            this.updateUI();
+            return true;
         }
+        return false;
     }
 
     removeCustomer(index) {
         if (index >= 0 && index < this.setupData.customers.length) {
             this.setupData.customers.splice(index, 1);
             localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
-            this.updateCustomerList();
-            this.updateUI();
+            return true;
         }
+        return false;
     }
 
     removeCategory(index) {
         if (index >= 0 && index < this.setupData.categories.length) {
             this.setupData.categories.splice(index, 1);
             localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
-            this.updateCategoryList();
-            this.updateUI();
-            this.updateProductCategoryDropdown();
+            return true;
         }
+        return false;
     }
 
     removeProduct(index) {
         if (index >= 0 && index < this.setupData.products.length) {
             this.setupData.products.splice(index, 1);
             localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
-            this.updateProductList();
-            this.updateUI();
+            return true;
         }
+        return false;
     }
 
     // ===== COMPLETE SETUP =====
@@ -1630,7 +1413,7 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
     }
 
-    // ===== RENDER METHODS DIPERBAIKI (MASALAH 4) =====
+    // ===== RENDER METHODS =====
     
     render() {
         const hash = window.location.hash.substring(1);
@@ -1658,6 +1441,12 @@ class SetupWizardMulti {
             default:
                 return this.renderCompanyStep();
         }
+    }
+
+    // ===== PERBAIKAN: TAMBAH METHOD renderMigratePage =====
+    
+    renderMigratePage() {
+        return this.renderMigrate();
     }
 
     // ===== PROGRESS BAR =====
@@ -1690,7 +1479,7 @@ class SetupWizardMulti {
         `;
     }
 
-    // ===== RENDER STEP METHODS DIPERBAIKI (MASALAH 4) =====
+    // ===== RENDER STEP METHODS =====
     
     renderCompanyStep() {
         const savedData = this.setupData.company || {};
@@ -1773,7 +1562,6 @@ class SetupWizardMulti {
         const warehouseLimit = this.userPlan === 'basic' ? 1 :
             this.userPlan === 'pro' ? 3 : Infinity;
         
-        // PERBAIKAN MASALAH 4: Untuk BASIC plan, checkbox harus disabled dan checked
         const isBasicPlan = this.userPlan === 'basic';
         const isFirstWarehouse = savedWarehouses.length === 0;
         const checkboxDisabled = isBasicPlan && isFirstWarehouse;
@@ -2224,10 +2012,365 @@ class SetupWizardMulti {
         `;
     }
 
-    // ===== METHOD UNTUK RENDER MIGRATE PAGE =====
+    // ===== RENDER MIGRATE PAGE =====
     
-    renderMigratePage() {
-        return this.renderMigrate();
+    renderMigrate() {
+        return `
+        <div class="migration-container">
+            <div class="migration-header">
+                <h2><i class="fas fa-database"></i> Data Migration</h2>
+                <p class="subtitle">Import your existing data from Excel template</p>
+            </div>
+            
+            <div class="warning-box">
+                <div class="warning-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="warning-content">
+                    <h4>Advanced Users Only</h4>
+                    <p>This migration tool is designed for users who understand database relationships. 
+                    Please ensure you have backed up your data before proceeding.</p>
+                    <p><strong>Template Complexity:</strong> High - requires understanding of multiple table relationships.</p>
+                </div>
+            </div>
+            
+            <div class="step-guide">
+                <h3><i class="fas fa-list-ol"></i> Step-by-Step Migration Guide</h3>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Download Template</h4>
+                            <p>Get the Excel template with pre-defined columns</p>
+                            <a href="template.html" class="btn-download" target="_blank">
+                                <i class="fas fa-download"></i> Download Template
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Fill Your Data</h4>
+                            <p>Open the template and fill in your data according to the instructions</p>
+                            <ul>
+                                <li>Don't modify column headers</li>
+                                <li>Keep sheet names unchanged</li>
+                                <li>Fill all required fields</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Upload Excel File</h4>
+                            <p>Upload the filled Excel file here</p>
+                            <div class="upload-section">
+                                <div class="file-input-container">
+                                    <div class="drop-area" id="dropArea" style="
+                                        border: 2px dashed #19BEBB;
+                                        border-radius: 10px;
+                                        padding: 40px 20px;
+                                        text-align: center;
+                                        margin-bottom: 20px;
+                                        cursor: pointer;
+                                        transition: all 0.3s;
+                                        background: #f8f9fa;
+                                    ">
+                                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;"></i>
+                                        <h4 style="margin: 0 0 10px 0; color: #333;">Drag & Drop Excel File Here</h4>
+                                        <p style="color: #666; margin: 0 0 20px 0; font-size: 14px;">or click to browse</p>
+                                        <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;">
+                                        <button type="button" id="browseFileBtn" class="btn-browse">
+                                            <i class="fas fa-folder-open"></i> Browse Excel File
+                                        </button>
+                                    </div>
+                                    
+                                    <div style="text-align: center;">
+                                        <span id="selectedFileName" style="
+                                            display: inline-block;
+                                            padding: 10px 20px;
+                                            background: #f8f9fa;
+                                            border-radius: 6px;
+                                            margin: 10px 0;
+                                            color: #666;
+                                            border: 1px solid #ddd;
+                                            min-width: 200px;
+                                        ">No file selected</span>
+                                    </div>
+                                </div>
+                                
+                                <button type="button" id="uploadFileBtn" class="btn-upload" disabled>
+                                    <i class="fas fa-upload"></i> Upload & Process
+                                </button>
+                                
+                                <div id="uploadProgress" class="progress-container" style="display: none;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill"></div>
+                                    </div>
+                                    <div class="progress-text" id="progressText">0%</div>
+                                </div>
+                                
+                                <div id="uploadResult" class="result-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn-back" onclick="window.location.hash='#setup/start-new'">
+                    <i class="fas fa-arrow-left"></i> Back to Setup Options
+                </button>
+                
+                <button type="button" class="btn-cancel" onclick="window.location.hash='#dashboard'">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+        
+        <style>
+        .migration-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .migration-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .migration-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .warning-icon {
+            color: #856404;
+            font-size: 24px;
+        }
+        
+        .warning-content h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+        }
+        
+        .step-guide {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .steps {
+            margin-top: 20px;
+        }
+        
+        .step {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #19BEBB;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .step-content h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .step-content ul {
+            margin: 10px 0 0 0;
+            padding-left: 20px;
+        }
+        
+        .step-content li {
+            margin-bottom: 5px;
+            color: #666;
+        }
+        
+        .btn-download, .btn-browse, .btn-upload, .btn-back, .btn-cancel {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-download {
+            background: #19BEBB;
+            color: white;
+        }
+        
+        .btn-download:hover {
+            background: #0fa8a6;
+        }
+        
+        .btn-browse {
+            background: #6c757d;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        
+        .btn-browse:hover {
+            background: #5a6268;
+        }
+        
+        .btn-upload {
+            background: #10b981;
+            color: white;
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+        
+        .btn-upload:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-upload:hover:not(:disabled) {
+            background: #0da271;
+        }
+        
+        .btn-back {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-back:hover {
+            background: #e9ecef;
+        }
+        
+        .btn-cancel {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-cancel:hover {
+            background: #dc2626;
+        }
+        
+        .file-input-container {
+            margin: 15px 0;
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #19BEBB;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .result-error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .drop-area:hover {
+            background: #e3f2fd !important;
+            border-color: #0fa8a6 !important;
+        }
+        
+        .drop-area.drag-over {
+            background: #d1ecf1 !important;
+            border-color: #19BEBB !important;
+            border-style: solid !important;
+        }
+        
+        .drop-area i.fa-cloud-upload-alt {
+            transition: transform 0.3s;
+        }
+        
+        .drop-area:hover i.fa-cloud-upload-alt {
+            transform: scale(1.1);
+        }
+        </style>
+        `;
     }
 
     // ===== HELPER METHODS =====
@@ -2342,4 +2485,4 @@ class SetupWizardMulti {
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded successfully with all fixes');
+console.log('✅ SetupWizardMulti loaded successfully with ALL FIXES');
