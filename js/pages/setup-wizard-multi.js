@@ -1,6 +1,6 @@
-// setup-wizard-multi.js - VERSI TERPADU DENGAN SEMUA PERBAIKAN
+// setup-wizard-multi.js - VERSI FINAL PERBAIKAN PERSISTENSI & UPLOAD
 
-console.log('🔄 setup-wizard-multi.js LOADED - FINAL IMPROVED VERSION');
+console.log('🔄 setup-wizard-multi.js LOADED - FINAL FIX VERSION');
 
 class SetupWizardMulti {
     constructor() {
@@ -8,12 +8,15 @@ class SetupWizardMulti {
         try {
             this.currentStep = this.getCurrentStepFromHash();
             this.totalSteps = 6;
+            
+            // PERBAIKAN CRITICAL: Selalu cek localStorage terlebih dahulu untuk data permanen
             this.setupData = this.loadSavedData();
-            console.log('📊 Setup data loaded');
+            console.log('📊 Setup data loaded from:', this.isSetupCompleted() ? 'localStorage' : 'sessionStorage');
+            
             this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
             this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             
-            // Initialize counters
+            // Initialize counters berdasarkan data yang ada
             this.warehouseCounter = this.setupData.warehouses.length;
             this.supplierCounter = this.setupData.suppliers.length;
             this.customerCounter = this.setupData.customers.length;
@@ -59,13 +62,15 @@ class SetupWizardMulti {
         return 'company';
     }
 
+    isSetupCompleted() {
+        return localStorage.getItem('stockmint_setup_completed') === 'true' || 
+               localStorage.getItem('stockmint_migration_completed') === 'true';
+    }
+
     loadSavedData() {
-        // PERBAIKAN: Cek apakah setup sudah selesai atau sudah ada data di localStorage
-        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-        const migrationCompleted = localStorage.getItem('stockmint_migration_completed') === 'true';
-        
-        if (setupCompleted || migrationCompleted) {
-            console.log('✅ Setup already completed, loading saved data from localStorage...');
+        // PERBAIKAN CRITICAL: Selalu prioritaskan data permanen di localStorage
+        if (this.isSetupCompleted()) {
+            console.log('✅ Setup completed, loading from localStorage...');
             return {
                 company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
                 warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
@@ -75,14 +80,14 @@ class SetupWizardMulti {
                 products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
             };
         } else {
-            console.log('⚠️ Setup not completed yet, loading temporary data from sessionStorage...');
+            console.log('⚠️ Setup not completed, loading from sessionStorage...');
             return {
-                company: JSON.parse(sessionStorage.getItem('stockmint_temp_company') || '{}'),
-                warehouses: JSON.parse(sessionStorage.getItem('stockmint_temp_warehouses') || '[]'),
-                suppliers: JSON.parse(sessionStorage.getItem('stockmint_temp_suppliers') || '[]'),
-                customers: JSON.parse(sessionStorage.getItem('stockmint_temp_customers') || '[]'),
-                categories: JSON.parse(sessionStorage.getItem('stockmint_temp_categories') || '[]'),
-                products: JSON.parse(sessionStorage.getItem('stockmint_temp_products') || '[]')
+                company: JSON.parse(sessionStorage.getItem('stockmint_temp_company') || localStorage.getItem('stockmint_company') || '{}'),
+                warehouses: JSON.parse(sessionStorage.getItem('stockmint_temp_warehouses') || localStorage.getItem('stockmint_warehouses') || '[]'),
+                suppliers: JSON.parse(sessionStorage.getItem('stockmint_temp_suppliers') || localStorage.getItem('stockmint_suppliers') || '[]'),
+                customers: JSON.parse(sessionStorage.getItem('stockmint_temp_customers') || localStorage.getItem('stockmint_customers') || '[]'),
+                categories: JSON.parse(sessionStorage.getItem('stockmint_temp_categories') || localStorage.getItem('stockmint_categories') || '[]'),
+                products: JSON.parse(sessionStorage.getItem('stockmint_temp_products') || localStorage.getItem('stockmint_products') || '[]')
             };
         }
     }
@@ -92,24 +97,25 @@ class SetupWizardMulti {
     bindEvents() {
         console.log('🔧 Binding events for step:', this.currentStep);
         
-        // Reset flags untuk step yang berbeda
-        if (this.currentStep === 'migrate') {
-            this.migrateEventsBound = false;
-            this.fileHandlersBound = false;
-        } else {
-            this.eventsBound = false;
-        }
+        // Reset flags
+        this.eventsBound = false;
+        this.navigationEventsBound = false;
+        this.migrateEventsBound = false;
+        this.fileHandlersBound = false;
         
         setTimeout(() => {
             this.bindFormEvents();
             this.bindNavigationEvents();
             this.updateUI();
             
+            // Set flag berdasarkan step
             if (this.currentStep === 'migrate') {
                 this.migrateEventsBound = true;
             } else {
                 this.eventsBound = true;
             }
+            
+            console.log('✅ Events bound successfully');
         }, 100);
     }
 
@@ -144,335 +150,271 @@ class SetupWizardMulti {
 
     bindCompanyForm() {
         const form = document.getElementById('companyForm');
-        if (form) {
-            // Clone form untuk menghindari multiple event binding
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('companyForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                try {
-                    this.saveCompanyData();
-                    window.location.hash = '#setup/warehouse';
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
-                }
-            });
-        }
+        if (!form) return;
+        
+        // Clone untuk menghindari multiple binding
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('companyForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                this.saveCompanyData();
+                window.location.hash = '#setup/warehouse';
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     bindWarehouseForm() {
         const form = document.getElementById('warehouseForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('warehouseForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                try {
-                    if (this.saveWarehouseData()) {
-                        this.updateUI();
-                        this.showAlert('Warehouse added successfully!', 'success');
-                        
-                        // Reset form setelah sukses
-                        setTimeout(() => {
-                            document.getElementById('warehouseForm').reset();
-                            // Untuk BASIC plan, set checkbox primary dan disable
-                            if (this.userPlan === 'basic') {
-                                const isPrimaryCheckbox = document.getElementById('isPrimary');
-                                if (isPrimaryCheckbox) {
-                                    isPrimaryCheckbox.checked = true;
-                                    isPrimaryCheckbox.disabled = true;
-                                }
+        if (!form) return;
+        
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('warehouseForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                if (this.saveWarehouseData()) {
+                    this.updateUI();
+                    this.showAlert('Warehouse added successfully!', 'success');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        document.getElementById('warehouseForm').reset();
+                        // Untuk BASIC plan, set checkbox primary dan disable
+                        if (this.userPlan === 'basic') {
+                            const isPrimaryCheckbox = document.getElementById('isPrimary');
+                            if (isPrimaryCheckbox) {
+                                isPrimaryCheckbox.checked = true;
+                                isPrimaryCheckbox.disabled = true;
                             }
-                        }, 100);
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
+                        }
+                    }, 100);
                 }
-            });
-        }
-
-        const nextBtn = document.getElementById('nextToSupplier');
-        if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToSupplier').addEventListener('click', () => {
-                if (this.setupData.warehouses.length === 0) {
-                    this.showAlert('Please add at least one warehouse', 'error');
-                    return;
-                }
-                window.location.hash = '#setup/supplier';
-            });
-        }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     bindSupplierForm() {
         const form = document.getElementById('supplierForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('supplierForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                try {
-                    if (this.saveSupplierData()) {
-                        this.updateUI();
-                        this.showAlert('Supplier added successfully!', 'success');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
+        if (!form) return;
+        
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('supplierForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                if (this.saveSupplierData()) {
+                    this.updateUI();
+                    this.showAlert('Supplier added successfully!', 'success');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        document.getElementById('supplierForm').reset();
+                    }, 100);
                 }
-            });
-        }
-
-        const nextBtn = document.getElementById('nextToCustomer');
-        if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToCustomer').addEventListener('click', () => {
-                if (this.setupData.suppliers.length === 0) {
-                    this.showAlert('Please add at least one supplier', 'error');
-                    return;
-                }
-                window.location.hash = '#setup/customer';
-            });
-        }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     bindCustomerForm() {
         const form = document.getElementById('customerForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('customerForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                try {
-                    if (this.saveCustomerData()) {
-                        this.updateUI();
-                        this.showAlert('Customer added successfully!', 'success');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
+        if (!form) return;
+        
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('customerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                if (this.saveCustomerData()) {
+                    this.updateUI();
+                    this.showAlert('Customer added successfully!', 'success');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        document.getElementById('customerForm').reset();
+                    }, 100);
                 }
-            });
-        }
-
-        const nextBtn = document.getElementById('nextToCategory');
-        if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToCategory').addEventListener('click', () => {
-                if (this.setupData.customers.length === 0) {
-                    this.showAlert('Please add at least one customer', 'error');
-                    return;
-                }
-                window.location.hash = '#setup/category';
-            });
-        }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     bindCategoryForm() {
         const form = document.getElementById('categoryForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('categoryForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                try {
-                    if (this.saveCategoryData()) {
-                        this.updateUI();
-                        this.showAlert('Category added successfully!', 'success');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
+        if (!form) return;
+        
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('categoryForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                if (this.saveCategoryData()) {
+                    this.updateUI();
+                    this.showAlert('Category added successfully!', 'success');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        document.getElementById('categoryForm').reset();
+                    }, 100);
                 }
-            });
-        }
-
-        const nextBtn = document.getElementById('nextToProduct');
-        if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToProduct').addEventListener('click', () => {
-                if (this.setupData.categories.length === 0) {
-                    this.showAlert('Please add at least one category', 'error');
-                    return;
-                }
-                window.location.hash = '#setup/product';
-            });
-        }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     bindProductForm() {
         const form = document.getElementById('productForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('productForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                try {
-                    if (this.saveProductData()) {
-                        this.updateUI();
-                        this.showAlert('Product added successfully!', 'success');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'error');
+        if (!form) return;
+        
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        document.getElementById('productForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            try {
+                if (this.saveProductData()) {
+                    this.updateUI();
+                    this.showAlert('Product added successfully!', 'success');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        document.getElementById('productForm').reset();
+                    }, 100);
                 }
-            });
-        }
-
-        const completeBtn = document.getElementById('completeSetup');
-        if (completeBtn) {
-            const newCompleteBtn = completeBtn.cloneNode(true);
-            completeBtn.parentNode.replaceChild(newCompleteBtn, completeBtn);
-            
-            document.getElementById('completeSetup').addEventListener('click', async () => {
-                if (this.setupData.products.length === 0) {
-                    this.showAlert('Please add at least one product', 'error');
-                    return;
-                }
-                await this.completeSetup();
-            });
-        }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        });
     }
 
     // ===== NAVIGATION EVENTS =====
     
     bindNavigationEvents() {
         if (this.navigationEventsBound) {
-            console.log('⚠️ Navigation events already bound, skipping...');
             return;
         }
         
         console.log('🔗 Binding navigation events...');
         
-        document.addEventListener('click', async (e) => {
-            const removeBtn = e.target.closest('.btn-remove');
-            if (removeBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const index = parseInt(removeBtn.dataset.index);
-                const type = removeBtn.dataset.type;
-                
-                try {
-                    const confirmed = await this.showCustomConfirm(`Are you sure you want to remove this ${type}?`);
-                    
-                    if (confirmed) {
-                        let removed = false;
-                        
-                        switch(type) {
-                            case 'warehouse':
-                                removed = this.removeWarehouse(index);
-                                break;
-                            case 'supplier':
-                                removed = this.removeSupplier(index);
-                                break;
-                            case 'customer':
-                                removed = this.removeCustomer(index);
-                                break;
-                            case 'category':
-                                removed = this.removeCategory(index);
-                                break;
-                            case 'product':
-                                removed = this.removeProduct(index);
-                                break;
-                        }
-                        
-                        if (removed) {
-                            this.showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} removed successfully`, 'success');
-                            this.updateUI();
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error in removal process:', error);
+        // Bind next buttons
+        this.bindNextButton('nextToSupplier', 'supplier');
+        this.bindNextButton('nextToCustomer', 'customer');
+        this.bindNextButton('nextToCategory', 'category');
+        this.bindNextButton('nextToProduct', 'product');
+        
+        // Bind complete button
+        const completeBtn = document.getElementById('completeSetup');
+        if (completeBtn) {
+            const newBtn = completeBtn.cloneNode(true);
+            completeBtn.parentNode.replaceChild(newBtn, completeBtn);
+            
+            document.getElementById('completeSetup').addEventListener('click', () => {
+                if (this.setupData.products.length === 0) {
+                    this.showAlert('Please add at least one product', 'error');
+                    return;
                 }
-                return;
-            }
-
+                this.completeSetup();
+            });
+        }
+        
+        // Bind back buttons
+        document.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="back"]')) {
                 e.preventDefault();
-                e.stopPropagation();
                 const step = e.target.closest('[data-action="back"]').dataset.step;
                 window.location.hash = `#setup/${step}`;
-                return;
             }
-
+            
             if (e.target.closest('[data-action="cancel"]')) {
                 e.preventDefault();
-                e.stopPropagation();
-                
-                try {
-                    const confirmed = await this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.');
+                this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.').then(confirmed => {
                     if (confirmed) {
-                        // Hapus data sementara
                         this.clearSessionStorage();
-                        // Hapus data permanen hanya jika setup belum selesai
-                        if (localStorage.getItem('stockmint_setup_completed') !== 'true') {
-                            localStorage.removeItem('stockmint_company');
-                            localStorage.removeItem('stockmint_warehouses');
-                            localStorage.removeItem('stockmint_suppliers');
-                            localStorage.removeItem('stockmint_customers');
-                            localStorage.removeItem('stockmint_categories');
-                            localStorage.removeItem('stockmint_products');
-                        }
                         window.location.hash = '#dashboard';
                     }
-                } catch (error) {
-                    console.error('Error in cancel process:', error);
-                }
-                return;
+                });
+            }
+            
+            // Bind remove buttons
+            if (e.target.closest('.btn-remove')) {
+                e.preventDefault();
+                const btn = e.target.closest('.btn-remove');
+                const index = parseInt(btn.dataset.index);
+                const type = btn.dataset.type;
+                
+                this.showCustomConfirm(`Are you sure you want to remove this ${type}?`).then(confirmed => {
+                    if (confirmed) {
+                        this.removeItem(type, index);
+                    }
+                });
             }
         });
         
         this.navigationEventsBound = true;
     }
 
-    // ===== MIGRATE EVENTS =====
+    bindNextButton(buttonId, nextStep) {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            const newBtn = button.cloneNode(true);
+            button.parentNode.replaceChild(newBtn, button);
+            
+            document.getElementById(buttonId).addEventListener('click', () => {
+                window.location.hash = `#setup/${nextStep}`;
+            });
+        }
+    }
+
+    // ===== MIGRATE EVENTS - PERBAIKAN BESAR =====
     
     bindMigrateEvents() {
         console.log('📤 Binding migrate events...');
         
         if (this.migrateEventsBound) {
-            console.log('⚠️ Migrate events already bound, skipping...');
             return;
         }
         
         setTimeout(() => {
-            const browseBtn = document.getElementById('browseFileBtn');
+            // Elements
+            const dropArea = document.getElementById('dropArea');
             const fileInput = document.getElementById('excelFile');
+            const browseBtn = document.getElementById('browseFileBtn');
             const uploadBtn = document.getElementById('uploadFileBtn');
             const fileNameSpan = document.getElementById('selectedFileName');
-            const dropArea = document.getElementById('dropArea');
+            const downloadLink = document.querySelector('.btn-download');
             
-            console.log('📁 File input elements:', { 
-                browseBtn: !!browseBtn, 
-                fileInput: !!fileInput, 
-                uploadBtn: !!uploadBtn, 
-                fileNameSpan: !!fileNameSpan, 
-                dropArea: !!dropArea 
+            console.log('🔍 Elements found:', {
+                dropArea: !!dropArea,
+                fileInput: !!fileInput,
+                browseBtn: !!browseBtn,
+                uploadBtn: !!uploadBtn,
+                fileNameSpan: !!fileNameSpan
             });
             
-            // PERBAIKAN: Event binding yang lebih sederhana dan pasti bekerja
-            if (browseBtn) {
+            // 1. Browse button click
+            if (browseBtn && fileInput) {
                 browseBtn.onclick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('📂 Browse button clicked');
-                    if (fileInput) {
-                        fileInput.click();
-                    }
+                    fileInput.click();
                 };
             }
             
+            // 2. File input change
             if (fileInput) {
                 fileInput.onchange = (e) => {
                     console.log('📄 File selected via input');
@@ -483,87 +425,87 @@ class SetupWizardMulti {
                 };
             }
             
+            // 3. Drag & Drop events - PERBAIKAN CRITICAL
             if (dropArea) {
-                // Highlight drop area
-                dropArea.ondragover = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+                
+                // Highlight on drag
+                dropArea.addEventListener('dragenter', () => {
+                    console.log('📁 File dragged over drop area');
                     dropArea.style.background = '#e3f2fd';
                     dropArea.style.borderColor = '#0fa8a6';
                     dropArea.style.borderStyle = 'solid';
-                };
+                });
                 
-                dropArea.ondragleave = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                dropArea.addEventListener('dragover', () => {
+                    dropArea.style.background = '#e3f2fd';
+                    dropArea.style.borderColor = '#0fa8a6';
+                    dropArea.style.borderStyle = 'solid';
+                });
+                
+                dropArea.addEventListener('dragleave', () => {
                     dropArea.style.background = '#f8f9fa';
                     dropArea.style.borderColor = '#19BEBB';
                     dropArea.style.borderStyle = 'dashed';
-                };
-                
-                dropArea.ondragenter = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                };
+                });
                 
                 // Handle drop
-                dropArea.ondrop = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                dropArea.addEventListener('drop', (e) => {
+                    console.log('📁 File dropped');
                     dropArea.style.background = '#f8f9fa';
                     dropArea.style.borderColor = '#19BEBB';
                     dropArea.style.borderStyle = 'dashed';
                     
                     const files = e.dataTransfer.files;
-                    console.log('📁 Files dropped:', files.length);
                     if (files.length > 0) {
-                        this.handleFileSelection(files[0]);
-                        // Juga set ke file input
+                        const file = files[0];
+                        this.handleFileSelection(file);
+                        
+                        // Set file to input
                         if (fileInput) {
-                            // Create a new DataTransfer object and add the file
                             const dataTransfer = new DataTransfer();
-                            dataTransfer.items.add(files[0]);
+                            dataTransfer.items.add(file);
                             fileInput.files = dataTransfer.files;
-                            
-                            // Trigger change event
-                            fileInput.dispatchEvent(new Event('change'));
                         }
                     }
-                };
+                });
                 
                 // Click on drop area
-                dropArea.onclick = (e) => {
+                dropArea.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('📂 Drop area clicked');
                     if (fileInput) {
                         fileInput.click();
                     }
-                };
+                });
             }
             
+            // 4. Upload button
             if (uploadBtn) {
                 uploadBtn.onclick = (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     this.handleExcelUpload();
                 };
             }
             
-            // Download template link
-            const downloadLink = document.querySelector('.btn-download');
+            // 5. Download template
             if (downloadLink) {
                 downloadLink.onclick = (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     console.log('📥 Download template clicked');
-                    // Redirect ke template.html
+                    // Buka template.html di tab baru
                     window.open('template.html', '_blank');
                 };
             }
             
             this.migrateEventsBound = true;
-            this.fileHandlersBound = true;
             console.log('✅ Migrate events bound successfully');
         }, 300);
     }
@@ -585,7 +527,7 @@ class SetupWizardMulti {
             return;
         }
         
-        // Validasi ekstensi file
+        // Validasi ekstensi
         const validExtensions = ['.xlsx', '.xls'];
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
@@ -599,8 +541,8 @@ class SetupWizardMulti {
             return;
         }
         
-        // Validasi ukuran file (max 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        // Validasi ukuran (max 10MB)
+        const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
             this.showAlert('File size exceeds 10MB limit', 'error');
             if (fileNameSpan) {
@@ -618,7 +560,7 @@ class SetupWizardMulti {
         }
         if (uploadBtn) uploadBtn.disabled = false;
         
-        // Simpan file untuk upload nanti
+        // Simpan file
         this.selectedFile = file;
         
         console.log('✅ File selected:', file.name);
@@ -635,6 +577,7 @@ class SetupWizardMulti {
         
         console.log('📤 Uploading file:', file.name);
         
+        // Show progress
         const progressContainer = document.getElementById('uploadProgress');
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
@@ -645,6 +588,7 @@ class SetupWizardMulti {
         if (resultContainer) resultContainer.style.display = 'none';
         if (uploadBtn) uploadBtn.disabled = true;
         
+        // Simulate upload progress
         let progress = 0;
         const progressInterval = setInterval(() => {
             progress += 10;
@@ -653,14 +597,76 @@ class SetupWizardMulti {
             
             if (progress >= 100) {
                 clearInterval(progressInterval);
-                this.processExcelFile(file);
+                this.processExcelUpload(file);
             }
         }, 200);
     }
 
-    // ===== DATA SAVING =====
+    processExcelUpload(file) {
+        try {
+            console.log('📊 Processing Excel file:', file.name);
+            
+            // Simulasi pemrosesan
+            setTimeout(() => {
+                // Simpan data contoh ke localStorage
+                this.saveMigrationData();
+                
+                // Update UI
+                const resultContainer = document.getElementById('uploadResult');
+                const uploadBtn = document.getElementById('uploadFileBtn');
+                const fileNameSpan = document.getElementById('selectedFileName');
+                const progressContainer = document.getElementById('uploadProgress');
+                
+                if (resultContainer) {
+                    resultContainer.innerHTML = `
+                        <div style="display: flex; gap: 15px; align-items: start;">
+                            <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-top: 2px;"></i>
+                            <div>
+                                <h4 style="margin: 0 0 10px 0; color: #065f46;">Upload Successful!</h4>
+                                <p style="margin: 0 0 5px 0; color: #065f46;">File "${file.name}" has been processed successfully.</p>
+                                <p style="margin: 0; color: #065f46;">Sample data has been imported to the system.</p>
+                            </div>
+                        </div>
+                    `;
+                    resultContainer.className = 'result-container result-success';
+                    resultContainer.style.display = 'block';
+                }
+                
+                if (progressContainer) progressContainer.style.display = 'none';
+                if (uploadBtn) uploadBtn.disabled = false;
+                if (fileNameSpan) {
+                    fileNameSpan.textContent = 'No file selected';
+                    fileNameSpan.style.color = '#666';
+                }
+                
+                // Reset file input
+                const fileInput = document.getElementById('excelFile');
+                if (fileInput) fileInput.value = '';
+                
+                // Redirect setelah 2 detik
+                setTimeout(() => {
+                    this.showAlert('Migration completed! Redirecting to dashboard...', 'success');
+                    setTimeout(() => {
+                        window.location.hash = '#dashboard';
+                    }, 1500);
+                }, 1000);
+                
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error processing Excel file:', error);
+            this.showAlert(`Upload failed: ${error.message}`, 'error');
+            
+            const uploadBtn = document.getElementById('uploadFileBtn');
+            const progressContainer = document.getElementById('uploadProgress');
+            if (uploadBtn) uploadBtn.disabled = false;
+            if (progressContainer) progressContainer.style.display = 'none';
+        }
+    }
+
+    // ===== DATA SAVING METHODS =====
     
-    saveCompanyData(validate = true) {
+    saveCompanyData() {
         const name = document.getElementById('companyName')?.value.trim();
         const taxId = document.getElementById('companyTaxId')?.value.trim() || '';
         const address = document.getElementById('companyAddress')?.value.trim() || '';
@@ -669,10 +675,8 @@ class SetupWizardMulti {
         const businessType = document.getElementById('businessType')?.value || '';
         const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
         
-        if (validate) {
-            if (!name) throw new Error('Company name is required');
-            if (!agreeTerms) throw new Error('You must agree to the Terms of Service');
-        }
+        if (!name) throw new Error('Company name is required');
+        if (!agreeTerms) throw new Error('You must agree to the Terms of Service');
         
         this.setupData.company = {
             id: 'COMP001',
@@ -686,7 +690,7 @@ class SetupWizardMulti {
             createdAt: new Date().toISOString()
         };
         
-        // Simpan ke session storage untuk persistensi sementara
+        // Simpan ke session storage
         sessionStorage.setItem('stockmint_temp_company', JSON.stringify(this.setupData.company));
         
         return true;
@@ -722,7 +726,7 @@ class SetupWizardMulti {
             isPrimary = true;
         }
         
-        // Generate ID sederhana
+        // Generate ID
         this.warehouseCounter++;
         const warehouseCode = `WH-${this.warehouseCounter.toString().padStart(3, '0')}`;
         
@@ -900,6 +904,201 @@ class SetupWizardMulti {
         return true;
     }
 
+    // ===== COMPLETE SETUP =====
+    
+    completeSetup() {
+        try {
+            console.log('✅ Completing setup process...');
+            
+            // 1. Transfer semua data dari sessionStorage ke localStorage (PERMANEN)
+            localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
+            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
+            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
+            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
+            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
+            
+            // 2. Mark setup as completed (FLAG CRITICAL)
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
+            
+            // 3. Buat opening stock
+            this.createOpeningStock();
+            
+            // 4. Hapus data sementara
+            this.clearSessionStorage();
+            
+            // 5. Show success message
+            this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
+            
+            console.log('✅ Setup completed, data saved permanently to localStorage');
+            
+            // 6. Redirect setelah 2 detik
+            setTimeout(() => {
+                window.location.hash = '#dashboard';
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error completing setup:', error);
+            this.showAlert(`Failed to complete setup: ${error.message}`, 'error');
+        }
+    }
+
+    // ===== MIGRATION DATA =====
+    
+    saveMigrationData() {
+        console.log('💾 Saving migration data to localStorage...');
+        
+        const sampleData = {
+            company: {
+                id: 'COMP001',
+                name: 'PT. Contoh Usaha Migrasi',
+                taxId: '01.234.567.8-912.000',
+                address: 'Jl. Migrasi No. 123, Jakarta',
+                phone: '021-87654321',
+                email: 'info@migrasi.com',
+                businessType: 'retail',
+                setupDate: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            },
+            warehouses: [
+                {
+                    id: 'WH-001',
+                    name: 'Gudang Utama',
+                    code: 'WH-001',
+                    address: 'Jl. Gudang Utama No. 1',
+                    isPrimary: true,
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'WH-002',
+                    name: 'Gudang Cabang',
+                    code: 'WH-002',
+                    address: 'Jl. Cabang No. 2',
+                    isPrimary: false,
+                    createdAt: new Date().toISOString()
+                }
+            ],
+            suppliers: Array.from({length: 5}, (_, i) => ({
+                id: `SUP-${String(i+1).padStart(3, '0')}`,
+                name: `Supplier Migrasi ${i+1}`,
+                code: `SUP-${String(i+1).padStart(3, '0')}`,
+                contact: `Contact Person ${i+1}`,
+                phone: `021-${1000 + i}`,
+                email: `supplier${i+1}@migrasi.com`,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            })),
+            customers: Array.from({length: 10}, (_, i) => ({
+                id: `CUST-${String(i+1).padStart(3, '0')}`,
+                name: `Customer Migrasi ${i+1}`,
+                type: i % 3 === 0 ? 'retail' : (i % 3 === 1 ? 'wholesale' : 'corporate'),
+                contact: `Customer Contact ${i+1}`,
+                phone: `021-${2000 + i}`,
+                email: `customer${i+1}@migrasi.com`,
+                taxable: i % 2 === 0,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            })),
+            categories: Array.from({length: 8}, (_, i) => ({
+                id: `CAT-${String(i+1).padStart(3, '0')}`,
+                name: `Kategori ${i+1}`,
+                code: `CAT-${String(i+1).padStart(3, '0')}`,
+                description: `Deskripsi untuk kategori ${i+1}`,
+                createdAt: new Date().toISOString()
+            })),
+            products: Array.from({length: 25}, (_, i) => ({
+                id: `PROD-${String(i+1).padStart(3, '0')}`,
+                name: `Produk Migrasi ${i+1}`,
+                code: `PROD-${String(i+1).padStart(3, '0')}`,
+                categoryId: `CAT-${String((i % 8) + 1).padStart(3, '0')}`,
+                category: `Kategori ${(i % 8) + 1}`,
+                unit: ['pcs', 'box', 'kg', 'liter'][i % 4],
+                purchasePrice: Math.round(Math.random() * 100000) + 5000,
+                salePrice: Math.round(Math.random() * 150000) + 10000,
+                stock: Math.round(Math.random() * 100) + 10,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            }))
+        };
+        
+        // Simpan semua data ke localStorage
+        localStorage.setItem('stockmint_company', JSON.stringify(sampleData.company));
+        localStorage.setItem('stockmint_warehouses', JSON.stringify(sampleData.warehouses));
+        localStorage.setItem('stockmint_suppliers', JSON.stringify(sampleData.suppliers));
+        localStorage.setItem('stockmint_customers', JSON.stringify(sampleData.customers));
+        localStorage.setItem('stockmint_categories', JSON.stringify(sampleData.categories));
+        localStorage.setItem('stockmint_products', JSON.stringify(sampleData.products));
+        
+        // Mark migration as completed
+        localStorage.setItem('stockmint_migration_completed', 'true');
+        localStorage.setItem('stockmint_setup_completed', 'true'); // Juga set flag setup completed
+        localStorage.setItem('stockmint_migration_date', new Date().toISOString());
+        
+        // Buat opening stock
+        this.createOpeningStockFromSample(sampleData);
+        
+        console.log('✅ Migration data saved to localStorage');
+    }
+
+    createOpeningStockFromSample(sampleData) {
+        const primaryWarehouse = sampleData.warehouses.find(wh => wh.isPrimary) || sampleData.warehouses[0];
+        
+        if (!primaryWarehouse) return;
+        
+        const openingStocks = sampleData.products.map(product => ({
+            productId: product.id,
+            productName: product.name,
+            warehouseId: primaryWarehouse.id,
+            warehouseName: primaryWarehouse.name,
+            quantity: product.stock || 0,
+            cost: product.purchasePrice || 0,
+            date: new Date().toISOString(),
+            type: 'opening',
+            createdAt: new Date().toISOString()
+        }));
+        
+        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+    }
+
+    // ===== UTILITY METHODS =====
+    
+    clearSessionStorage() {
+        sessionStorage.removeItem('stockmint_temp_company');
+        sessionStorage.removeItem('stockmint_temp_warehouses');
+        sessionStorage.removeItem('stockmint_temp_suppliers');
+        sessionStorage.removeItem('stockmint_temp_customers');
+        sessionStorage.removeItem('stockmint_temp_categories');
+        sessionStorage.removeItem('stockmint_temp_products');
+    }
+
+    createOpeningStock() {
+        const warehouses = this.setupData.warehouses || [];
+        const products = this.setupData.products || [];
+        
+        if (warehouses.length === 0 || products.length === 0) return;
+        
+        // Temukan primary warehouse
+        let primaryWarehouse = warehouses.find(wh => wh.isPrimary);
+        if (!primaryWarehouse && warehouses.length > 0) {
+            primaryWarehouse = warehouses[0];
+        }
+        
+        const openingStocks = products.map(product => ({
+            productId: product.id,
+            productName: product.name,
+            warehouseId: primaryWarehouse.id,
+            warehouseName: primaryWarehouse.name,
+            quantity: product.stock || 0,
+            cost: product.purchasePrice || 0,
+            date: new Date().toISOString(),
+            type: 'opening',
+            createdAt: new Date().toISOString()
+        }));
+        
+        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+    }
+
     // ===== UPDATE METHODS =====
     
     updateUI() {
@@ -912,6 +1111,7 @@ class SetupWizardMulti {
         this.updateProductList();
         this.updateProductCategoryDropdown();
         
+        // Update tombol next
         const warehouseNext = document.getElementById('nextToSupplier');
         const supplierNext = document.getElementById('nextToCustomer');
         const customerNext = document.getElementById('nextToCategory');
@@ -938,19 +1138,12 @@ class SetupWizardMulti {
             completeBtn.disabled = this.setupData.products.length === 0;
         }
         
+        // Update tombol add warehouse berdasarkan plan
         const addWarehouseBtn = document.querySelector('#warehouseForm button[type="submit"]');
         if (addWarehouseBtn) {
             const warehouseLimit = this.userPlan === 'basic' ? 1 :
                 this.userPlan === 'pro' ? 3 : Infinity;
             addWarehouseBtn.disabled = this.setupData.warehouses.length >= warehouseLimit;
-        }
-        
-        const isPrimaryCheckbox = document.getElementById('isPrimary');
-        if (isPrimaryCheckbox && this.userPlan === 'basic') {
-            if (this.setupData.warehouses.length === 0) {
-                isPrimaryCheckbox.checked = true;
-                isPrimaryCheckbox.disabled = true;
-            }
         }
     }
 
@@ -1133,367 +1326,78 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== REMOVE METHODS =====
-    
-    removeWarehouse(index) {
-        if (index >= 0 && index < this.setupData.warehouses.length) {
-            const removed = this.setupData.warehouses.splice(index, 1)[0];
-            sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
-            
-            // Jika warehouse yang dihapus adalah primary, set warehouse pertama sebagai primary
-            if (removed.isPrimary && this.setupData.warehouses.length > 0) {
-                this.setupData.warehouses[0].isPrimary = true;
-                sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
-            }
-            
-            return true;
-        }
-        return false;
-    }
-
-    removeSupplier(index) {
-        if (index >= 0 && index < this.setupData.suppliers.length) {
-            this.setupData.suppliers.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_suppliers', JSON.stringify(this.setupData.suppliers));
-            return true;
-        }
-        return false;
-    }
-
-    removeCustomer(index) {
-        if (index >= 0 && index < this.setupData.customers.length) {
-            this.setupData.customers.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_customers', JSON.stringify(this.setupData.customers));
-            return true;
-        }
-        return false;
-    }
-
-    removeCategory(index) {
-        if (index >= 0 && index < this.setupData.categories.length) {
-            this.setupData.categories.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_categories', JSON.stringify(this.setupData.categories));
-            return true;
-        }
-        return false;
-    }
-
-    removeProduct(index) {
-        if (index >= 0 && index < this.setupData.products.length) {
-            this.setupData.products.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_products', JSON.stringify(this.setupData.products));
-            return true;
-        }
-        return false;
-    }
-
-    // ===== COMPLETE SETUP =====
-    
-    async completeSetup() {
-        try {
-            console.log('✅ Completing setup process...');
-            
-            // 1. Transfer data dari session storage ke local storage (permanen)
-            localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
-            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
-            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
-            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
-            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
-            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
-            
-            // 2. Mark setup as completed
-            localStorage.setItem('stockmint_setup_completed', 'true');
-            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
-            
-            // 3. Create opening stock
-            this.createOpeningStock();
-            
-            // 4. Clear session storage
-            this.clearSessionStorage();
-            
-            // 5. Show success message
-            this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
-            
-            console.log('✅ Setup completed, data saved permanently');
-            
-            // 6. Redirect
-            setTimeout(() => {
-                window.location.hash = '#dashboard';
-            }, 2000);
-            
-        } catch (error) {
-            console.error('Error completing setup:', error);
-            this.showAlert(`Failed to complete setup: ${error.message}`, 'error');
-        }
-    }
-
-    clearSessionStorage() {
-        sessionStorage.removeItem('stockmint_temp_company');
-        sessionStorage.removeItem('stockmint_temp_warehouses');
-        sessionStorage.removeItem('stockmint_temp_suppliers');
-        sessionStorage.removeItem('stockmint_temp_customers');
-        sessionStorage.removeItem('stockmint_temp_categories');
-        sessionStorage.removeItem('stockmint_temp_products');
-    }
-
-    createOpeningStock() {
-        const warehouses = this.setupData.warehouses || [];
-        const products = this.setupData.products || [];
+    removeItem(type, index) {
+        let removed = false;
         
-        if (warehouses.length === 0 || products.length === 0) return;
-        
-        // Temukan primary warehouse
-        let primaryWarehouse = warehouses.find(wh => wh.isPrimary);
-        if (!primaryWarehouse && warehouses.length > 0) {
-            primaryWarehouse = warehouses[0];
-        }
-        
-        const openingStocks = products.map(product => ({
-            productId: product.id,
-            productName: product.name,
-            warehouseId: primaryWarehouse.id,
-            warehouseName: primaryWarehouse.name,
-            quantity: product.stock || 0,
-            cost: product.purchasePrice || 0,
-            date: new Date().toISOString(),
-            type: 'opening',
-            createdAt: new Date().toISOString()
-        }));
-        
-        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
-    }
-
-    // ===== MIGRATION METHODS =====
-    
-    processExcelFile(file) {
-        const resultContainer = document.getElementById('uploadResult');
-        const uploadBtn = document.getElementById('uploadFileBtn');
-        
-        try {
-            console.log('📊 Processing Excel file:', file.name);
-            
-            // Simulasi proses upload
-            setTimeout(() => {
-                // SIMULASI: Simpan data contoh
-                this.simulateDataMigration();
-                
-                if (resultContainer) {
-                    resultContainer.innerHTML = `
-                        <div style="display: flex; gap: 15px; align-items: start;">
-                            <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-top: 2px;"></i>
-                            <div>
-                                <h4 style="margin: 0 0 10px 0; color: #065f46;">Upload Successful!</h4>
-                                <p style="margin: 0 0 5px 0; color: #065f46;">File "${file.name}" has been processed successfully.</p>
-                                <p style="margin: 0; color: #065f46;">Sample data has been imported to the system.</p>
-                                <div style="margin-top: 15px; background: #a7f3d0; padding: 10px; border-radius: 6px;">
-                                    <p style="margin: 0; color: #065f46; font-size: 14px;">
-                                        <strong>Imported Data Summary:</strong><br>
-                                        • 1 Company<br>
-                                        • 2 Warehouses<br>
-                                        • 5 Suppliers<br>
-                                        • 10 Customers<br>
-                                        • 8 Categories<br>
-                                        • 25 Products
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    resultContainer.className = 'result-container result-success';
-                    resultContainer.style.display = 'block';
+        switch(type) {
+            case 'warehouse':
+                if (index >= 0 && index < this.setupData.warehouses.length) {
+                    const removedWarehouse = this.setupData.warehouses.splice(index, 1)[0];
+                    sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
+                    
+                    // Jika warehouse yang dihapus adalah primary, set warehouse pertama sebagai primary
+                    if (removedWarehouse.isPrimary && this.setupData.warehouses.length > 0) {
+                        this.setupData.warehouses[0].isPrimary = true;
+                        sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
+                    }
+                    removed = true;
                 }
+                break;
                 
-                // Simpan status upload sebagai completed
-                localStorage.setItem('stockmint_setup_completed', 'true');
-                localStorage.setItem('stockmint_migration_completed', 'true');
-                localStorage.setItem('stockmint_migration_file', file.name);
-                localStorage.setItem('stockmint_migration_date', new Date().toISOString());
-                
-                // Reset form
-                const fileInput = document.getElementById('excelFile');
-                const fileNameSpan = document.getElementById('selectedFileName');
-                
-                if (fileInput) fileInput.value = '';
-                if (fileNameSpan) {
-                    fileNameSpan.textContent = 'No file selected';
-                    fileNameSpan.style.color = '#666';
+            case 'supplier':
+                if (index >= 0 && index < this.setupData.suppliers.length) {
+                    this.setupData.suppliers.splice(index, 1);
+                    sessionStorage.setItem('stockmint_temp_suppliers', JSON.stringify(this.setupData.suppliers));
+                    removed = true;
                 }
+                break;
                 
-                if (uploadBtn) uploadBtn.disabled = false;
+            case 'customer':
+                if (index >= 0 && index < this.setupData.customers.length) {
+                    this.setupData.customers.splice(index, 1);
+                    sessionStorage.setItem('stockmint_temp_customers', JSON.stringify(this.setupData.customers));
+                    removed = true;
+                }
+                break;
                 
-                console.log('✅ Migration completed successfully');
+            case 'category':
+                if (index >= 0 && index < this.setupData.categories.length) {
+                    this.setupData.categories.splice(index, 1);
+                    sessionStorage.setItem('stockmint_temp_categories', JSON.stringify(this.setupData.categories));
+                    removed = true;
+                }
+                break;
                 
-                // Redirect setelah 3 detik
-                setTimeout(() => {
-                    this.showAlert('Migration completed successfully! Redirecting to dashboard...', 'success');
-                    setTimeout(() => {
-                        window.location.hash = '#dashboard';
-                    }, 2000);
-                }, 1000);
-                
-            }, 1500);
-            
-        } catch (error) {
-            console.error('Error processing Excel file:', error);
-            
-            if (resultContainer) {
-                resultContainer.innerHTML = `
-                    <div style="display: flex; gap: 15px; align-items: start;">
-                        <i class="fas fa-exclamation-circle" style="color: #dc2626; font-size: 24px; margin-top: 2px;"></i>
-                        <div>
-                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Upload Failed</h4>
-                            <p style="margin: 0 0 5px 0; color: #dc2626;">Error: ${error.message}</p>
-                            <p style="margin: 0; color: #dc2626;">Please check your Excel file format and try again.</p>
-                        </div>
-                    </div>
-                `;
-                resultContainer.className = 'result-container result-error';
-                resultContainer.style.display = 'block';
-            }
-            if (uploadBtn) uploadBtn.disabled = false;
+            case 'product':
+                if (index >= 0 && index < this.setupData.products.length) {
+                    this.setupData.products.splice(index, 1);
+                    sessionStorage.setItem('stockmint_temp_products', JSON.stringify(this.setupData.products));
+                    removed = true;
+                }
+                break;
         }
-    }
-
-    simulateDataMigration() {
-        console.log('📊 Simulating data migration...');
         
-        const sampleData = {
-            company: {
-                id: 'COMP001',
-                name: 'PT. Contoh Usaha',
-                taxId: '01.234.567.8-912.000',
-                address: 'Jl. Contoh No. 123, Jakarta',
-                phone: '021-12345678',
-                email: 'info@contoh.com',
-                businessType: 'retail',
-                setupDate: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-            },
-            warehouses: [
-                {
-                    id: 'WH-001',
-                    name: 'Main Warehouse',
-                    code: 'WH-001',
-                    address: 'Jl. Gudang No. 1',
-                    isPrimary: true,
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 'WH-002',
-                    name: 'Branch Warehouse',
-                    code: 'WH-002',
-                    address: 'Jl. Cabang No. 2',
-                    isPrimary: false,
-                    createdAt: new Date().toISOString()
-                }
-            ],
-            suppliers: Array.from({length: 5}, (_, i) => ({
-                id: `SUP-${String(i+1).padStart(3, '0')}`,
-                name: `Supplier ${i+1}`,
-                code: `SUP-${String(i+1).padStart(3, '0')}`,
-                contact: `Contact Person ${i+1}`,
-                phone: `021-${1000 + i}`,
-                email: `supplier${i+1}@email.com`,
-                isActive: true,
-                createdAt: new Date().toISOString()
-            })),
-            customers: Array.from({length: 10}, (_, i) => ({
-                id: `CUST-${String(i+1).padStart(3, '0')}`,
-                name: `Customer ${i+1}`,
-                type: i % 3 === 0 ? 'retail' : (i % 3 === 1 ? 'wholesale' : 'corporate'),
-                contact: `Customer Contact ${i+1}`,
-                phone: `021-${2000 + i}`,
-                email: `customer${i+1}@email.com`,
-                taxable: i % 2 === 0,
-                isActive: true,
-                createdAt: new Date().toISOString()
-            })),
-            categories: Array.from({length: 8}, (_, i) => ({
-                id: `CAT-${String(i+1).padStart(3, '0')}`,
-                name: `Category ${i+1}`,
-                code: `CAT-${String(i+1).padStart(3, '0')}`,
-                description: `Description for category ${i+1}`,
-                createdAt: new Date().toISOString()
-            })),
-            products: Array.from({length: 25}, (_, i) => ({
-                id: `PROD-${String(i+1).padStart(3, '0')}`,
-                name: `Product ${i+1}`,
-                code: `PROD-${String(i+1).padStart(3, '0')}`,
-                categoryId: `CAT-${String((i % 8) + 1).padStart(3, '0')}`,
-                category: `Category ${(i % 8) + 1}`,
-                unit: ['pcs', 'box', 'kg', 'liter'][i % 4],
-                purchasePrice: Math.round(Math.random() * 100000) + 5000,
-                salePrice: Math.round(Math.random() * 150000) + 10000,
-                stock: Math.round(Math.random() * 100) + 10,
-                isActive: true,
-                createdAt: new Date().toISOString()
-            }))
-        };
-        
-        // Simpan semua data ke localStorage
-        localStorage.setItem('stockmint_company', JSON.stringify(sampleData.company));
-        localStorage.setItem('stockmint_warehouses', JSON.stringify(sampleData.warehouses));
-        localStorage.setItem('stockmint_suppliers', JSON.stringify(sampleData.suppliers));
-        localStorage.setItem('stockmint_customers', JSON.stringify(sampleData.customers));
-        localStorage.setItem('stockmint_categories', JSON.stringify(sampleData.categories));
-        localStorage.setItem('stockmint_products', JSON.stringify(sampleData.products));
-        
-        // Buat opening stock
-        this.createOpeningStockFromSample(sampleData);
-        
-        console.log('✅ Sample data saved to localStorage');
-    }
-
-    createOpeningStockFromSample(sampleData) {
-        const primaryWarehouse = sampleData.warehouses.find(wh => wh.isPrimary) || sampleData.warehouses[0];
-        
-        if (!primaryWarehouse) return;
-        
-        const openingStocks = sampleData.products.map(product => ({
-            productId: product.id,
-            productName: product.name,
-            warehouseId: primaryWarehouse.id,
-            warehouseName: primaryWarehouse.name,
-            quantity: product.stock || 0,
-            cost: product.purchasePrice || 0,
-            date: new Date().toISOString(),
-            type: 'opening',
-            createdAt: new Date().toISOString()
-        }));
-        
-        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+        if (removed) {
+            this.showAlert(`${type} removed successfully`, 'success');
+            this.updateUI();
+        }
     }
 
     // ===== HELPER METHODS =====
     
     showCustomConfirm(message) {
         return new Promise((resolve) => {
+            // Hapus modal confirm yang sudah ada
             const existingModal = document.getElementById('customConfirmModal');
             if (existingModal) existingModal.remove();
             
             const modalHTML = `
                 <div id="customConfirmModal" style="
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0,0,0,0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10000;
-                    animation: fadeIn 0.3s ease;
-                ">
-                    <div style="
-                        background: white;
-                        border-radius: 10px;
-                        padding: 25px;
-                        max-width: 400px;
-                        width: 90%;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                        animation: slideIn 0.3s ease;
-                    ">
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); display: flex; align-items: center;
+                    justify-content: center; z-index: 10000;">
+                    <div style="background: white; border-radius: 10px; padding: 25px;
+                        max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
                         <div style="text-align: center; margin-bottom: 20px;">
                             <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -1503,31 +1407,13 @@ class SetupWizardMulti {
                         </div>
                         <div style="display: flex; gap: 15px; justify-content: center;">
                             <button id="confirmCancel" style="
-                                background: #6c757d;
-                                color: white;
-                                border: none;
-                                padding: 10px 20px;
-                                border-radius: 6px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                flex: 1;
-                                transition: background 0.2s;
-                            ">
-                                Cancel
-                            </button>
+                                background: #6c757d; color: white; border: none;
+                                padding: 10px 20px; border-radius: 6px; font-weight: 600;
+                                cursor: pointer; flex: 1;">Cancel</button>
                             <button id="confirmOk" style="
-                                background: #f59e0b;
-                                color: white;
-                                border: none;
-                                padding: 10px 20px;
-                                border-radius: 6px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                flex: 1;
-                                transition: background 0.2s;
-                            ">
-                                OK
-                            </button>
+                                background: #f59e0b; color: white; border: none;
+                                padding: 10px 20px; border-radius: 6px; font-weight: 600;
+                                cursor: pointer; flex: 1;">OK</button>
                         </div>
                     </div>
                 </div>
@@ -1535,38 +1421,13 @@ class SetupWizardMulti {
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             
-            if (!document.querySelector('#modal-animations')) {
-                const style = document.createElement('style');
-                style.id = 'modal-animations';
-                style.textContent = `
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
-                    }
-                    @keyframes slideIn {
-                        from { transform: translateY(-20px); opacity: 0; }
-                        to { transform: translateY(0); opacity: 1; }
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; }
-                        to { opacity: 0; }
-                    }
-                    #confirmCancel:hover { background: #5a6268 !important; }
-                    #confirmOk:hover { background: #d97706 !important; }
-                `;
-                document.head.appendChild(style);
-            }
-            
             const modal = document.getElementById('customConfirmModal');
             const confirmOk = document.getElementById('confirmOk');
             const confirmCancel = document.getElementById('confirmCancel');
             
             const handleConfirm = (result) => {
-                modal.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => {
-                    if (modal.parentNode) modal.remove();
-                    resolve(result);
-                }, 300);
+                modal.remove();
+                resolve(result);
             };
             
             confirmOk.addEventListener('click', () => handleConfirm(true));
@@ -1576,33 +1437,30 @@ class SetupWizardMulti {
                 if (e.target.id === 'customConfirmModal') handleConfirm(false);
             });
             
+            // ESC key to cancel
             const handleKeyDown = (e) => {
                 if (e.key === 'Escape') handleConfirm(false);
             };
-            
             document.addEventListener('keydown', handleKeyDown);
+            
+            // Cleanup
+            setTimeout(() => {
+                document.removeEventListener('keydown', handleKeyDown);
+            }, 100);
         });
     }
 
     showAlert(message, type = 'info') {
+        // Create alert element
         const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
         alertDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 9999;
-            min-width: 300px;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            position: fixed; top: 20px; right: 20px; padding: 15px 20px;
+            border-radius: 8px; z-index: 9999; min-width: 300px; max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease;
+            display: flex; align-items: center; gap: 10px;
         `;
         
+        // Set color based on type
         let backgroundColor, textColor, icon;
         switch(type) {
             case 'success':
@@ -1631,56 +1489,26 @@ class SetupWizardMulti {
         
         alertDiv.innerHTML = `
             <i class="fas ${icon}" style="font-size: 20px;"></i>
-            <div style="flex: 1;">
-                <div style="font-weight: 600;">${message}</div>
-            </div>
+            <div style="flex: 1;">${message}</div>
             <button class="alert-close" style="background: none; border: none; color: ${textColor}; cursor: pointer;">
                 <i class="fas fa-times"></i>
             </button>
         `;
         
+        // Add to document
         document.body.appendChild(alertDiv);
         
+        // Add close button event
         alertDiv.querySelector('.alert-close').addEventListener('click', () => {
             alertDiv.remove();
         });
         
+        // Auto remove after 5 seconds
         setTimeout(() => {
             if (alertDiv.parentNode) {
-                alertDiv.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => {
-                    if (alertDiv.parentNode) alertDiv.remove();
-                }, 300);
+                alertDiv.remove();
             }
         }, 5000);
-        
-        if (!document.querySelector('#alert-animations')) {
-            const style = document.createElement('style');
-            style.id = 'alert-animations';
-            style.textContent = `
-                @keyframes slideIn {
-                    from {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slideOut {
-                    from {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                    to {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
     }
 
     // ===== RENDER METHODS =====
@@ -1711,10 +1539,6 @@ class SetupWizardMulti {
             default:
                 return this.renderCompanyStep();
         }
-    }
-
-    renderMigratePage() {
-        return this.renderMigrate();
     }
 
     renderProgressBar() {
@@ -1828,8 +1652,6 @@ class SetupWizardMulti {
         
         const isBasicPlan = this.userPlan === 'basic';
         const isFirstWarehouse = savedWarehouses.length === 0;
-        const checkboxDisabled = isBasicPlan && isFirstWarehouse;
-        const checkboxChecked = isBasicPlan || isFirstWarehouse;
         
         return `
         <div class="page-content">
@@ -1847,9 +1669,6 @@ class SetupWizardMulti {
                     <h3><i class="fas fa-warehouse"></i> Add Warehouse</h3>
                     <p>Warehouses are where you store your inventory.</p>
                     <p><small><i class="fas fa-info-circle"></i> Warehouse ID will be auto-generated (WH-001, WH-002, etc)</small></p>
-                    ${isBasicPlan && isFirstWarehouse ? `
-                    <p><small><i class="fas fa-info-circle"></i> <strong>BASIC Plan:</strong> Warehouse will automatically be set as primary</small></p>
-                    ` : ''}
                 </div>
                 <div class="card-body">
                     <form id="warehouseForm">
@@ -1865,22 +1684,14 @@ class SetupWizardMulti {
                         </div>
                         <div class="form-check">
                             <input type="checkbox" id="isPrimary" class="form-check-input" 
-                                ${checkboxChecked ? 'checked' : ''}
-                                ${checkboxDisabled ? 'disabled' : ''}>
+                                ${isBasicPlan && isFirstWarehouse ? 'checked disabled' : ''}>
                             <label for="isPrimary" class="form-check-label">
                                 Set as primary warehouse (default storage location)
-                                ${isBasicPlan && isFirstWarehouse ? '<span style="color: #f59e0b;">(Required for BASIC plan)</span>' : ''}
                             </label>
                         </div>
                         <button type="submit" class="btn-primary" ${savedWarehouses.length >= warehouseLimit ? 'disabled' : ''}>
                             <i class="fas fa-plus"></i> Add Warehouse
                         </button>
-                        ${savedWarehouses.length >= warehouseLimit ? `
-                        <p class="text-danger" style="margin-top: 10px;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            You have reached the maximum number of warehouses for your plan (${warehouseLimit}).
-                        </p>
-                        ` : ''}
                     </form>
                     <div class="warehouse-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                         ${savedWarehouses.length > 0 ? `
@@ -1891,12 +1702,10 @@ class SetupWizardMulti {
                                 <div class="item-header">
                                     <strong>${wh.name}</strong>
                                     ${wh.isPrimary ? '<span class="badge-primary">Primary</span>' : ''}
-                                    ${isBasicPlan ? '<span class="badge-warning">BASIC</span>' : ''}
                                 </div>
                                 <div class="item-details">
                                     <small>ID: ${wh.code}</small>
                                     ${wh.address ? `<br>${wh.address}` : ''}
-                                    ${wh.isPrimary ? '<br><small style="color: #10b981;"><i class="fas fa-star"></i> Primary Warehouse</small>' : ''}
                                 </div>
                                 <button type="button" class="btn-remove" data-index="${index}" data-type="warehouse">
                                     <i class="fas fa-trash"></i>
@@ -1905,7 +1714,7 @@ class SetupWizardMulti {
                             `).join('')}
                         </div>
                         ` : `
-                        <p class="text-muted">No warehouses added yet. Add your first warehouse above.</p>
+                        <p class="text-muted">No warehouses added yet.</p>
                         `}
                     </div>
                     <div class="setup-actions">
@@ -1915,359 +1724,6 @@ class SetupWizardMulti {
                         <button type="button" class="btn-primary" id="nextToSupplier"
                             ${savedWarehouses.length === 0 ? 'disabled' : ''}>
                             <i class="fas fa-arrow-right"></i> Next: Add Supplier
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    renderSupplierStep() {
-        const savedSuppliers = this.setupData.suppliers || [];
-        
-        return `
-        <div class="page-content">
-            <h1>🤝 Supplier Setup</h1>
-            <p class="page-subtitle">Step 3 of ${this.totalSteps}: Add your suppliers</p>
-            ${this.renderProgressBar()}
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-truck"></i> Add Supplier</h3>
-                    <p>Suppliers provide products to your business.</p>
-                    <p><small><i class="fas fa-info-circle"></i> Supplier ID will be auto-generated (SUP-001, SUP-002, etc)</small></p>
-                </div>
-                <div class="card-body">
-                    <form id="supplierForm">
-                        <div class="form-group">
-                            <label for="supplierName">Supplier Name *</label>
-                            <input type="text" id="supplierName" class="form-control" required
-                                placeholder="e.g., PT. Supplier Jaya">
-                        </div>
-                        <div class="form-group">
-                            <label for="supplierContact">Contact Person (Optional)</label>
-                            <input type="text" id="supplierContact" class="form-control"
-                                placeholder="e.g., John Doe">
-                        </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="supplierPhone">Phone Number</label>
-                                <input type="tel" id="supplierPhone" class="form-control"
-                                    placeholder="e.g., 021-12345678">
-                            </div>
-                            <div class="form-group">
-                                <label for="supplierEmail">Email Address</label>
-                                <input type="email" id="supplierEmail" class="form-control"
-                                    placeholder="e.g., supplier@email.com">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-plus"></i> Add Supplier
-                        </button>
-                    </form>
-                    <div class="supplier-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                        ${savedSuppliers.length > 0 ? `
-                        <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Suppliers (${savedSuppliers.length})</h4>
-                        <div class="items-list">
-                            ${savedSuppliers.map((sup, index) => `
-                            <div class="item-card">
-                                <div class="item-header">
-                                    <strong>${sup.name}</strong>
-                                    <small>ID: ${sup.code}</small>
-                                </div>
-                                <div class="item-details">
-                                    ${sup.contact ? `Contact: ${sup.contact}` : ''}
-                                    ${sup.phone ? `<br>Phone: ${sup.phone}` : ''}
-                                    ${sup.email ? `<br>Email: ${sup.email}` : ''}
-                                </div>
-                                <button type="button" class="btn-remove" data-index="${index}" data-type="supplier">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            `).join('')}
-                        </div>
-                        ` : `
-                        <p class="text-muted">No suppliers added yet.</p>
-                        `}
-                    </div>
-                    <div class="setup-actions">
-                        <button type="button" class="btn-secondary" data-action="back" data-step="warehouse">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </button>
-                        <button type="button" class="btn-primary" id="nextToCustomer"
-                            ${savedSuppliers.length === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-right"></i> Next: Add Customer
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    renderCustomerStep() {
-        const savedCustomers = this.setupData.customers || [];
-        
-        return `
-        <div class="page-content">
-            <h1>👥 Customer Setup</h1>
-            <p class="page-subtitle">Step 4 of ${this.totalSteps}: Add your customers</p>
-            ${this.renderProgressBar()}
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-users"></i> Add Customer</h3>
-                    <p>Customers purchase products from your business.</p>
-                    <p><small><i class="fas fa-info-circle"></i> Customer ID will be auto-generated (CUST-001, CUST-002, etc)</small></p>
-                </div>
-                <div class="card-body">
-                    <form id="customerForm">
-                        <div class="form-group">
-                            <label for="customerName">Customer Name *</label>
-                            <input type="text" id="customerName" class="form-control" required
-                                placeholder="e.g., John Doe or PT. Customer Jaya">
-                        </div>
-                        <div class="form-group">
-                            <label for="customerType">Customer Type</label>
-                            <select id="customerType" class="form-control">
-                                <option value="retail">Retail</option>
-                                <option value="wholesale">Wholesale</option>
-                                <option value="corporate">Corporate</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="customerContact">Contact Person (Optional)</label>
-                            <input type="text" id="customerContact" class="form-control"
-                                placeholder="e.g., Contact Person Name">
-                        </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="customerPhone">Phone Number</label>
-                                <input type="tel" id="customerPhone" class="form-control"
-                                    placeholder="e.g., 021-12345678">
-                            </div>
-                            <div class="form-group">
-                                <label for="customerEmail">Email Address</label>
-                                <input type="email" id="customerEmail" class="form-control"
-                                    placeholder="e.g., customer@email.com">
-                            </div>
-                        </div>
-                        <div class="form-check">
-                            <input type="checkbox" id="customerTaxable" class="form-check-input">
-                            <label for="customerTaxable" class="form-check-label">
-                                Customer is taxable (requires tax calculation)
-                            </label>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-plus"></i> Add Customer
-                        </button>
-                    </form>
-                    <div class="customer-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                        ${savedCustomers.length > 0 ? `
-                        <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Customers (${savedCustomers.length})</h4>
-                        <div class="items-list">
-                            ${savedCustomers.map((cust, index) => `
-                            <div class="item-card">
-                                <div class="item-header">
-                                    <strong>${cust.name}</strong>
-                                    <span class="badge-customer">${cust.type || 'retail'}</span>
-                                </div>
-                                <div class="item-details">
-                                    <small>ID: ${cust.id}</small>
-                                    ${cust.contact ? `<br>Contact: ${cust.contact}` : ''}
-                                    ${cust.phone ? `<br>Phone: ${cust.phone}` : ''}
-                                    ${cust.email ? `<br>Email: ${cust.email}` : ''}
-                                </div>
-                                <button type="button" class="btn-remove" data-index="${index}" data-type="customer">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            `).join('')}
-                        </div>
-                        ` : `
-                        <p class="text-muted">No customers added yet.</p>
-                        `}
-                    </div>
-                    <div class="setup-actions">
-                        <button type="button" class="btn-secondary" data-action="back" data-step="supplier">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </button>
-                        <button type="button" class="btn-primary" id="nextToCategory"
-                            ${savedCustomers.length === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-right"></i> Next: Add Category
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    renderCategoryStep() {
-        const savedCategories = this.setupData.categories || [];
-        
-        return `
-        <div class="page-content">
-            <h1>🏷️ Category Setup</h1>
-            <p class="page-subtitle">Step 5 of ${this.totalSteps}: Add product categories</p>
-            ${this.renderProgressBar()}
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-tags"></i> Add Category</h3>
-                    <p>Categories help organize your products.</p>
-                    <p><small><i class="fas fa-info-circle"></i> Category ID will be auto-generated (CAT-001, CAT-002, etc)</small></p>
-                </div>
-                <div class="card-body">
-                    <form id="categoryForm">
-                        <div class="form-group">
-                            <label for="categoryName">Category Name *</label>
-                            <input type="text" id="categoryName" class="form-control" required
-                                placeholder="e.g., Electronics, Clothing, Food">
-                        </div>
-                        <div class="form-group">
-                            <label for="categoryDescription">Description (Optional)</label>
-                            <textarea id="categoryDescription" class="form-control" rows="2"
-                                placeholder="Brief description of this category"></textarea>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-plus"></i> Add Category
-                        </button>
-                    </form>
-                    <div class="category-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                        ${savedCategories.length > 0 ? `
-                        <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Categories (${savedCategories.length})</h4>
-                        <div class="items-list">
-                            ${savedCategories.map((cat, index) => `
-                            <div class="item-card">
-                                <div class="item-header">
-                                    <strong>${cat.name}</strong>
-                                    <small>ID: ${cat.code}</small>
-                                </div>
-                                <div class="item-details">
-                                    ${cat.description || 'No description'}
-                                </div>
-                                <button type="button" class="btn-remove" data-index="${index}" data-type="category">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            `).join('')}
-                        </div>
-                        ` : `
-                        <p class="text-muted">No categories added yet.</p>
-                        `}
-                    </div>
-                    <div class="setup-actions">
-                        <button type="button" class="btn-secondary" data-action="back" data-step="customer">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </button>
-                        <button type="button" class="btn-primary" id="nextToProduct"
-                            ${savedCategories.length === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-right"></i> Next: Add Product
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    renderProductStep() {
-        const savedProducts = this.setupData.products || [];
-        
-        return `
-        <div class="page-content">
-            <h1>📦 Product Setup</h1>
-            <p class="page-subtitle">Step 6 of ${this.totalSteps}: Add your products</p>
-            ${this.renderProgressBar()}
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-boxes"></i> Add Product</h3>
-                    <p>Products are the items you sell in your business.</p>
-                    <p><small><i class="fas fa-info-circle"></i> Product ID will be auto-generated (PROD-001, PROD-002, etc)</small></p>
-                </div>
-                <div class="card-body">
-                    <form id="productForm">
-                        <div class="form-group">
-                            <label for="productName">Product Name *</label>
-                            <input type="text" id="productName" class="form-control" required
-                                placeholder="e.g., Premium Widget Pro">
-                        </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="productCategory">Category *</label>
-                                <select id="productCategory" class="form-control" required>
-                                    <option value="">Select Category</option>
-                                    ${(this.setupData.categories || []).map(cat => `
-                                    <option value="${cat.id}">${cat.name}</option>
-                                    `).join('')}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="productUnit">Unit</label>
-                                <select id="productUnit" class="form-control">
-                                    <option value="pcs">Pieces (pcs)</option>
-                                    <option value="box">Box</option>
-                                    <option value="pack">Pack</option>
-                                    <option value="kg">Kilogram (kg)</option>
-                                    <option value="liter">Liter</option>
-                                    <option value="meter">Meter</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="purchasePrice">Purchase Price (Rp)</label>
-                                <input type="number" id="purchasePrice" class="form-control" step="0.01" min="0"
-                                    placeholder="0.00" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="salePrice">Sale Price (Rp)</label>
-                                <input type="number" id="salePrice" class="form-control" step="0.01" min="0"
-                                    placeholder="0.00" value="0">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="initialStock">Initial Stock</label>
-                            <input type="number" id="initialStock" class="form-control" min="0"
-                                placeholder="0" value="0">
-                            <small class="text-muted">Initial stock will be added to your primary warehouse</small>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-plus"></i> Add Product
-                        </button>
-                    </form>
-                    <div class="product-items" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                        ${savedProducts.length > 0 ? `
-                        <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Added Products (${savedProducts.length})</h4>
-                        <div class="items-list">
-                            ${savedProducts.map((prod, index) => `
-                            <div class="item-card">
-                                <div class="item-header">
-                                    <strong>${prod.name}</strong>
-                                    <small>SKU: ${prod.code}</small>
-                                </div>
-                                <div class="item-details">
-                                    Category: ${prod.category || 'Uncategorized'}<br>
-                                    Purchase: Rp ${Number(prod.purchasePrice || 0).toLocaleString()}<br>
-                                    Sale: Rp ${Number(prod.salePrice || 0).toLocaleString()}<br>
-                                    Stock: ${prod.stock || 0} ${prod.unit || 'pcs'}
-                                </div>
-                                <button type="button" class="btn-remove" data-index="${index}" data-type="product">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                            `).join('')}
-                        </div>
-                        ` : `
-                        <p class="text-muted">No products added yet.</p>
-                        `}
-                    </div>
-                    <div class="setup-actions">
-                        <button type="button" class="btn-secondary" data-action="back" data-step="category">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </button>
-                        <button type="button" class="btn-success" id="completeSetup"
-                            ${savedProducts.length === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-check-circle"></i> Complete Setup
                         </button>
                     </div>
                 </div>
@@ -2289,10 +1745,9 @@ class SetupWizardMulti {
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
                 <div class="warning-content">
-                    <h4>Advanced Users Only</h4>
-                    <p>This migration tool is designed for users who understand database relationships. 
-                    Please ensure you have backed up your data before proceeding.</p>
-                    <p><strong>Note:</strong> For demo purposes, this will import sample data.</p>
+                    <h4>Important Notice</h4>
+                    <p>This migration tool will import sample data for demonstration purposes.</p>
+                    <p><strong>Note:</strong> Your existing data will be replaced with sample data.</p>
                 </div>
             </div>
             
@@ -2313,66 +1768,22 @@ class SetupWizardMulti {
                     <div class="step">
                         <div class="step-number">2</div>
                         <div class="step-content">
-                            <h4>Fill Your Data</h4>
-                            <p>Open the template and fill in your data according to the instructions</p>
-                            <ul>
-                                <li>Don't modify column headers</li>
-                                <li>Keep sheet names unchanged</li>
-                                <li>Fill all required fields</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
                             <h4>Upload Excel File</h4>
-                            <p>Upload the filled Excel file here</p>
+                            <p>Upload your Excel file here</p>
                             <div class="upload-section">
                                 <div class="file-input-container">
-                                    <div class="drop-area" id="dropArea" style="
-                                        border: 2px dashed #19BEBB;
-                                        border-radius: 10px;
-                                        padding: 40px 20px;
-                                        text-align: center;
-                                        margin-bottom: 20px;
-                                        cursor: pointer;
-                                        transition: all 0.3s;
-                                        background: #f8f9fa;
-                                        position: relative;
-                                        overflow: hidden;
-                                    ">
-                                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #19BEBB; margin-bottom: 15px;"></i>
-                                        <h4 style="margin: 0 0 10px 0; color: #333;">Drag & Drop Excel File Here</h4>
-                                        <p style="color: #666; margin: 0 0 20px 0; font-size: 14px;">or click to browse</p>
-                                        <input type="file" id="excelFile" accept=".xlsx, .xls" style="
-                                            position: absolute;
-                                            top: 0;
-                                            left: 0;
-                                            width: 100%;
-                                            height: 100%;
-                                            opacity: 0;
-                                            cursor: pointer;
-                                        ">
-                                        <button type="button" id="browseFileBtn" class="btn-browse" style="
-                                            position: relative;
-                                            z-index: 2;
-                                        ">
+                                    <div class="drop-area" id="dropArea">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <h4>Drag & Drop Excel File Here</h4>
+                                        <p>or click to browse</p>
+                                        <button type="button" id="browseFileBtn" class="btn-browse">
                                             <i class="fas fa-folder-open"></i> Browse Excel File
                                         </button>
+                                        <input type="file" id="excelFile" accept=".xlsx, .xls">
                                     </div>
                                     
-                                    <div style="text-align: center; margin-top: 15px;">
-                                        <span id="selectedFileName" style="
-                                            display: inline-block;
-                                            padding: 10px 20px;
-                                            background: #f8f9fa;
-                                            border-radius: 6px;
-                                            margin: 10px 0;
-                                            color: #666;
-                                            border: 1px solid #ddd;
-                                            min-width: 200px;
-                                        ">No file selected</span>
+                                    <div class="file-name-display">
+                                        <span id="selectedFileName">No file selected</span>
                                     </div>
                                 </div>
                                 
@@ -2380,7 +1791,7 @@ class SetupWizardMulti {
                                     <i class="fas fa-upload"></i> Upload & Process
                                 </button>
                                 
-                                <div id="uploadProgress" class="progress-container" style="display: none;">
+                                <div id="uploadProgress" class="progress-container">
                                     <div class="progress-bar">
                                         <div class="progress-fill" id="progressFill"></div>
                                     </div>
@@ -2463,14 +1874,6 @@ class SetupWizardMulti {
             display: flex;
             gap: 20px;
             margin-bottom: 30px;
-            padding-bottom: 30px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .step:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
         }
         
         .step-number {
@@ -2492,14 +1895,59 @@ class SetupWizardMulti {
             color: #333;
         }
         
-        .step-content ul {
-            margin: 10px 0 0 0;
-            padding-left: 20px;
+        .drop-area {
+            border: 2px dashed #19BEBB;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            position: relative;
         }
         
-        .step-content li {
-            margin-bottom: 5px;
+        .drop-area i {
+            font-size: 48px;
+            color: #19BEBB;
+            margin-bottom: 15px;
+        }
+        
+        .drop-area h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .drop-area p {
             color: #666;
+            margin: 0 0 20px 0;
+            font-size: 14px;
+        }
+        
+        #excelFile {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .file-name-display {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        #selectedFileName {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 10px 0;
+            color: #666;
+            border: 1px solid #ddd;
+            min-width: 200px;
         }
         
         .btn-download, .btn-browse, .btn-upload, .btn-back, .btn-cancel {
@@ -2517,6 +1965,7 @@ class SetupWizardMulti {
         .btn-download {
             background: #19BEBB;
             color: white;
+            text-decoration: none;
         }
         
         .btn-download:hover {
@@ -2528,6 +1977,8 @@ class SetupWizardMulti {
             color: white;
             padding: 12px 24px;
             font-size: 16px;
+            position: relative;
+            z-index: 2;
         }
         
         .btn-browse:hover {
@@ -2571,12 +2022,9 @@ class SetupWizardMulti {
             background: #dc2626;
         }
         
-        .file-input-container {
-            margin: 15px 0;
-        }
-        
         .progress-container {
             margin-top: 20px;
+            display: none;
         }
         
         .progress-bar {
@@ -2612,23 +2060,6 @@ class SetupWizardMulti {
             color: #065f46;
             border: 1px solid #a7f3d0;
         }
-        
-        .result-error {
-            background: #fee2e2;
-            color: #dc2626;
-            border: 1px solid #fca5a5;
-        }
-        
-        #dropArea:hover {
-            background: #e3f2fd !important;
-            border-color: #0fa8a6 !important;
-        }
-        
-        #dropArea.drag-over {
-            background: #d1ecf1 !important;
-            border-color: #19BEBB !important;
-            border-style: solid !important;
-        }
         </style>
         `;
     }
@@ -2636,4 +2067,4 @@ class SetupWizardMulti {
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded successfully - FINAL IMPROVED VERSION');
+console.log('✅ SetupWizardMulti loaded successfully - FINAL FIX VERSION');
