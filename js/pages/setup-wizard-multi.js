@@ -878,7 +878,7 @@ class SetupWizardMulti {
         }
         
         this.productCounter++;
-        const productCode = `PROD-${this.productCounter.toString().padStart(3, '0')}`;
+        const productCode = `PROD-${this.productCounter.toString().padStart(5, '0')}`;
         
         const product = {
             id: productCode,
