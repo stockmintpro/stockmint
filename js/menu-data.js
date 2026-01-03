@@ -16,6 +16,7 @@ const StockMintMenu = {
       id: 'master-data',
       title: 'Master Data',
       icon: 'fas fa-database',
+      url: '#master-data',  // TAMBAHKAN INI - sangat penting!
       children: [
         { id: 'company', title: 'Company', url: '#master/company' },
         { id: 'warehouses', title: 'Warehouses', url: '#master/warehouses' },
