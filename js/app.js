@@ -1,4 +1,4 @@
-// StockMint Main Application - COMPLETE VERSION WITH FIRST-TIME SETUP
+// StockMint Main Application - COMPLETE VERSION WITH PRESERVED SETUP DATA
 
 class StockMintApp {
   constructor() {
@@ -172,8 +172,8 @@ class StockMintApp {
     }
   }
   
- // Setup routing and navigation
-    setupRouting() {
+  // Setup routing and navigation
+  setupRouting() {
     console.log('📍 Setting up routing...');
     
     // Handle hash changes
@@ -195,7 +195,7 @@ class StockMintApp {
     }, 300);
   }
   
-    // Handle route changes
+  // Handle route changes
   handleRouteChange() {
     try {
       const hash = window.location.hash.substring(1) || 'dashboard';
@@ -298,21 +298,21 @@ class StockMintApp {
   }
   
   // Load page content
-loadPage(page) {
+  loadPage(page) {
     const contentArea = document.getElementById('contentArea');
     if (!contentArea) {
-        console.error('❌ Content area not found');
-        return;
+      console.error('❌ Content area not found');
+      return;
     }
     
     console.log('📄 Loading page:', page);
     
     // Show loading
     contentArea.innerHTML = `
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>Loading ${this.getPageTitle(page)}...</p>
-        </div>
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading ${this.getPageTitle(page)}...</p>
+      </div>
     `;
     
     // Update navbar title
@@ -320,40 +320,67 @@ loadPage(page) {
     
     // Load actual content
     setTimeout(() => {
-        try {
-            const html = this.getPageContent(page);
-            contentArea.innerHTML = html;
-            
-            // SPECIAL HANDLING FOR SETUP WIZARD
-            if (page.startsWith('setup/')) {
-                console.log('🔧 Setting up wizard events for:', page);
-                
-                // Tunggu untuk memastikan DOM dirender
-                setTimeout(() => {
-                    if (window.currentWizard) {
-                        // Priority: Gunakan forceBindEvents jika ada
-                        if (window.currentWizard.forceBindEvents) {
-                            console.log('🔧 Using forceBindEvents');
-                            window.currentWizard.forceBindEvents();
-                        }
-                        // Fallback: Gunakan bindEvents biasa
-                        else if (window.currentWizard.bindEvents) {
-                            console.log('🔧 Using regular bindEvents');
-                            window.currentWizard.bindEvents();
-                        }
-                    }
-                }, 300);
+      try {
+        // TANGANI HALAMAN MASTER-DATA KHUSUS
+        if (page === 'master-data') {
+          if (window.MasterDataPage) {
+            const masterDataPage = new MasterDataPage();
+            contentArea.innerHTML = masterDataPage.render();
+            setTimeout(() => masterDataPage.bindEvents(), 100);
+          } else {
+            contentArea.innerHTML = this.getDefaultPageContent(page);
+          }
+        } 
+        // TANGANI SETUP PAGES
+        else if (page.startsWith('setup/')) {
+          if (typeof SetupWizardMulti === 'undefined') {
+            console.error('❌ SetupWizardMulti not loaded!');
+            contentArea.innerHTML = '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
+          } else {
+            try {
+              const wizard = new SetupWizardMulti();
+              window.currentWizard = wizard;
+              
+              const hash = window.location.hash.substring(1);
+              const route = hash.split('/')[1];
+              
+              let html;
+              if (route === 'migrate') {
+                html = wizard.renderMigratePage();
+              } else {
+                wizard.currentStep = route || wizard.currentStep;
+                html = wizard.render();
+              }
+              
+              contentArea.innerHTML = html;
+              
+              // Bind events setelah DOM dirender
+              setTimeout(() => {
+                if (window.currentWizard && window.currentWizard.bindEvents) {
+                  window.currentWizard.bindEvents();
+                }
+              }, 100);
+            } catch (error) {
+              console.error('❌ Error rendering setup wizard:', error);
+              contentArea.innerHTML = `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
             }
-            
-            this.initPageScripts(page);
-            console.log(`✅ Page "${page}" loaded`);
-            
-        } catch (error) {
-            console.error(`❌ Error loading page "${page}":`, error);
-            contentArea.innerHTML = this.getErrorPage(page, error);
+          }
+        } 
+        // HALAMAN LAINNYA
+        else {
+          const html = this.getPageContent(page);
+          contentArea.innerHTML = html;
+          this.initPageScripts(page);
         }
+        
+        console.log(`✅ Page "${page}" loaded`);
+        
+      } catch (error) {
+        console.error(`❌ Error loading page "${page}":`, error);
+        contentArea.innerHTML = this.getErrorPage(page, error);
+      }
     }, 300);
-}
+  }
   
   // Update navbar title
   updateNavbarTitle(page) {
@@ -417,6 +444,12 @@ loadPage(page) {
       'help': 'Help & Guide',
       'setup/start-new': 'Start New Setup',
       'setup/migrate': 'Data Migration',
+      'setup/company': 'Company Setup',
+      'setup/warehouse': 'Warehouse Setup',
+      'setup/supplier': 'Supplier Setup',
+      'setup/customer': 'Customer Setup',
+      'setup/category': 'Category Setup',
+      'setup/product': 'Product Setup',
       'feature-locked': 'Feature Locked'
     };
     
@@ -449,63 +482,21 @@ loadPage(page) {
     return subtitles[page] || 'Manage your business operations';
   }
   
-  // Get page content - UPDATE untuk handle multi-step setup
-  // Ganti bagian ini di method getPageContent (sekitar line 416)
-getPageContent(page) {
+  // Get page content
+  getPageContent(page) {
     // Feature locked page for demo users
     if (page === 'feature-locked') {
-        return this.getFeatureLockedContent();
+      return this.getFeatureLockedContent();
     }
     
     // Dashboard content
     if (page === 'dashboard') {
-        return this.getDashboardContent();
-    }
-    
-    // Master Data content
-    if (page === 'master-data') {
-        return this.getMasterDataContent();
-    }
-    
-    // Setup pages
-    if (page.startsWith('setup/')) {
-      if (typeof SetupWizardMulti === 'undefined') {
-        console.error('❌ SetupWizardMulti not loaded!');
-        return '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
-      }
-      
-      try {
-        const wizard = new SetupWizardMulti();
-        window.currentWizard = wizard;
-        
-        const hash = window.location.hash.substring(1);
-        const route = hash.split('/')[1];
-        
-        let html;
-        if (route === 'migrate') {
-          html = wizard.renderMigratePage();
-        } else {
-          wizard.currentStep = route || wizard.currentStep;
-          html = wizard.render();
-        }
-        
-        // Bind events setelah DOM dirender
-        setTimeout(() => {
-          if (window.currentWizard && window.currentWizard.bindEvents) {
-            window.currentWizard.bindEvents();
-          }
-        }, 100);
-        
-        return html;
-      } catch (error) {
-        console.error('❌ Error rendering setup wizard:', error);
-        return `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
-      }
+      return this.getDashboardContent();
     }
     
     // Other pages
     return this.getDefaultPageContent(page);
-}
+  }
   
   // Dashboard content
   getDashboardContent() {
@@ -709,273 +700,6 @@ getPageContent(page) {
           box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
       </style>
-    `;
-  }
-  
-  // Master Data content with plan restrictions DAN RESET FUNCTIONALITY
-  getMasterDataContent() {
-    const isDemo = this.currentPlan === 'demo';
-    const isBasic = this.currentPlan === 'basic';
-    
-    return `
-      <div class="page-content">
-        <h1>Master Data</h1>
-        <p class="page-subtitle">Manage your core business data and settings</p>
-        
-        ${isDemo ? `
-          <div class="demo-alert">
-            <i class="fas fa-info-circle"></i>
-            <span>Demo mode: Most features are enabled! Only Data Migration and Marketplace Fee are disabled.</span>
-          </div>
-        ` : ''}
-        
-        <div class="cards-grid">
-          <div class="feature-card" onclick="window.location.hash='#master/company'">
-            <div class="feature-icon" style="background: #19BEBB;">
-              <i class="fas fa-building"></i>
-            </div>
-            <h3>Company</h3>
-            <p>Company profile and information</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/warehouses'">
-            <div class="feature-icon" style="background: #667eea;">
-              <i class="fas fa-warehouse"></i>
-            </div>
-            <h3>Warehouses</h3>
-            <p>Manage storage locations</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/suppliers'">
-            <div class="feature-icon" style="background: #10b981;">
-              <i class="fas fa-truck"></i>
-            </div>
-            <h3>Suppliers</h3>
-            <p>Supplier information and contacts</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/customers'">
-            <div class="feature-icon" style="background: #f59e0b;">
-              <i class="fas fa-users"></i>
-            </div>
-            <h3>Customers</h3>
-            <p>Customer database</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/products'">
-            <div class="feature-icon" style="background: #ef4444;">
-              <i class="fas fa-boxes"></i>
-            </div>
-            <h3>Products</h3>
-            <p>Product catalog and inventory</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/categories'">
-            <div class="feature-icon" style="background: #8b5cf6;">
-              <i class="fas fa-tags"></i>
-            </div>
-            <h3>Categories</h3>
-            <p>Product categories and grouping</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/units'">
-            <div class="feature-icon" style="background: #3b82f6;">
-              <i class="fas fa-balance-scale"></i>
-            </div>
-            <h3>Units</h3>
-            <p>Measurement units and conversions</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/tax-rates'">
-            <div class="feature-icon" style="background: #10b981;">
-              <i class="fas fa-percent"></i>
-            </div>
-            <h3>Tax Rates</h3>
-            <p>Tax configurations and rates</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card" onclick="window.location.hash='#master/currency'">
-            <div class="feature-icon" style="background: #f59e0b;">
-              <i class="fas fa-money-bill-wave"></i>
-            </div>
-            <h3>Currency</h3>
-            <p>Currency exchange rates</p>
-            <span class="feature-access">✅ Available in Demo</span>
-          </div>
-          
-          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/marketplace-fee\'' : 'window.location.hash=\'#feature-locked\''}">
-            <div class="feature-icon" style="background: #f97316;">
-              <i class="fas fa-percentage"></i>
-            </div>
-            <h3>Marketplace Fee</h3>
-            <p>Configure marketplace fees</p>
-            ${isDemo ? 
-              '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
-              '<span class="feature-access">✅ Available</span>'}
-          </div>
-          
-          <div class="feature-card ${isDemo ? 'disabled-feature' : ''}" 
-               onclick="${!isDemo ? 'window.location.hash=\'#master/data-migration\'' : 'window.location.hash=\'#feature-locked\''}">
-            <div class="feature-icon" style="background: #6b7280;">
-              <i class="fas fa-database"></i>
-            </div>
-            <h3>Data Migration</h3>
-            <p>Import data from old systems</p>
-            ${isDemo ? 
-              '<span class="feature-access locked">🔒 DEMO Restricted</span>' : 
-              '<span class="feature-access">✅ Available</span>'}
-          </div>
-        </div>
-        
-        <!-- RESET DATA SECTION -->
-        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-            <h4><i class="fas fa-redo"></i> Reset Data</h4>
-            <p>Reset your setup data or perform a full reset to demo mode.</p>
-            
-            <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
-                <button class="btn-warning" id="resetSetupBtn" style="background: #f59e0b; color: white;">
-                    <i class="fas fa-undo"></i> Reset Setup Only
-                </button>
-                <button class="btn-danger" id="fullResetBtn" style="background: #ef4444; color: white;">
-                    <i class="fas fa-trash"></i> Full Reset (Back to Demo)
-                </button>
-            </div>
-            
-            <div id="resetStatus" style="margin-top: 10px;"></div>
-        </div>
-      </div>
-      
-      <style>
-        .feature-access {
-          display: block;
-          margin-top: 10px;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 12px;
-          text-align: center;
-        }
-        
-        .feature-access.locked {
-          background: #fee2e2;
-          color: #dc2626;
-          border: 1px solid #fca5a5;
-        }
-        
-        .feature-card .feature-access:not(.locked) {
-          background: #d1fae5;
-          color: #065f46;
-          border: 1px solid #a7f3d0;
-        }
-        
-        .disabled-feature {
-          opacity: 0.7;
-          cursor: not-allowed !important;
-        }
-        
-        .demo-alert {
-          background: #fff3cd;
-          border: 1px solid #ffeaa7;
-          border-radius: 8px;
-          padding: 10px 15px;
-          margin: 15px 0;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #856404;
-        }
-        
-        .btn-warning, .btn-danger {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-        
-        .btn-warning:hover {
-            background: #d97706 !important;
-            transform: translateY(-2px);
-        }
-        
-        .btn-danger:hover {
-            background: #dc2626 !important;
-            transform: translateY(-2px);
-        }
-      </style>
-      
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Reset Setup Only (data setup saja)
-            const resetSetupBtn = document.getElementById('resetSetupBtn');
-            if (resetSetupBtn) {
-                resetSetupBtn.addEventListener('click', function() {
-                    if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
-                        const resetStatus = document.getElementById('resetStatus');
-                        resetStatus.innerHTML = '<div style="color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> Resetting setup data...</div>';
-                        
-                        setTimeout(() => {
-                            // Hapus semua data setup
-                            localStorage.removeItem('stockmint_setup_completed');
-                            localStorage.removeItem('stockmint_company');
-                            localStorage.removeItem('stockmint_warehouses');
-                            localStorage.removeItem('stockmint_suppliers');
-                            localStorage.removeItem('stockmint_customers');
-                            localStorage.removeItem('stockmint_categories');
-                            localStorage.removeItem('stockmint_products');
-                            localStorage.removeItem('stockmint_opening_stocks');
-                            localStorage.removeItem('stockmint_setup_current_step');
-                            
-                            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Setup data reset successfully! Redirecting to setup page...</div>';
-                            
-                            setTimeout(() => {
-                                window.location.hash = '#setup/start-new';
-                                window.location.reload();
-                            }, 1500);
-                        }, 1000);
-                    }
-                });
-            }
-            
-            // Full Reset (kembali ke demo)
-            const fullResetBtn = document.getElementById('fullResetBtn');
-            if (fullResetBtn) {
-                fullResetBtn.addEventListener('click', function() {
-                    if (confirm('FULL RESET: This will delete ALL data and return to demo mode. Are you absolutely sure?')) {
-                        const resetStatus = document.getElementById('resetStatus');
-                        resetStatus.innerHTML = '<div style="color: #ef4444;"><i class="fas fa-spinner fa-spin"></i> Performing full reset...</div>';
-                        
-                        setTimeout(() => {
-                            // Hapus SEMUA data
-                            localStorage.clear();
-                            
-                            // Set plan ke demo
-                            localStorage.setItem('stockmint_plan', 'demo');
-                            
-                            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Full reset completed! Redirecting to login...</div>';
-                            
-                            setTimeout(() => {
-                                window.location.href = 'index.html';
-                            }, 1500);
-                        }, 1000);
-                    }
-                });
-            }
-        });
-      </script>
     `;
   }
   
@@ -1265,9 +989,8 @@ getPageContent(page) {
   initPageScripts(page) {
     if (page === 'dashboard') {
       this.initDashboard();
-    } else if (page === 'master-data') {
-      this.initMasterData();
     }
+    // Note: MasterDataPage meng-handle event-nya sendiri
   }
   
   // Initialize dashboard
@@ -1277,65 +1000,6 @@ getPageContent(page) {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         this.showNotification('Dashboard refreshed!', 'success');
-      });
-    }
-  }
-  
-  // Initialize master data page
-  initMasterData() {
-    // Reset Setup Only (data setup saja)
-    const resetSetupBtn = document.getElementById('resetSetupBtn');
-    if (resetSetupBtn) {
-      resetSetupBtn.addEventListener('click', () => {
-        if (confirm('Reset setup data? This will remove company, warehouse, supplier, customer, category, and product data, but keep your user account.')) {
-          const resetStatus = document.getElementById('resetStatus');
-          resetStatus.innerHTML = '<div style="color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> Resetting setup data...</div>';
-          
-          setTimeout(() => {
-            // Hapus semua data setup
-            localStorage.removeItem('stockmint_setup_completed');
-            localStorage.removeItem('stockmint_company');
-            localStorage.removeItem('stockmint_warehouses');
-            localStorage.removeItem('stockmint_suppliers');
-            localStorage.removeItem('stockmint_customers');
-            localStorage.removeItem('stockmint_categories');
-            localStorage.removeItem('stockmint_products');
-            localStorage.removeItem('stockmint_opening_stocks');
-            localStorage.removeItem('stockmint_setup_current_step');
-            
-            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Setup data reset successfully! Redirecting to setup page...</div>';
-            
-            setTimeout(() => {
-              window.location.hash = '#setup/start-new';
-              window.location.reload();
-            }, 1500);
-          }, 1000);
-        }
-      });
-    }
-    
-    // Full Reset (kembali ke demo)
-    const fullResetBtn = document.getElementById('fullResetBtn');
-    if (fullResetBtn) {
-      fullResetBtn.addEventListener('click', () => {
-        if (confirm('FULL RESET: This will delete ALL data and return to demo mode. Are you absolutely sure?')) {
-          const resetStatus = document.getElementById('resetStatus');
-          resetStatus.innerHTML = '<div style="color: #ef4444;"><i class="fas fa-spinner fa-spin"></i> Performing full reset...</div>';
-          
-          setTimeout(() => {
-            // Hapus SEMUA data
-            localStorage.clear();
-            
-            // Set plan ke demo
-            localStorage.setItem('stockmint_plan', 'demo');
-            
-            resetStatus.innerHTML = '<div style="color: #10b981;">✅ Full reset completed! Redirecting to login...</div>';
-            
-            setTimeout(() => {
-              window.location.href = 'index.html';
-            }, 1500);
-          }, 1000);
-        }
       });
     }
   }
@@ -1755,10 +1419,66 @@ getPageContent(page) {
     }, 1000);
   }
   
-  // Logout
+  // LOGOUT FUNCTION - PRESERVE SETUP DATA
   logout() {
     if (confirm('Are you sure you want to logout?')) {
-      localStorage.clear();
+      console.log('🚪 Logging out...');
+      
+      // Data setup yang harus dipertahankan
+      const preservedData = {
+        // Data setup inti
+        'stockmint_company': localStorage.getItem('stockmint_company'),
+        'stockmint_warehouses': localStorage.getItem('stockmint_warehouses'),
+        'stockmint_suppliers': localStorage.getItem('stockmint_suppliers'),
+        'stockmint_customers': localStorage.getItem('stockmint_customers'),
+        'stockmint_categories': localStorage.getItem('stockmint_categories'),
+        'stockmint_products': localStorage.getItem('stockmint_products'),
+        'stockmint_opening_stocks': localStorage.getItem('stockmint_opening_stocks'),
+        
+        // Status setup
+        'stockmint_setup_completed': localStorage.getItem('stockmint_setup_completed'),
+        'stockmint_setup_date': localStorage.getItem('stockmint_setup_date'),
+        
+        // Plan
+        'stockmint_plan': localStorage.getItem('stockmint_plan'),
+        
+        // Migration data (jika ada)
+        'stockmint_migration_completed': localStorage.getItem('stockmint_migration_completed'),
+        'stockmint_migration_file': localStorage.getItem('stockmint_migration_file'),
+        'stockmint_migration_date': localStorage.getItem('stockmint_migration_date'),
+        
+        // Transaction data (jika ingin dipertahankan)
+        'stockmint_transactions': localStorage.getItem('stockmint_transactions'),
+        'stockmint_purchases': localStorage.getItem('stockmint_purchases'),
+        'stockmint_sales': localStorage.getItem('stockmint_sales')
+      };
+      
+      // Hapus SEMUA data stockmint terlebih dahulu
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('stockmint_')) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      // Kembalikan data setup yang harus dipertahankan
+      Object.entries(preservedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== 'null' && value !== 'undefined') {
+          localStorage.setItem(key, value);
+        }
+      });
+      
+      // Hapus session data
+      sessionStorage.clear();
+      
+      console.log('✅ Logout successful, setup data preserved');
+      
+      // Redirect ke login page
       window.location.href = 'index.html';
     }
   }
@@ -1766,12 +1486,10 @@ getPageContent(page) {
 
 // Create global instance
 window.StockMintApp = new StockMintApp();
-console.log('✅ StockMintApp instance created');
+console.log('✅ StockMintApp instance created - WITH PRESERVED SETUP DATA');
 
 // ===== TEMPORARY PATCH FOR SETUP WIZARD =====
 // Ini akan memastikan setup wizard berfungsi meskipun routing bermasalah
-// TARUH DI SINI - SETELAH CLASS DEFINITION
-
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🔧 Applying setup wizard patch...');
   
@@ -1789,7 +1507,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.currentWizard && window.currentWizard.saveCompanyData) {
           try {
             window.currentWizard.saveCompanyData();
-            // alert('✅ Company data saved! Redirecting to warehouse...');
             window.location.hash = '#setup/warehouse';
           } catch (error) {
             alert('Error: ' + error.message);
