@@ -15,6 +15,15 @@ class StockMintApp {
   // Initialize application
   init() {
     console.log('🚀 StockMintApp initializing...');
+
+     // PENTING: Tampilkan app container dulu, sembunyikan loading screen nanti
+    const loadingScreen = document.getElementById('loadingScreen');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (loadingScreen && appContainer) {
+        loadingScreen.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+    }
     
     try {
       // Step 1: Load user data
