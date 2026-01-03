@@ -1,6 +1,6 @@
-// setup-wizard-multi.js - VERSI TERPADU DENGAN SEMUA PERBAIKAN
+// setup-wizard-multi.js - VERSI KOMPLIT DENGAN SEMUA METHOD
 
-console.log('🔄 setup-wizard-multi.js LOADED - FINAL IMPROVED VERSION');
+console.log('🔄 setup-wizard-multi.js LOADED - COMPLETE VERSION');
 
 class SetupWizardMulti {
     constructor() {
@@ -9,11 +9,11 @@ class SetupWizardMulti {
             this.currentStep = this.getCurrentStepFromHash();
             this.totalSteps = 6;
             this.setupData = this.loadSavedData();
-            console.log('📊 Setup data loaded');
+            console.log('📊 Setup data loaded from localStorage');
             this.userPlan = localStorage.getItem('stockmint_plan') || 'basic';
             this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             
-            // Initialize counters
+            // Initialize counters dari data yang ada
             this.warehouseCounter = this.setupData.warehouses.length;
             this.supplierCounter = this.setupData.suppliers.length;
             this.customerCounter = this.setupData.customers.length;
@@ -60,31 +60,16 @@ class SetupWizardMulti {
     }
 
     loadSavedData() {
-        // PERBAIKAN: Cek apakah setup sudah selesai atau sudah ada data di localStorage
-        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-        const migrationCompleted = localStorage.getItem('stockmint_migration_completed') === 'true';
+        console.log('📦 Loading data from localStorage...');
         
-        if (setupCompleted || migrationCompleted) {
-            console.log('✅ Setup already completed, loading saved data from localStorage...');
-            return {
-                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
-                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
-                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
-                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
-                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
-                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
-            };
-        } else {
-            console.log('⚠️ Setup not completed yet, loading temporary data from sessionStorage...');
-            return {
-                company: JSON.parse(sessionStorage.getItem('stockmint_temp_company') || '{}'),
-                warehouses: JSON.parse(sessionStorage.getItem('stockmint_temp_warehouses') || '[]'),
-                suppliers: JSON.parse(sessionStorage.getItem('stockmint_temp_suppliers') || '[]'),
-                customers: JSON.parse(sessionStorage.getItem('stockmint_temp_customers') || '[]'),
-                categories: JSON.parse(sessionStorage.getItem('stockmint_temp_categories') || '[]'),
-                products: JSON.parse(sessionStorage.getItem('stockmint_temp_products') || '[]')
-            };
-        }
+        return {
+            company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+            warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+            suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+            customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+            categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+            products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+        };
     }
 
     // ===== EVENT BINDING =====
@@ -92,25 +77,15 @@ class SetupWizardMulti {
     bindEvents() {
         console.log('🔧 Binding events for step:', this.currentStep);
         
-        // Reset flags untuk step yang berbeda
         if (this.currentStep === 'migrate') {
-            this.migrateEventsBound = false;
-            this.fileHandlersBound = false;
+            this.bindMigrateEvents();
+            this.migrateEventsBound = true;
         } else {
-            this.eventsBound = false;
-        }
-        
-        setTimeout(() => {
             this.bindFormEvents();
             this.bindNavigationEvents();
             this.updateUI();
-            
-            if (this.currentStep === 'migrate') {
-                this.migrateEventsBound = true;
-            } else {
-                this.eventsBound = true;
-            }
-        }, 100);
+            this.eventsBound = true;
+        }
     }
 
     bindFormEvents() {
@@ -136,20 +111,13 @@ class SetupWizardMulti {
             case 'product':
                 this.bindProductForm();
                 break;
-            case 'migrate':
-                this.bindMigrateEvents();
-                break;
         }
     }
 
     bindCompanyForm() {
         const form = document.getElementById('companyForm');
         if (form) {
-            // Clone form untuk menghindari multiple event binding
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('companyForm').addEventListener('submit', (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     this.saveCompanyData();
@@ -164,26 +132,18 @@ class SetupWizardMulti {
     bindWarehouseForm() {
         const form = document.getElementById('warehouseForm');
         if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('warehouseForm').addEventListener('submit', async (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     if (this.saveWarehouseData()) {
                         this.updateUI();
                         this.showAlert('Warehouse added successfully!', 'success');
-                        
-                        // Reset form setelah sukses
                         setTimeout(() => {
                             document.getElementById('warehouseForm').reset();
-                            // Untuk BASIC plan, set checkbox primary dan disable
-                            if (this.userPlan === 'basic') {
-                                const isPrimaryCheckbox = document.getElementById('isPrimary');
-                                if (isPrimaryCheckbox) {
-                                    isPrimaryCheckbox.checked = true;
-                                    isPrimaryCheckbox.disabled = true;
-                                }
+                            const isPrimaryCheckbox = document.getElementById('isPrimary');
+                            if (isPrimaryCheckbox && this.userPlan === 'basic') {
+                                isPrimaryCheckbox.checked = true;
+                                isPrimaryCheckbox.disabled = true;
                             }
                         }, 100);
                     }
@@ -195,10 +155,7 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToSupplier');
         if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToSupplier').addEventListener('click', () => {
+            nextBtn.addEventListener('click', () => {
                 if (this.setupData.warehouses.length === 0) {
                     this.showAlert('Please add at least one warehouse', 'error');
                     return;
@@ -211,15 +168,15 @@ class SetupWizardMulti {
     bindSupplierForm() {
         const form = document.getElementById('supplierForm');
         if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('supplierForm').addEventListener('submit', (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     if (this.saveSupplierData()) {
                         this.updateUI();
                         this.showAlert('Supplier added successfully!', 'success');
+                        setTimeout(() => {
+                            document.getElementById('supplierForm').reset();
+                        }, 100);
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -229,10 +186,7 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToCustomer');
         if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToCustomer').addEventListener('click', () => {
+            nextBtn.addEventListener('click', () => {
                 if (this.setupData.suppliers.length === 0) {
                     this.showAlert('Please add at least one supplier', 'error');
                     return;
@@ -245,15 +199,15 @@ class SetupWizardMulti {
     bindCustomerForm() {
         const form = document.getElementById('customerForm');
         if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('customerForm').addEventListener('submit', (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     if (this.saveCustomerData()) {
                         this.updateUI();
                         this.showAlert('Customer added successfully!', 'success');
+                        setTimeout(() => {
+                            document.getElementById('customerForm').reset();
+                        }, 100);
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -263,10 +217,7 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToCategory');
         if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToCategory').addEventListener('click', () => {
+            nextBtn.addEventListener('click', () => {
                 if (this.setupData.customers.length === 0) {
                     this.showAlert('Please add at least one customer', 'error');
                     return;
@@ -279,15 +230,15 @@ class SetupWizardMulti {
     bindCategoryForm() {
         const form = document.getElementById('categoryForm');
         if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('categoryForm').addEventListener('submit', (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     if (this.saveCategoryData()) {
                         this.updateUI();
                         this.showAlert('Category added successfully!', 'success');
+                        setTimeout(() => {
+                            document.getElementById('categoryForm').reset();
+                        }, 100);
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -297,10 +248,7 @@ class SetupWizardMulti {
 
         const nextBtn = document.getElementById('nextToProduct');
         if (nextBtn) {
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            document.getElementById('nextToProduct').addEventListener('click', () => {
+            nextBtn.addEventListener('click', () => {
                 if (this.setupData.categories.length === 0) {
                     this.showAlert('Please add at least one category', 'error');
                     return;
@@ -313,15 +261,15 @@ class SetupWizardMulti {
     bindProductForm() {
         const form = document.getElementById('productForm');
         if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            document.getElementById('productForm').addEventListener('submit', (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 try {
                     if (this.saveProductData()) {
                         this.updateUI();
                         this.showAlert('Product added successfully!', 'success');
+                        setTimeout(() => {
+                            document.getElementById('productForm').reset();
+                        }, 100);
                     }
                 } catch (error) {
                     this.showAlert(error.message, 'error');
@@ -331,10 +279,7 @@ class SetupWizardMulti {
 
         const completeBtn = document.getElementById('completeSetup');
         if (completeBtn) {
-            const newCompleteBtn = completeBtn.cloneNode(true);
-            completeBtn.parentNode.replaceChild(newCompleteBtn, completeBtn);
-            
-            document.getElementById('completeSetup').addEventListener('click', async () => {
+            completeBtn.addEventListener('click', async () => {
                 if (this.setupData.products.length === 0) {
                     this.showAlert('Please add at least one product', 'error');
                     return;
@@ -348,7 +293,6 @@ class SetupWizardMulti {
     
     bindNavigationEvents() {
         if (this.navigationEventsBound) {
-            console.log('⚠️ Navigation events already bound, skipping...');
             return;
         }
         
@@ -413,17 +357,13 @@ class SetupWizardMulti {
                 try {
                     const confirmed = await this.showCustomConfirm('Are you sure you want to cancel setup? All progress will be lost.');
                     if (confirmed) {
-                        // Hapus data sementara
                         this.clearSessionStorage();
-                        // Hapus data permanen hanya jika setup belum selesai
-                        if (localStorage.getItem('stockmint_setup_completed') !== 'true') {
-                            localStorage.removeItem('stockmint_company');
-                            localStorage.removeItem('stockmint_warehouses');
-                            localStorage.removeItem('stockmint_suppliers');
-                            localStorage.removeItem('stockmint_customers');
-                            localStorage.removeItem('stockmint_categories');
-                            localStorage.removeItem('stockmint_products');
-                        }
+                        localStorage.removeItem('stockmint_company');
+                        localStorage.removeItem('stockmint_warehouses');
+                        localStorage.removeItem('stockmint_suppliers');
+                        localStorage.removeItem('stockmint_customers');
+                        localStorage.removeItem('stockmint_categories');
+                        localStorage.removeItem('stockmint_products');
                         window.location.hash = '#dashboard';
                     }
                 } catch (error) {
@@ -434,470 +374,6 @@ class SetupWizardMulti {
         });
         
         this.navigationEventsBound = true;
-    }
-
-    // ===== MIGRATE EVENTS =====
-    
-    bindMigrateEvents() {
-        console.log('📤 Binding migrate events...');
-        
-        if (this.migrateEventsBound) {
-            console.log('⚠️ Migrate events already bound, skipping...');
-            return;
-        }
-        
-        setTimeout(() => {
-            const browseBtn = document.getElementById('browseFileBtn');
-            const fileInput = document.getElementById('excelFile');
-            const uploadBtn = document.getElementById('uploadFileBtn');
-            const fileNameSpan = document.getElementById('selectedFileName');
-            const dropArea = document.getElementById('dropArea');
-            
-            console.log('📁 File input elements:', { 
-                browseBtn: !!browseBtn, 
-                fileInput: !!fileInput, 
-                uploadBtn: !!uploadBtn, 
-                fileNameSpan: !!fileNameSpan, 
-                dropArea: !!dropArea 
-            });
-            
-            // PERBAIKAN: Event binding yang lebih sederhana dan pasti bekerja
-            if (browseBtn) {
-                browseBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('📂 Browse button clicked');
-                    if (fileInput) {
-                        fileInput.click();
-                    }
-                };
-            }
-            
-            if (fileInput) {
-                fileInput.onchange = (e) => {
-                    console.log('📄 File selected via input');
-                    const file = e.target.files[0];
-                    if (file) {
-                        this.handleFileSelection(file);
-                    }
-                };
-            }
-            
-            if (dropArea) {
-                // Highlight drop area
-                dropArea.ondragover = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dropArea.style.background = '#e3f2fd';
-                    dropArea.style.borderColor = '#0fa8a6';
-                    dropArea.style.borderStyle = 'solid';
-                };
-                
-                dropArea.ondragleave = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dropArea.style.background = '#f8f9fa';
-                    dropArea.style.borderColor = '#19BEBB';
-                    dropArea.style.borderStyle = 'dashed';
-                };
-                
-                dropArea.ondragenter = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                };
-                
-                // Handle drop
-                dropArea.ondrop = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dropArea.style.background = '#f8f9fa';
-                    dropArea.style.borderColor = '#19BEBB';
-                    dropArea.style.borderStyle = 'dashed';
-                    
-                    const files = e.dataTransfer.files;
-                    console.log('📁 Files dropped:', files.length);
-                    if (files.length > 0) {
-                        this.handleFileSelection(files[0]);
-                        // Juga set ke file input
-                        if (fileInput) {
-                            // Create a new DataTransfer object and add the file
-                            const dataTransfer = new DataTransfer();
-                            dataTransfer.items.add(files[0]);
-                            fileInput.files = dataTransfer.files;
-                            
-                            // Trigger change event
-                            fileInput.dispatchEvent(new Event('change'));
-                        }
-                    }
-                };
-                
-                // Click on drop area
-                dropArea.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('📂 Drop area clicked');
-                    if (fileInput) {
-                        fileInput.click();
-                    }
-                };
-            }
-            
-            if (uploadBtn) {
-                uploadBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.handleExcelUpload();
-                };
-            }
-            
-            // Download template link
-            const downloadLink = document.querySelector('.btn-download');
-            if (downloadLink) {
-                downloadLink.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('📥 Download template clicked');
-                    // Redirect ke template.html
-                    window.open('template.html', '_blank');
-                };
-            }
-            
-            this.migrateEventsBound = true;
-            this.fileHandlersBound = true;
-            console.log('✅ Migrate events bound successfully');
-        }, 300);
-    }
-
-    // ===== FILE HANDLING =====
-    
-    handleFileSelection(file) {
-        console.log('📄 Handling file selection:', file?.name);
-        
-        const fileNameSpan = document.getElementById('selectedFileName');
-        const uploadBtn = document.getElementById('uploadFileBtn');
-        
-        if (!file) {
-            if (fileNameSpan) {
-                fileNameSpan.textContent = 'No file selected';
-                fileNameSpan.style.color = '#666';
-            }
-            if (uploadBtn) uploadBtn.disabled = true;
-            return;
-        }
-        
-        // Validasi ekstensi file
-        const validExtensions = ['.xlsx', '.xls'];
-        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-        
-        if (!validExtensions.includes(fileExtension)) {
-            this.showAlert('Please select a valid Excel file (.xlsx or .xls)', 'error');
-            if (fileNameSpan) {
-                fileNameSpan.textContent = 'Invalid file type';
-                fileNameSpan.style.color = '#ef4444';
-            }
-            if (uploadBtn) uploadBtn.disabled = true;
-            return;
-        }
-        
-        // Validasi ukuran file (max 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxSize) {
-            this.showAlert('File size exceeds 10MB limit', 'error');
-            if (fileNameSpan) {
-                fileNameSpan.textContent = 'File too large';
-                fileNameSpan.style.color = '#ef4444';
-            }
-            if (uploadBtn) uploadBtn.disabled = true;
-            return;
-        }
-        
-        // Tampilkan nama file
-        if (fileNameSpan) {
-            fileNameSpan.textContent = file.name;
-            fileNameSpan.style.color = '#10b981';
-        }
-        if (uploadBtn) uploadBtn.disabled = false;
-        
-        // Simpan file untuk upload nanti
-        this.selectedFile = file;
-        
-        console.log('✅ File selected:', file.name);
-    }
-
-    handleExcelUpload() {
-        const fileInput = document.getElementById('excelFile');
-        const file = fileInput?.files[0] || this.selectedFile;
-        
-        if (!file) {
-            this.showAlert('Please select an Excel file first', 'error');
-            return;
-        }
-        
-        console.log('📤 Uploading file:', file.name);
-        
-        const progressContainer = document.getElementById('uploadProgress');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        const resultContainer = document.getElementById('uploadResult');
-        const uploadBtn = document.getElementById('uploadFileBtn');
-        
-        if (progressContainer) progressContainer.style.display = 'block';
-        if (resultContainer) resultContainer.style.display = 'none';
-        if (uploadBtn) uploadBtn.disabled = true;
-        
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += 10;
-            if (progressFill) progressFill.style.width = `${progress}%`;
-            if (progressText) progressText.textContent = `${progress}%`;
-            
-            if (progress >= 100) {
-                clearInterval(progressInterval);
-                this.processExcelFile(file);
-            }
-        }, 200);
-    }
-
-    // ===== DATA SAVING =====
-    
-    saveCompanyData(validate = true) {
-        const name = document.getElementById('companyName')?.value.trim();
-        const taxId = document.getElementById('companyTaxId')?.value.trim() || '';
-        const address = document.getElementById('companyAddress')?.value.trim() || '';
-        const phone = document.getElementById('companyPhone')?.value.trim() || '';
-        const email = document.getElementById('companyEmail')?.value.trim() || '';
-        const businessType = document.getElementById('businessType')?.value || '';
-        const agreeTerms = document.getElementById('agreeTerms')?.checked || false;
-        
-        if (validate) {
-            if (!name) throw new Error('Company name is required');
-            if (!agreeTerms) throw new Error('You must agree to the Terms of Service');
-        }
-        
-        this.setupData.company = {
-            id: 'COMP001',
-            name,
-            taxId,
-            address,
-            phone,
-            email,
-            businessType,
-            setupDate: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-        };
-        
-        // Simpan ke session storage untuk persistensi sementara
-        sessionStorage.setItem('stockmint_temp_company', JSON.stringify(this.setupData.company));
-        
-        return true;
-    }
-
-    saveWarehouseData() {
-        const name = document.getElementById('warehouseName')?.value.trim();
-        const address = document.getElementById('warehouseAddress')?.value.trim() || '';
-        const isPrimaryCheckbox = document.getElementById('isPrimary');
-        let isPrimary = isPrimaryCheckbox?.checked || false;
-        
-        if (!name) throw new Error('Warehouse name is required');
-        
-        // Check plan restrictions
-        const warehouseLimit = this.userPlan === 'basic' ? 1 :
-            this.userPlan === 'pro' ? 3 : Infinity;
-        
-        if (this.setupData.warehouses.length >= warehouseLimit) {
-            throw new Error(`You can only have ${warehouseLimit} warehouse(s) in your current plan.`);
-        }
-        
-        // Check duplicate name
-        const existingWarehouse = this.setupData.warehouses.find(wh =>
-            wh.name.toLowerCase() === name.toLowerCase()
-        );
-        
-        if (existingWarehouse) {
-            throw new Error('Warehouse with this name already exists');
-        }
-        
-        // Untuk paket BASIC, warehouse pertama HARUS primary
-        if (this.userPlan === 'basic' && this.setupData.warehouses.length === 0) {
-            isPrimary = true;
-        }
-        
-        // Generate ID sederhana
-        this.warehouseCounter++;
-        const warehouseCode = `WH-${this.warehouseCounter.toString().padStart(3, '0')}`;
-        
-        const warehouse = {
-            id: warehouseCode,
-            name,
-            code: warehouseCode,
-            address,
-            isPrimary,
-            createdAt: new Date().toISOString()
-        };
-        
-        // Jika ini primary, set yang lain menjadi non-primary
-        if (isPrimary) {
-            this.setupData.warehouses.forEach(wh => wh.isPrimary = false);
-        }
-        
-        this.setupData.warehouses.push(warehouse);
-        
-        // Simpan ke session storage
-        sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
-        
-        return true;
-    }
-
-    saveSupplierData() {
-        const name = document.getElementById('supplierName')?.value.trim();
-        const contact = document.getElementById('supplierContact')?.value.trim() || '';
-        const phone = document.getElementById('supplierPhone')?.value.trim() || '';
-        const email = document.getElementById('supplierEmail')?.value.trim() || '';
-        
-        if (!name) throw new Error('Supplier name is required');
-        
-        // Check duplicate name
-        const existingSupplier = this.setupData.suppliers.find(sup =>
-            sup.name.toLowerCase() === name.toLowerCase()
-        );
-        
-        if (existingSupplier) {
-            throw new Error('Supplier with this name already exists');
-        }
-        
-        this.supplierCounter++;
-        const supplierCode = `SUP-${this.supplierCounter.toString().padStart(3, '0')}`;
-        
-        const supplier = {
-            id: supplierCode,
-            name,
-            code: supplierCode,
-            contact,
-            phone,
-            email,
-            isActive: true,
-            createdAt: new Date().toISOString()
-        };
-        
-        this.setupData.suppliers.push(supplier);
-        sessionStorage.setItem('stockmint_temp_suppliers', JSON.stringify(this.setupData.suppliers));
-        
-        return true;
-    }
-
-    saveCustomerData() {
-        const name = document.getElementById('customerName')?.value.trim();
-        const type = document.getElementById('customerType')?.value || 'retail';
-        const contact = document.getElementById('customerContact')?.value.trim() || '';
-        const phone = document.getElementById('customerPhone')?.value.trim() || '';
-        const email = document.getElementById('customerEmail')?.value.trim() || '';
-        const taxable = document.getElementById('customerTaxable')?.checked || false;
-        
-        if (!name) throw new Error('Customer name is required');
-        
-        // Check duplicate name
-        const existingCustomer = this.setupData.customers.find(cust =>
-            cust.name.toLowerCase() === name.toLowerCase()
-        );
-        
-        if (existingCustomer) {
-            throw new Error('Customer with this name already exists');
-        }
-        
-        this.customerCounter++;
-        const customerCode = `CUST-${this.customerCounter.toString().padStart(3, '0')}`;
-        
-        const customer = {
-            id: customerCode,
-            name,
-            type,
-            contact,
-            phone,
-            email,
-            taxable,
-            isActive: true,
-            createdAt: new Date().toISOString()
-        };
-        
-        this.setupData.customers.push(customer);
-        sessionStorage.setItem('stockmint_temp_customers', JSON.stringify(this.setupData.customers));
-        
-        return true;
-    }
-
-    saveCategoryData() {
-        const name = document.getElementById('categoryName')?.value.trim();
-        const description = document.getElementById('categoryDescription')?.value.trim() || '';
-        
-        if (!name) throw new Error('Category name is required');
-        
-        // Check duplicate name
-        const existingCategory = this.setupData.categories.find(cat =>
-            cat.name.toLowerCase() === name.toLowerCase()
-        );
-        
-        if (existingCategory) {
-            throw new Error('Category with this name already exists');
-        }
-        
-        this.categoryCounter++;
-        const categoryCode = `CAT-${this.categoryCounter.toString().padStart(3, '0')}`;
-        
-        const category = {
-            id: categoryCode,
-            name,
-            code: categoryCode,
-            description,
-            createdAt: new Date().toISOString()
-        };
-        
-        this.setupData.categories.push(category);
-        sessionStorage.setItem('stockmint_temp_categories', JSON.stringify(this.setupData.categories));
-        
-        return true;
-    }
-
-    saveProductData() {
-        const name = document.getElementById('productName')?.value.trim();
-        const category = document.getElementById('productCategory')?.value;
-        const unit = document.getElementById('productUnit')?.value || 'pcs';
-        const purchasePrice = parseFloat(document.getElementById('purchasePrice')?.value || 0);
-        const salePrice = parseFloat(document.getElementById('salePrice')?.value || 0);
-        const initialStock = parseInt(document.getElementById('initialStock')?.value || 0);
-        
-        if (!name) throw new Error('Product name is required');
-        if (!category) throw new Error('Please select a category');
-        
-        // Check duplicate name
-        const existingProduct = this.setupData.products.find(prod =>
-            prod.name.toLowerCase() === name.toLowerCase()
-        );
-        
-        if (existingProduct) {
-            throw new Error('Product with this name already exists');
-        }
-        
-        this.productCounter++;
-        const productCode = `PROD-${this.productCounter.toString().padStart(5, '0')}`;
-        
-        const product = {
-            id: productCode,
-            name,
-            code: productCode,
-            categoryId: category,
-            category: this.setupData.categories?.find(c => c.id === category)?.name || category,
-            unit,
-            purchasePrice,
-            salePrice,
-            stock: initialStock,
-            isActive: true,
-            createdAt: new Date().toISOString()
-        };
-        
-        this.setupData.products.push(product);
-        sessionStorage.setItem('stockmint_temp_products', JSON.stringify(this.setupData.products));
-        
-        return true;
     }
 
     // ===== UPDATE METHODS =====
@@ -1133,227 +609,94 @@ class SetupWizardMulti {
         }
     }
 
-    // ===== REMOVE METHODS =====
+    // ===== FILE HANDLING =====
     
-    removeWarehouse(index) {
-        if (index >= 0 && index < this.setupData.warehouses.length) {
-            const removed = this.setupData.warehouses.splice(index, 1)[0];
-            sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
-            
-            // Jika warehouse yang dihapus adalah primary, set warehouse pertama sebagai primary
-            if (removed.isPrimary && this.setupData.warehouses.length > 0) {
-                this.setupData.warehouses[0].isPrimary = true;
-                sessionStorage.setItem('stockmint_temp_warehouses', JSON.stringify(this.setupData.warehouses));
+    handleFileSelection(file) {
+        console.log('📄 Handling file selection:', file?.name);
+        
+        const fileNameSpan = document.getElementById('selectedFileName');
+        const uploadBtn = document.getElementById('uploadFileBtn');
+        
+        if (!file) {
+            if (fileNameSpan) {
+                fileNameSpan.textContent = 'No file selected';
+                fileNameSpan.style.color = '#666';
             }
-            
-            return true;
-        }
-        return false;
-    }
-
-    removeSupplier(index) {
-        if (index >= 0 && index < this.setupData.suppliers.length) {
-            this.setupData.suppliers.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_suppliers', JSON.stringify(this.setupData.suppliers));
-            return true;
-        }
-        return false;
-    }
-
-    removeCustomer(index) {
-        if (index >= 0 && index < this.setupData.customers.length) {
-            this.setupData.customers.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_customers', JSON.stringify(this.setupData.customers));
-            return true;
-        }
-        return false;
-    }
-
-    removeCategory(index) {
-        if (index >= 0 && index < this.setupData.categories.length) {
-            this.setupData.categories.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_categories', JSON.stringify(this.setupData.categories));
-            return true;
-        }
-        return false;
-    }
-
-    removeProduct(index) {
-        if (index >= 0 && index < this.setupData.products.length) {
-            this.setupData.products.splice(index, 1);
-            sessionStorage.setItem('stockmint_temp_products', JSON.stringify(this.setupData.products));
-            return true;
-        }
-        return false;
-    }
-
-    // ===== COMPLETE SETUP =====
-    
-    async completeSetup() {
-        try {
-            console.log('✅ Completing setup process...');
-            
-            // 1. Transfer data dari session storage ke local storage (permanen)
-            localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
-            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
-            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
-            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
-            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
-            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
-            
-            // 2. Mark setup as completed
-            localStorage.setItem('stockmint_setup_completed', 'true');
-            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
-            
-            // 3. Create opening stock
-            this.createOpeningStock();
-            
-            // 4. Clear session storage
-            this.clearSessionStorage();
-            
-            // 5. Show success message
-            this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
-            
-            console.log('✅ Setup completed, data saved permanently');
-            
-            // 6. Redirect
-            setTimeout(() => {
-                window.location.hash = '#dashboard';
-            }, 2000);
-            
-        } catch (error) {
-            console.error('Error completing setup:', error);
-            this.showAlert(`Failed to complete setup: ${error.message}`, 'error');
-        }
-    }
-
-    clearSessionStorage() {
-        sessionStorage.removeItem('stockmint_temp_company');
-        sessionStorage.removeItem('stockmint_temp_warehouses');
-        sessionStorage.removeItem('stockmint_temp_suppliers');
-        sessionStorage.removeItem('stockmint_temp_customers');
-        sessionStorage.removeItem('stockmint_temp_categories');
-        sessionStorage.removeItem('stockmint_temp_products');
-    }
-
-    createOpeningStock() {
-        const warehouses = this.setupData.warehouses || [];
-        const products = this.setupData.products || [];
-        
-        if (warehouses.length === 0 || products.length === 0) return;
-        
-        // Temukan primary warehouse
-        let primaryWarehouse = warehouses.find(wh => wh.isPrimary);
-        if (!primaryWarehouse && warehouses.length > 0) {
-            primaryWarehouse = warehouses[0];
+            if (uploadBtn) uploadBtn.disabled = true;
+            return;
         }
         
-        const openingStocks = products.map(product => ({
-            productId: product.id,
-            productName: product.name,
-            warehouseId: primaryWarehouse.id,
-            warehouseName: primaryWarehouse.name,
-            quantity: product.stock || 0,
-            cost: product.purchasePrice || 0,
-            date: new Date().toISOString(),
-            type: 'opening',
-            createdAt: new Date().toISOString()
-        }));
+        const validExtensions = ['.xlsx', '.xls'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
-        localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+        if (!validExtensions.includes(fileExtension)) {
+            this.showAlert('Please select a valid Excel file (.xlsx or .xls)', 'error');
+            if (fileNameSpan) {
+                fileNameSpan.textContent = 'Invalid file type';
+                fileNameSpan.style.color = '#ef4444';
+            }
+            if (uploadBtn) uploadBtn.disabled = true;
+            return;
+        }
+        
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            this.showAlert('File size exceeds 10MB limit', 'error');
+            if (fileNameSpan) {
+                fileNameSpan.textContent = 'File too large';
+                fileNameSpan.style.color = '#ef4444';
+            }
+            if (uploadBtn) uploadBtn.disabled = true;
+            return;
+        }
+        
+        if (fileNameSpan) {
+            fileNameSpan.textContent = file.name;
+            fileNameSpan.style.color = '#10b981';
+        }
+        if (uploadBtn) uploadBtn.disabled = false;
+        
+        this.selectedFile = file;
+        
+        console.log('✅ File selected:', file.name);
+    }
+
+    handleExcelUpload() {
+        const fileInput = document.getElementById('excelFile');
+        const file = fileInput?.files[0] || this.selectedFile;
+        
+        if (!file) {
+            this.showAlert('Please select an Excel file first', 'error');
+            return;
+        }
+        
+        console.log('📤 Uploading file:', file.name);
+        
+        const progressContainer = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('uploadResult');
+        const uploadBtn = document.getElementById('uploadFileBtn');
+        
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (resultContainer) resultContainer.style.display = 'none';
+        if (uploadBtn) uploadBtn.disabled = true;
+        
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += 10;
+            if (progressFill) progressFill.style.width = `${progress}%`;
+            if (progressText) progressText.textContent = `${progress}%`;
+            
+            if (progress >= 100) {
+                clearInterval(progressInterval);
+                this.processExcelFile(file);
+            }
+        }, 200);
     }
 
     // ===== MIGRATION METHODS =====
     
-    processExcelFile(file) {
-        const resultContainer = document.getElementById('uploadResult');
-        const uploadBtn = document.getElementById('uploadFileBtn');
-        
-        try {
-            console.log('📊 Processing Excel file:', file.name);
-            
-            // Simulasi proses upload
-            setTimeout(() => {
-                // SIMULASI: Simpan data contoh
-                this.simulateDataMigration();
-                
-                if (resultContainer) {
-                    resultContainer.innerHTML = `
-                        <div style="display: flex; gap: 15px; align-items: start;">
-                            <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-top: 2px;"></i>
-                            <div>
-                                <h4 style="margin: 0 0 10px 0; color: #065f46;">Upload Successful!</h4>
-                                <p style="margin: 0 0 5px 0; color: #065f46;">File "${file.name}" has been processed successfully.</p>
-                                <p style="margin: 0; color: #065f46;">Sample data has been imported to the system.</p>
-                                <div style="margin-top: 15px; background: #a7f3d0; padding: 10px; border-radius: 6px;">
-                                    <p style="margin: 0; color: #065f46; font-size: 14px;">
-                                        <strong>Imported Data Summary:</strong><br>
-                                        • 1 Company<br>
-                                        • 2 Warehouses<br>
-                                        • 5 Suppliers<br>
-                                        • 10 Customers<br>
-                                        • 8 Categories<br>
-                                        • 25 Products
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    resultContainer.className = 'result-container result-success';
-                    resultContainer.style.display = 'block';
-                }
-                
-                // Simpan status upload sebagai completed
-                localStorage.setItem('stockmint_setup_completed', 'true');
-                localStorage.setItem('stockmint_migration_completed', 'true');
-                localStorage.setItem('stockmint_migration_file', file.name);
-                localStorage.setItem('stockmint_migration_date', new Date().toISOString());
-                
-                // Reset form
-                const fileInput = document.getElementById('excelFile');
-                const fileNameSpan = document.getElementById('selectedFileName');
-                
-                if (fileInput) fileInput.value = '';
-                if (fileNameSpan) {
-                    fileNameSpan.textContent = 'No file selected';
-                    fileNameSpan.style.color = '#666';
-                }
-                
-                if (uploadBtn) uploadBtn.disabled = false;
-                
-                console.log('✅ Migration completed successfully');
-                
-                // Redirect setelah 3 detik
-                setTimeout(() => {
-                    this.showAlert('Migration completed successfully! Redirecting to dashboard...', 'success');
-                    setTimeout(() => {
-                        window.location.hash = '#dashboard';
-                    }, 2000);
-                }, 1000);
-                
-            }, 1500);
-            
-        } catch (error) {
-            console.error('Error processing Excel file:', error);
-            
-            if (resultContainer) {
-                resultContainer.innerHTML = `
-                    <div style="display: flex; gap: 15px; align-items: start;">
-                        <i class="fas fa-exclamation-circle" style="color: #dc2626; font-size: 24px; margin-top: 2px;"></i>
-                        <div>
-                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Upload Failed</h4>
-                            <p style="margin: 0 0 5px 0; color: #dc2626;">Error: ${error.message}</p>
-                            <p style="margin: 0; color: #dc2626;">Please check your Excel file format and try again.</p>
-                        </div>
-                    </div>
-                `;
-                resultContainer.className = 'result-container result-error';
-                resultContainer.style.display = 'block';
-            }
-            if (uploadBtn) uploadBtn.disabled = false;
-        }
-    }
-
     simulateDataMigration() {
         console.log('📊 Simulating data migration...');
         
@@ -1430,7 +773,6 @@ class SetupWizardMulti {
             }))
         };
         
-        // Simpan semua data ke localStorage
         localStorage.setItem('stockmint_company', JSON.stringify(sampleData.company));
         localStorage.setItem('stockmint_warehouses', JSON.stringify(sampleData.warehouses));
         localStorage.setItem('stockmint_suppliers', JSON.stringify(sampleData.suppliers));
@@ -1438,7 +780,6 @@ class SetupWizardMulti {
         localStorage.setItem('stockmint_categories', JSON.stringify(sampleData.categories));
         localStorage.setItem('stockmint_products', JSON.stringify(sampleData.products));
         
-        // Buat opening stock
         this.createOpeningStockFromSample(sampleData);
         
         console.log('✅ Sample data saved to localStorage');
@@ -1462,6 +803,46 @@ class SetupWizardMulti {
         }));
         
         localStorage.setItem('stockmint_opening_stocks', JSON.stringify(openingStocks));
+    }
+
+    // ===== COMPLETE SETUP =====
+    
+    async completeSetup() {
+        try {
+            console.log('✅ Completing setup process...');
+            
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
+            
+            this.createOpeningStock();
+            
+            this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
+            
+            console.log('✅ Setup completed, all data saved permanently in localStorage');
+            
+            setTimeout(() => {
+                window.location.hash = '#dashboard';
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error completing setup:', error);
+            this.showAlert(`Failed to complete setup: ${error.message}`, 'error');
+        }
+    }
+
+    clearSessionStorage() {
+        const keys = [
+            'stockmint_temp_company',
+            'stockmint_temp_warehouses',
+            'stockmint_temp_suppliers',
+            'stockmint_temp_customers',
+            'stockmint_temp_categories',
+            'stockmint_temp_products'
+        ];
+        
+        keys.forEach(key => {
+            sessionStorage.removeItem(key);
+        });
     }
 
     // ===== HELPER METHODS =====
@@ -2636,4 +2017,4 @@ class SetupWizardMulti {
 
 // Create global instance
 window.SetupWizardMulti = SetupWizardMulti;
-console.log('✅ SetupWizardMulti loaded successfully - FINAL IMPROVED VERSION');
+console.log('✅ SetupWizardMulti loaded successfully - COMPLETE VERSION');
