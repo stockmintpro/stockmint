@@ -1248,43 +1248,74 @@ class SetupWizardMulti {
     // ===== COMPLETE SETUP =====
     
     async completeSetup() {
-        try {
-            console.log('✅ Completing setup process...');
-            
-            // 1. Transfer data dari session storage ke local storage (permanen)
-            localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
-            localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
-            localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
-            localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
-            localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
-            localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
-            
-            // 2. Mark setup as completed
-            localStorage.setItem('stockmint_setup_completed', 'true');
-            localStorage.setItem('stockmint_setup_date', new Date().toISOString());
-            
-            // 3. Create opening stock
-            this.createOpeningStock();
-            
-            // 4. Clear session storage
-            this.clearSessionStorage();
-            
-            // 5. Show success message
-            this.showAlert('🎉 Setup completed successfully! Redirecting to dashboard...', 'success');
-            
-            console.log('✅ Setup completed, data saved permanently');
-            
-            // 6. Redirect
-            setTimeout(() => {
-                window.location.hash = '#dashboard';
-            }, 2000);
-            
-        } catch (error) {
-            console.error('Error completing setup:', error);
-            this.showAlert(`Failed to complete setup: ${error.message}`, 'error');
-        }
+      try {
+        console.log('✅ Completing setup process...');
+    
+        // 1. Save to localStorage (cache/offline)
+        localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
+        localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
+        localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
+        localStorage.setItem('stockmint_customers', JSON.stringify(this.setupData.customers));
+        localStorage.setItem('stockmint_categories', JSON.stringify(this.setupData.categories));
+        localStorage.setItem('stockmint_products', JSON.stringify(this.setupData.products));
+    
+        // 2. Mark setup as completed
+        localStorage.setItem('stockmint_setup_completed', 'true');
+        localStorage.setItem('stockmint_setup_date', new Date().toISOString());
+    
+        // 3. Create opening stock (local)
+        this.createOpeningStock();
+    
+        // 4. Clear session storage
+        this.clearSessionStorage();
+    
+        // 5. SAVE TO GOOGLE SHEETS (PRIMARY STORAGE)
+        await this.saveToGoogleSheets();
+    
+        // 6. Show success message
+        this.showAlert('🎉 Setup completed! Data saved to Google Sheets.', 'success');
+    
+        console.log('✅ Setup completed, data synced to Google Sheets');
+    
+        // 7. Redirect
+        setTimeout(() => {
+              window.location.hash = '#dashboard';
+        }, 2000);
+    
+      } catch (error) {
+        console.error('Error completing setup:', error);
+        this.showAlert(`Setup saved locally. Google Sheets error: ${error.message}`, 'warning');
+    
+        // Still redirect
+        setTimeout(() => {
+          window.location.hash = '#dashboard';
+        }, 3000);
+      }
     }
 
+    async saveToGoogleSheets() {
+      try {
+        // Check if Google Sheets service is available
+        if (!window.GoogleSheetsService || !window.GoogleSheetsService.isReady()) {
+          console.log('⚠️ Google Sheets not ready, saving locally only');
+          return;
+        }
+    
+        // Show progress
+        this.showAlert('Saving data to Google Sheets...', 'info');
+    
+        // Save all setup data
+        await window.GoogleSheetsService.saveSetupData(this.setupData);
+    
+        console.log('✅ Setup data saved to Google Sheets');
+        return true;
+    
+      } catch (error) {
+        console.error('❌ Google Sheets save failed:', error);
+        throw error;
+      }
+    }
+    
     clearSessionStorage() {
         sessionStorage.removeItem('stockmint_temp_company');
         sessionStorage.removeItem('stockmint_temp_warehouses');
