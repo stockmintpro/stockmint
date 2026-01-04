@@ -1,162 +1,416 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Redirecting... - StockMint</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating - StockMint</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            padding-top: 50px;
-            background: #f5f7fa;
-            color: #333;
+            background: linear-gradient(135deg, #19BEBB 0%, #0fa8a6 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
-        
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 30px;
+
+        .auth-container {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
         }
-        
+
+        .auth-header {
+            background: linear-gradient(135deg, #19BEBB 0%, #0fa8a6 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .auth-header i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .auth-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .auth-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .auth-content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
         .loading-spinner {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border: 5px solid #f3f3f3;
             border-top: 5px solid #19BEBB;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            margin: 0 auto 30px auto;
         }
-        
+
+        .progress-container {
+            width: 100%;
+            background: #f0f4f8;
+            border-radius: 10px;
+            height: 10px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #19BEBB 0%, #0fa8a6 100%);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step.active {
+            color: #19BEBB;
+            font-weight: 600;
+        }
+
+        .step i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .status-message {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+            border-left: 4px solid #19BEBB;
+        }
+
+        .status-message h3 {
+            color: #334155;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .status-message p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .spreadsheet-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .spreadsheet-info h4 {
+            color: #0369a1;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .spreadsheet-info a {
+            color: #0ea5e9;
+            text-decoration: none;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .spreadsheet-info a:hover {
+            text-decoration: underline;
+        }
+
+        .success-check {
+            font-size: 64px;
+            color: #10b981;
+            margin-bottom: 20px;
+            animation: bounce 0.5s ease;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            color: #ef4444;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #19BEBB;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #0fa8a6;
+            transform: translateY(-2px);
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        h2 {
-            color: #19BEBB;
-            margin-bottom: 10px;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        .success {
-            color: #10b981;
-            font-size: 48px;
-            margin-bottom: 20px;
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
-        
-        .error {
-            color: #ef4444;
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        
-        .plan-badge {
-            display: inline-block;
-            background: #19BEBB;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: 700;
-            margin: 10px 0;
-            font-size: 16px;
-        }
-        
-        button {
-            padding: 12px 24px;
-            background: #19BEBB;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 20px;
-            font-size: 16px;
-        }
-        
-        button:hover {
-            background: #0fa8a6;
+
+        @media (max-width: 480px) {
+            .auth-header {
+                padding: 30px 20px;
+            }
+            
+            .auth-content {
+                padding: 30px 20px;
+            }
+            
+            .auth-header i {
+                font-size: 48px;
+            }
+            
+            .auth-header h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="loading-spinner"></div>
-        <h2>Authenticating...</h2>
-        <p>Please wait while we log you in.</p>
+    <div class="auth-container" id="authContainer">
+        <div class="auth-header">
+            <i class="fas fa-shield-alt"></i>
+            <h1>StockMint Authentication</h1>
+            <p>Securely connecting to Google Sheets</p>
+        </div>
+        
+        <div class="auth-content">
+            <div class="loading-spinner" id="loadingSpinner"></div>
+            
+            <h2 id="statusTitle">Authenticating...</h2>
+            <p id="statusMessage">Please wait while we verify your credentials</p>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            
+            <div class="progress-steps">
+                <div class="step active" id="step1">
+                    <i class="fas fa-user-check"></i>
+                    <span>Authentication</span>
+                </div>
+                <div class="step" id="step2">
+                    <i class="fas fa-cloud"></i>
+                    <span>Google Sheets</span>
+                </div>
+                <div class="step" id="step3">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Complete</span>
+                </div>
+            </div>
+            
+            <div class="status-message" id="statusDetails">
+                <h3>Step 1: Verifying credentials</h3>
+                <p>Checking your Google account permissions...</p>
+            </div>
+            
+            <div id="spreadsheetInfo" style="display: none;">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            
+            <div id="errorContainer" style="display: none;">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
     </div>
-    
+
     <script>
-    // 1. Ambil token dari URL
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const token = params.get('access_token');
-    const error = params.get('error');
-    
-    if (error) {
-        // Jika error dari Google
-        document.querySelector('.container').innerHTML = `
-            <div class="error">❌</div>
-            <h2>Login Failed</h2>
-            <p>Error: ${error}</p>
-            <button onclick="window.location.href='../index.html'">Back to Login</button>`;
-    } else if (token) {
-        // 2. Ambil info user dari Google
-        fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(user => {
-            // 3. Simpan ke localStorage dengan plan BASIC
-            localStorage.setItem('stockmint_user', JSON.stringify({
-                name: user.name,
-                email: user.email,
-                picture: user.picture,
-                token: token,
-                isDemo: false,  // Tandai sebagai bukan demo
-                timestamp: Date.now()
-            }));
-            localStorage.setItem('stockmint_token', token);
+        // Progress animation
+        let progress = 0;
+        const progressBar = document.getElementById('progressBar');
+        const interval = setInterval(() => {
+            if (progress < 90) {
+                progress += 10;
+                progressBar.style.width = progress + '%';
+            }
+        }, 500);
+
+        // Update status function
+        function updateStatus(title, message, step, details) {
+            document.getElementById('statusTitle').textContent = title;
+            document.getElementById('statusMessage').textContent = message;
             
-            // SETEL PLAN BASIC secara otomatis untuk user Google
-            localStorage.setItem('stockmint_plan', 'basic');
+            // Update steps
+            document.querySelectorAll('.step').forEach((el, index) => {
+                if (index + 1 <= step) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
             
-            // Tampilkan pesan sukses dengan badge plan
-            document.querySelector('.container').innerHTML = `
-                <div class="success">✓</div>
-                <h2>Welcome, ${user.name}!</h2>
-                <p>You have successfully logged in with Google.</p>
-                <div class="plan-badge">BASIC PLAN ACTIVATED</div>
-                <p style="margin: 15px 0; font-size: 14px; color: #666;">
-                    You now have full access to all BASIC plan features.
-                </p>
-                <p style="font-weight: 600; color: #19BEBB;">
-                    Redirecting to dashboard...
+            // Update details
+            if (details) {
+                document.getElementById('statusDetails').innerHTML = details;
+            }
+        }
+
+        // Show success
+        function showSuccess(userName, spreadsheetUrl) {
+            clearInterval(interval);
+            progressBar.style.width = '100%';
+            
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            const successHTML = `
+                <div class="success-check">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Welcome, ${userName}!</h2>
+                <p>You're successfully authenticated and connected to Google Sheets</p>
+                
+                ${spreadsheetUrl ? `
+                <div class="spreadsheet-info">
+                    <h4>Your Google Sheets:</h4>
+                    <a href="${spreadsheetUrl}" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> Open Spreadsheet
+                    </a>
+                </div>
+                ` : ''}
+                
+                <p style="color: #64748b; margin-top: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    You will be redirected to the dashboard in a moment...
                 </p>
             `;
             
-            // 4. Redirect ke dashboard setelah 2 detik
+            document.querySelector('.auth-content').innerHTML = successHTML;
+            
+            // Redirect after 3 seconds
             setTimeout(() => {
                 window.location.href = '../app.html';
+            }, 3000);
+        }
+
+        // Show error
+        function showError(errorTitle, errorMessage) {
+            clearInterval(interval);
+            
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            const errorHTML = `
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2>${errorTitle}</h2>
+                <p>${errorMessage}</p>
+                
+                <button class="btn" onclick="window.location.href='../index.html'">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </button>
+                
+                <button class="btn" onclick="window.location.reload()" style="background: #6c757d; margin-left: 10px;">
+                    <i class="fas fa-redo"></i> Try Again
+                </button>
+            `;
+            
+            document.querySelector('.auth-content').innerHTML = errorHTML;
+        }
+
+        // Initial status update
+        updateStatus(
+            'Authenticating...',
+            'Connecting to Google account',
+            1,
+            '<h3>Step 1: Authorization</h3><p>Exchanging authorization code for access token...</p>'
+        );
+
+        // Check for URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            showError('Authentication Failed', `Error: ${error}. Please try again.`);
+        } else if (code) {
+            // We have a code, the main auth.js will handle it
+            updateStatus(
+                'Setting up Google Sheets...',
+                'Creating your personal spreadsheet',
+                2,
+                '<h3>Step 2: Google Sheets Setup</h3><p>Creating a new spreadsheet for your inventory data...</p>'
+            );
+            
+            // Simulate progress
+            setTimeout(() => {
+                updateStatus(
+                    'Finalizing setup...',
+                    'Almost ready!',
+                    3,
+                    '<h3>Step 3: Finalizing</h3><p>Setting up default sheets and permissions...</p>'
+                );
             }, 2000);
-        })
-        .catch(err => {
-            console.error(err);
-            document.querySelector('.container').innerHTML = `
-                <div class="error">❌</div>
-                <h2>Login Error</h2>
-                <p>Failed to get user information from Google.</p>
-                <button onclick="window.location.href='../index.html'">Back to Login</button>`;
-        });
-    } else {
-        // Jika tidak ada token, kembali ke login
-        document.querySelector('.container').innerHTML = `
-            <div class="error">❌</div>
-            <h2>No Access Token</h2>
-            <p>Authentication token not found. Please try logging in again.</p>
-            <button onclick="window.location.href='../index.html'">Back to Login</button>`;
-    }
+        } else {
+            showError('Invalid Request', 'No authorization code found. Please try logging in again.');
+        }
     </script>
+    
+    <!-- Load auth.js to handle the actual OAuth flow -->
+    <script src="../js/auth.js"></script>
 </body>
 </html>
