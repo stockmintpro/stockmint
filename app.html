@@ -176,85 +176,49 @@
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             console.log('📄 DOM Content Loaded - Starting initialization...');
-            
+    
             // Check authentication
             if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
                 console.log('🔒 Not authenticated, redirecting to login');
                 window.location.href = 'index.html';
                 return;
             }
-            
+    
             console.log('✅ User authenticated');
-            
+    
             // Wait a bit more to ensure all scripts are loaded
             const initInterval = setInterval(() => {
                 if (checkRequiredScripts()) {
                     clearInterval(initInterval);
-                    console.log('✅ All required scripts loaded, initializing app...');
-                    
-                    try {
-                        // Initialize the app
-                        if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
-                            console.log('🚀 Calling StockMintApp.init()...');
-                            window.StockMintApp.init();
-                        } else {
-                            console.error('❌ StockMintApp.init is not a function');
-                            showError('StockMintApp not properly initialized');
-                        }
-                    } catch (error) {
-                        console.error('❌ Error initializing app:', error);
-                        showError(error.message);
+                console.log('✅ All required scripts loaded, initializing app...');
+            
+                try {
+                    // Initialize the app
+                    if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
+                        console.log('🚀 Calling StockMintApp.init()...');
+                        window.StockMintApp.init();
+                    } else {
+                        console.error('❌ StockMintApp.init is not a function');
+                        showError('StockMintApp not properly initialized');
                     }
+                } catch (error) {
+                    console.error('❌ Error initializing app:', error);
+                    showError(error.message);
+                }
                 } else {
                     console.log('⏳ Waiting for scripts to load...');
                 }
             }, 100);
-            
+    
             // Timeout after 5 seconds
-            setTimeout(() => {
+                setTimeout(() => {
                 clearInterval(initInterval);
                 if (!checkRequiredScripts()) {
                     console.error('❌ Script loading timeout');
                     showError('Some scripts failed to load. Please refresh the page.');
-                }
-            }, 5000);
-        });
-        
-        // Function to show error message
-        function showError(message) {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 48px; margin-bottom: 20px;"></i>
-                        <h3>Failed to Load Application</h3>
-                        <p>Error: ${message}</p>
-                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
-                            <button onclick="window.location.reload()" style="
-                                background: #19BEBB;
-                                color: white;
-                                border: none;
-                                padding: 10px 20px;
-                                border-radius: 5px;
-                                cursor: pointer;
-                            ">
-                                <i class="fas fa-redo"></i> Reload
-                            </button>
-                            <button onclick="window.location.href='index.html'" style="
-                                background: #6c757d;
-                                color: white;
-                                border: none;
-                                padding: 10px 20px;
-                                border-radius: 5px;
-                                cursor: pointer;
-                            ">
-                                <i class="fas fa-sign-out-alt"></i> Back to Login
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-        }
+                    }
+                }, 5000);
+            });
         
         // Handle script loading errors
         window.addEventListener('error', function(event) {
