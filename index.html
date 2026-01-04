@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"> <!-- Ganti ke English untuk konsistensi -->
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -96,7 +96,8 @@
             font-size: 18px;
         }
 
-        .google-login-btn {
+        /* Updated Google Button Styles */
+        .btn-google {
             width: 100%;
             padding: 16px;
             background: white;
@@ -113,11 +114,16 @@
             transition: all 0.3s ease;
         }
 
-        .google-login-btn:hover {
+        .btn-google:hover {
             background: #f8f9fa;
             border-color: #c3c3c3;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .btn-google i {
+            color: #DB4437; /* Google Red */
+            font-size: 20px;
         }
 
         .divider {
@@ -157,6 +163,9 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .demo-btn:hover {
@@ -217,9 +226,11 @@
         <div class="login-body">
             <div class="login-method">
                 <h3>Login with Google Account</h3>
-                <button id="googleLoginBtn" class="google-login-btn">
-                    <div class="google-icon"></div>
-                    <span>Continue with Google</span>
+                
+                <!-- Updated Google Login Button -->
+                <button onclick="handleGoogleLogin()" class="btn-google" id="googleLoginBtn">
+                    <i class="fab fa-google"></i> 
+                    <span>Login with Google</span>
                 </button>
                 
                 <div class="requirements">
@@ -265,36 +276,35 @@
     </div>
 
     <script>
-        // ===== CONFIGURATION =====
-        const CONFIG = {
-            clientId: '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com',
-            redirectUri: window.location.origin + '/stockmint/auth/callback.html',
-            scopes: [
+        // ===== GOOGLE LOGIN FUNCTION =====
+        function handleGoogleLogin() {
+            const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
+            const redirectUri = window.location.origin + '/auth/callback.html';
+            const scopes = [
                 'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/userinfo.profile', 
                 'https://www.googleapis.com/auth/spreadsheets'
-            ].join(' ')
-        };
-
-        // ===== GOOGLE LOGIN =====
-        document.getElementById('googleLoginBtn').addEventListener('click', () => {
-            const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-            const params = {
-                client_id: CONFIG.clientId,
-                redirect_uri: CONFIG.redirectUri,
-                response_type: 'token',
-                scope: CONFIG.scopes,
-                include_granted_scopes: 'true',
-                state: 'stockmint_' + Date.now(),
-                prompt: 'select_account'
-            };
-
-            Object.keys(params).forEach(key => 
-                authUrl.searchParams.append(key, params[key])
-            );
-
-            window.location.href = authUrl.toString();
-        });
+            ].join(' ');
+            
+            // Generate a random state for security
+            const state = 'stockmint_' + Math.random().toString(36).substring(2, 15);
+            
+            // Store state in localStorage to verify later
+            localStorage.setItem('oauth_state', state);
+            
+            // Build the OAuth URL
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${encodeURIComponent(clientId)}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=code&` +
+                `scope=${encodeURIComponent(scopes)}&` +
+                `access_type=offline&` +
+                `prompt=consent&` +
+                `state=${state}`;
+                
+            // Redirect to Google OAuth
+            window.location.href = authUrl;
+        }
 
         // ===== DEMO LOGIN =====
         document.getElementById('demoLoginBtn').addEventListener('click', () => {
@@ -311,15 +321,32 @@
             localStorage.setItem('stockmint_token', 'demo_token_' + Date.now());
             localStorage.setItem('stockmint_plan', 'demo');
 
-            // Redirect to SPA
-            window.location.href = 'app.html';
+            // Show loading message
+            const btn = document.getElementById('demoLoginBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Demo...';
+            btn.disabled = true;
+
+            // Redirect to SPA after a short delay
+            setTimeout(() => {
+                window.location.href = 'app.html';
+            }, 1000);
         });
 
         // ===== CHECK EXISTING LOGIN =====
         window.addEventListener('load', () => {
             const token = localStorage.getItem('stockmint_token');
-            if (token) {
+            if (token && !token.startsWith('demo_token_')) {
                 window.location.href = 'app.html';
+            }
+        });
+
+        // ===== ADD CLICK EVENT LISTENER AS BACKUP =====
+        document.getElementById('googleLoginBtn').addEventListener('click', function(e) {
+            // This is just a backup - the onclick handler already does the job
+            // but we keep it for compatibility
+            if (!this.getAttribute('onclick')) {
+                handleGoogleLogin();
             }
         });
     </script>
