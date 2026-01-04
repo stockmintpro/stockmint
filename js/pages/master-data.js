@@ -576,48 +576,71 @@ class MasterDataPage {
     }
 
     async resetAllData() {
+      try {
+        // Show confirmation
+        const confirmed = await this.showResetConfirmation();
+        if (!confirmed) return;
+    
+        // 1. Reset Google Sheets (clear data but keep file)
         try {
-            // Hapus semua data dari localStorage
-            const keysToRemove = [
-                'stockmint_company',
-                'stockmint_warehouses',
-                'stockmint_suppliers',
-                'stockmint_customers',
-                'stockmint_categories',
-                'stockmint_products',
-                'stockmint_opening_stocks',
-                'stockmint_setup_completed',
-                'stockmint_setup_date',
-                'stockmint_migration_completed',
-                'stockmint_migration_file',
-                'stockmint_migration_date',
-                'stockmint_transactions',
-                'stockmint_purchases',
-                'stockmint_sales'
-            ];
-            
-            keysToRemove.forEach(key => {
-                localStorage.removeItem(key);
-            });
-            
-            // Tampilkan pesan sukses
-            this.showAlert('✅ All data has been reset successfully!', 'success');
-            
-            // Update previews
-            setTimeout(() => {
-                this.updateDataPreviews();
-                this.showAlert('Data reset complete. You can now start fresh!', 'success');
-            }, 1000);
-            
-            return true;
-            
-        } catch (error) {
-            console.error('Error resetting data:', error);
-            this.showAlert('Failed to reset data: ' + error.message, 'error');
-            return false;
+          if (window.GoogleSheetsService && window.GoogleSheetsService.isReady()) {
+            this.showAlert('Clearing Google Sheets data...', 'info');
+            await window.GoogleSheetsService.resetAllData();
+          }
+        } catch (sheetsError) {
+          console.error('Google Sheets reset failed:', sheetsError);
+        // Continue with local reset anyway
         }
+    
+        // 2. Clear localStorage (except auth and spreadsheet info)
+        const preserveKeys = [
+          'stockmint_user',
+          'stockmint_token',
+          'stockmint_spreadsheet_id', 
+          'stockmint_spreadsheet_url',
+          'stockmint_has_sheets_access',
+          'stockmint_plan'
+        ];
+    
+        const backup = {};
+        preserveKeys.forEach(key => {
+          const value = localStorage.getItem(key);
+          if (value) backup[key] = value;
+        });
+    
+        // Clear all stockmint data
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('stockmint_')) {
+            localStorage.removeItem(key);
+          }
+        });
+    
+        // Restore preserved data
+        Object.entries(backup).forEach(([key, value]) => {
+          localStorage.setItem(key, value);
+        });
+    
+        // 3. Clear session storage
+        sessionStorage.clear();
+    
+        // 4. Show success
+        this.showAlert('✅ All data has been reset! Google Sheets cleared.', 'success');
+    
+        // 5. Update UI
+        setTimeout(() => {
+          this.updateDataPreviews();
+          this.showAlert('You can now start fresh setup.', 'info');
+        }, 1000);
+    
+        return true;
+    
+      } catch (error) {
+        console.error('Error resetting data:', error);
+        this.showAlert('Failed to reset data: ' + error.message, 'error');
+        return false;
+      }
     }
-
+    
     backupData() {
         try {
             // Collect all data
