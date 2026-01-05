@@ -1,4 +1,4 @@
-// StockMint Main Application - COMPLETE VERSION WITH PRESERVED SETUP DATA
+// StockMint Main Application - COMPLETE VERSION WITH GOOGLE SHEETS INTEGRATION
 
 class StockMintApp {
   constructor() {
@@ -10,13 +10,14 @@ class StockMintApp {
     this.currentPlan = 'basic'; // default
     this.attemptedPage = null; // Untuk menyimpan halaman yang dicoba diakses
     this.inSetupMode = false; // Flag untuk mode setup
+    this.googleSheetsReady = false; // Flag untuk status Google Sheets
   }
   
   // Initialize application
-  init() {
+  async init() {
     console.log('🚀 StockMintApp initializing...');
 
-     // PENTING: Tampilkan app container dulu, sembunyikan loading screen nanti
+    // Tampilkan app container dulu, sembunyikan loading screen nanti
     const loadingScreen = document.getElementById('loadingScreen');
     const appContainer = document.getElementById('appContainer');
     
@@ -32,7 +33,12 @@ class StockMintApp {
       // Step 2: Setup configuration
       this.setupConfig();
       
-      // Step 3: Check if first-time setup is needed
+      // Step 3: Initialize Google Sheets for Google users
+      if (!this.user?.isDemo) {
+        await this.initGoogleSheets();
+      }
+      
+      // Step 4: Check if first-time setup is needed
       const shouldSetup = this.checkFirstTimeSetup();
       
       if (shouldSetup) {
@@ -42,16 +48,16 @@ class StockMintApp {
         return; // Keluar dari init sementara
       }
       
-      // Step 4: Load UI components (jika sudah setup)
+      // Step 5: Load UI components (jika sudah setup)
       this.loadComponents();
       
-      // Step 5: Setup routing
+      // Step 6: Setup routing
       this.setupRouting();
       
-      // Step 6: Load initial page
+      // Step 7: Load initial page
       this.loadInitialPage();
       
-      // Step 7: Mark as initialized
+      // Step 8: Mark as initialized
       this.initialized = true;
       
       console.log('✅ StockMintApp initialized successfully');
@@ -72,13 +78,57 @@ class StockMintApp {
     }
   }
   
+  // Initialize Google Sheets service
+  async initGoogleSheets() {
+    try {
+      console.log('🔄 Initializing Google Sheets service...');
+      
+      // Check if Google Sheets service is available
+      if (typeof window.GoogleSheetsService === 'undefined') {
+        console.warn('⚠️ Google Sheets service not available, using local storage only');
+        this.googleSheetsReady = false;
+        return false;
+      }
+      
+      // Initialize the service
+      const initialized = await window.GoogleSheetsService.init();
+      
+      if (initialized) {
+        console.log('✅ Google Sheets service initialized');
+        this.googleSheetsReady = true;
+        
+        // Check if we already have a spreadsheet
+        const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        if (spreadsheetId) {
+          console.log(`📊 Using existing Google Sheet: ${spreadsheetId}`);
+          
+          // Update Google Sheets Service with existing ID
+          window.GoogleSheetsService.spreadsheetId = spreadsheetId;
+        } else {
+          console.log('📝 No Google Sheet found, will create during setup');
+        }
+        
+        return true;
+      } else {
+        console.warn('⚠️ Google Sheets service not ready, using local storage only');
+        this.googleSheetsReady = false;
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error initializing Google Sheets:', error);
+      this.googleSheetsReady = false;
+      return false;
+    }
+  }
+  
   // Load user data from localStorage
   loadUserData() {
     try {
       const userData = localStorage.getItem('stockmint_user');
       if (userData) {
         this.user = JSON.parse(userData);
-        console.log('👤 User loaded:', this.user.name);
+        console.log('👤 User loaded:', this.user.name, 'isDemo:', this.user.isDemo);
       } else {
         console.warn('⚠️ No user data found');
         this.user = { name: 'Guest', isDemo: true };
@@ -109,6 +159,9 @@ class StockMintApp {
     // Set current plan in config
     this.config.currentPlan = this.currentPlan;
     this.config.currentPlanBadge = this.config.planBadges[this.currentPlan] || this.config.planBadges.basic;
+    
+    // Set Google Sheets availability
+    this.config.googleSheetsAvailable = this.googleSheetsReady && !this.user?.isDemo;
   }
   
   // Check if first-time setup is needed
@@ -134,6 +187,9 @@ class StockMintApp {
   // Load UI components (sidebar, navbar)
   loadComponents() {
     console.log('🛠️ Loading components...');
+    
+    // Update config with Google Sheets status
+    this.config.googleSheetsAvailable = this.googleSheetsReady && !this.user?.isDemo;
     
     // Load sidebar
     if (window.StockMintSidebar) {
@@ -209,6 +265,14 @@ class StockMintApp {
     try {
       const hash = window.location.hash.substring(1) || 'dashboard';
       console.log('➡️ Navigating to:', hash, 'Current page:', this.currentPage);
+      
+      // Check for Google Sheets page
+      if (hash === 'googlesheets') {
+        this.currentPage = 'googlesheets';
+        this.loadPage('googlesheets');
+        document.title = `StockMint - Google Sheets`;
+        return;
+      }
       
       // Jika sudah di halaman yang sama, skip
       if (hash === this.currentPage) {
@@ -330,8 +394,17 @@ class StockMintApp {
     // Load actual content
     setTimeout(() => {
       try {
+        // TANGANI HALAMAN GOOGLE SHEETS
+        if (page === 'googlesheets') {
+          if (typeof GoogleSheetsPage !== 'undefined') {
+            const googleSheetsPage = new GoogleSheetsPage();
+            contentArea.innerHTML = googleSheetsPage.render();
+          } else {
+            contentArea.innerHTML = this.getGoogleSheetsPageContent();
+          }
+        }
         // TANGANI HALAMAN MASTER-DATA KHUSUS
-        if (page === 'master-data') {
+        else if (page === 'master-data') {
           if (window.MasterDataPage) {
             const masterDataPage = new MasterDataPage();
             contentArea.innerHTML = masterDataPage.render();
@@ -459,7 +532,8 @@ class StockMintApp {
       'setup/customer': 'Customer Setup',
       'setup/category': 'Category Setup',
       'setup/product': 'Product Setup',
-      'feature-locked': 'Feature Locked'
+      'feature-locked': 'Feature Locked',
+      'googlesheets': 'Google Sheets'
     };
     
     return titles[page] || this.formatPageName(page);
@@ -485,7 +559,8 @@ class StockMintApp {
       'help': 'Documentation and support',
       'setup/start-new': 'Set up your business information',
       'setup/migrate': 'Import your existing data',
-      'feature-locked': 'Upgrade your plan to unlock this feature'
+      'feature-locked': 'Upgrade your plan to unlock this feature',
+      'googlesheets': 'Google Sheets integration and storage'
     };
     
     return subtitles[page] || 'Manage your business operations';
@@ -507,10 +582,113 @@ class StockMintApp {
     return this.getDefaultPageContent(page);
   }
   
+  // Google Sheets page content (fallback jika GoogleSheetsPage tidak tersedia)
+  getGoogleSheetsPageContent() {
+    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+    const spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
+    const user = this.user;
+    
+    if (!spreadsheetId || user?.isDemo) {
+      return `
+        <div class="page-content">
+          <h1><i class="fab fa-google-drive"></i> Google Sheets</h1>
+          <div class="card">
+            <div class="card-header">
+              <h3>Google Sheets Integration</h3>
+            </div>
+            <div class="card-body">
+              <div style="text-align: center; padding: 40px 20px;">
+                <i class="fab fa-google-drive" style="font-size: 64px; color: #4285f4; margin-bottom: 20px;"></i>
+                <h3>No Google Sheets Connected</h3>
+                <p style="color: #666; margin: 15px 0;">
+                  ${user?.isDemo 
+                    ? 'Google Sheets integration is not available in DEMO mode. Login with Google to enable cloud storage.' 
+                    : 'Your data is currently stored locally. Data will be saved to Google Sheets during setup.'}
+                </p>
+                <div style="margin-top: 30px;">
+                  ${user?.isDemo 
+                    ? `<a href="index.html" class="btn btn-primary">
+                        <i class="fab fa-google"></i> Login with Google
+                      </a>`
+                    : `<button onclick="window.location.hash='#dashboard'" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                      </button>`
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="page-content">
+        <h1><i class="fab fa-google-drive"></i> Google Sheets</h1>
+        <div class="card">
+          <div class="card-header">
+            <h3>Your Data is Securely Stored in Google Sheets</h3>
+          </div>
+          <div class="card-body">
+            <div style="text-align: center; padding: 30px 20px;">
+              <i class="fab fa-google-drive" style="font-size: 64px; color: #0f9d58; margin-bottom: 20px;"></i>
+              <h3 style="color: #0f9d58;">✓ Connected to Google Sheets</h3>
+              <p style="color: #666; margin: 15px 0;">
+                All your inventory data is automatically synced to your personal Google Sheets.
+              </p>
+              
+              <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 25px 0; text-align: left;">
+                <h4 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Storage Information</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                  <div>
+                    <p style="margin: 5px 0; color: #666;">Status:</p>
+                    <p style="margin: 5px 0; font-weight: 600; color: #0f9d58;">Active</p>
+                  </div>
+                  <div>
+                    <p style="margin: 5px 0; color: #666;">Owner:</p>
+                    <p style="margin: 5px 0; font-weight: 600;">${user?.email || 'You'}</p>
+                  </div>
+                  <div>
+                    <p style="margin: 5px 0; color: #666;">Spreadsheet ID:</p>
+                    <p style="margin: 5px 0; font-weight: 600; font-family: monospace; font-size: 12px;">${spreadsheetId}</p>
+                  </div>
+                  <div>
+                    <p style="margin: 5px 0; color: #666;">Last Synced:</p>
+                    <p style="margin: 5px 0; font-weight: 600;">${new Date().toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+                ${spreadsheetUrl ? `
+                  <a href="${spreadsheetUrl}" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt"></i> Open Google Sheets
+                  </a>
+                ` : ''}
+                <button onclick="window.StockMintApp.forceSyncToGoogleSheets()" class="btn btn-success">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="location.reload()" class="btn btn-secondary">
+                  <i class="fas fa-redo"></i> Refresh
+                </button>
+              </div>
+              
+              <p style="margin-top: 25px; font-size: 13px; color: #999;">
+                <i class="fas fa-shield-alt"></i> Only you have access to this spreadsheet
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
   // Dashboard content
   getDashboardContent() {
     const userName = this.user?.name || 'User';
     const plan = this.currentPlan.toUpperCase();
+    const isGoogleUser = !this.user?.isDemo;
+    const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
     
     return `
       <div class="dashboard-content">
@@ -523,6 +701,17 @@ class StockMintApp {
               <i class="fas fa-info-circle"></i>
               <span>Demo mode has limited features. Upgrade to unlock all features.</span>
             </div>` : ''}
+          
+          ${isGoogleUser && hasGoogleSheet ? `
+            <div class="google-sheets-status" style="background: #e8f5e8; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px 15px; margin: 15px 0; display: flex; align-items: center; gap: 10px; color: #2e7d32;">
+              <i class="fab fa-google-drive" style="color: #0f9d58;"></i>
+              <span>Your data is synced to Google Sheets</span>
+              <a href="#googlesheets" style="margin-left: auto; font-size: 14px; color: #19BEBB; text-decoration: none;">
+                <i class="fas fa-external-link-alt"></i> View
+              </a>
+            </div>
+          ` : ''}
+          
           <button class="btn-refresh" id="refreshBtn">
             <i class="fas fa-sync-alt"></i> Refresh Data
           </button>
@@ -1038,6 +1227,11 @@ class StockMintApp {
             </div>
             <h2 style="color: #333; margin-bottom: 10px;">Welcome to StockMint!</h2>
             <p style="color: #666;">Let's set up your inventory system</p>
+            ${!this.user?.isDemo ? `
+              <div style="background: #e8f5e8; border-radius: 8px; padding: 10px; margin-top: 15px; color: #2e7d32;">
+                <i class="fab fa-google-drive"></i> Google Sheets integration enabled
+              </div>
+            ` : ''}
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
@@ -1218,6 +1412,42 @@ class StockMintApp {
     notification.querySelector('.notification-close').addEventListener('click', () => {
       notification.remove();
     });
+  }
+  
+  // Force sync to Google Sheets
+  async forceSyncToGoogleSheets() {
+    try {
+      if (!window.GoogleSheetsService || this.user?.isDemo) {
+        this.showNotification('Google Sheets not available for demo users', 'error');
+        return;
+      }
+      
+      this.showNotification('Syncing data to Google Sheets...', 'info');
+      
+      // Prepare data from localStorage
+      const setupData = {
+        company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+        warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+        suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+        customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+        categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+        products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+      };
+      
+      // Save to Google Sheets
+      await window.GoogleSheetsService.saveSetupData(setupData);
+      
+      this.showNotification('Data synced to Google Sheets successfully!', 'success');
+      
+      // Refresh the page to show updated status
+      setTimeout(() => {
+        window.location.hash = '#googlesheets';
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error syncing to Google Sheets:', error);
+      this.showNotification(`Sync failed: ${error.message}`, 'error');
+    }
   }
   
   // Show critical error
@@ -1456,6 +1686,10 @@ class StockMintApp {
         'stockmint_migration_file': localStorage.getItem('stockmint_migration_file'),
         'stockmint_migration_date': localStorage.getItem('stockmint_migration_date'),
         
+        // Google Sheets data (jika ada)
+        'stockmint_google_sheet_id': localStorage.getItem('stockmint_google_sheet_id'),
+        'stockmint_google_sheet_url': localStorage.getItem('stockmint_google_sheet_url'),
+        
         // Transaction data (jika ingin dipertahankan)
         'stockmint_transactions': localStorage.getItem('stockmint_transactions'),
         'stockmint_purchases': localStorage.getItem('stockmint_purchases'),
@@ -1495,7 +1729,7 @@ class StockMintApp {
 
 // Create global instance
 window.StockMintApp = new StockMintApp();
-console.log('✅ StockMintApp instance created - WITH PRESERVED SETUP DATA');
+console.log('✅ StockMintApp instance created - WITH GOOGLE SHEETS INTEGRATION');
 
 // ===== TEMPORARY PATCH FOR SETUP WIZARD =====
 // Ini akan memastikan setup wizard berfungsi meskipun routing bermasalah
