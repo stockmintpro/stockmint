@@ -144,11 +144,9 @@
     <!-- Load libraries untuk XLSX jika diperlukan -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="js/google-sheets.js"></script> <!-- Tambah di sini -->
-    <!-- Setup Wizard dan Master Data DASHBOARD -->
-    <script src="js/pages/setup-wizard-multi.js?v=3.2"></script> <!-- PERBAIKI VERSION -->
-    <script src="js/pages/master-data.js"></script>
-    <!-- Main App -->
-    <script src="js/app.js?v=3.2"></script> <!-- PERBAIKI VERSION -->
+    <script src="js/pages/setup-wizard-multi.js?v=3.0"></script>
+    <!-- Load main app -->
+    <script src="js/app.js"></script>
     
     <!-- Initialize App Script -->
     <script>
@@ -174,86 +172,87 @@
         }
         
         // Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM Content Loaded - Starting initialization...');
-    
-    // ===== CEK KUSUS UNTUK DEMO USER =====
-    const token = localStorage.getItem('stockmint_token');
-    const user = localStorage.getItem('stockmint_user');
-    
-    // Jika demo user, bypass semua pengecekan auth.js
-    if (token && token.startsWith('demo_token_') && user) {
-        console.log('👤 Demo user detected, bypassing auth check...');
-        initAppForDemo();
-        return;
-    }
-    // ===== END CEK DEMO USER =====
-    
-    // Check authentication untuk Google user
-    if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
-        console.log('🔒 Not authenticated, redirecting to login');
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    console.log('✅ User authenticated');
-    
-    // Wait a bit more to ensure all scripts are loaded
-    const initInterval = setInterval(() => {
-        if (checkRequiredScripts()) {
-            clearInterval(initInterval);
-            console.log('✅ All required scripts loaded, initializing app...');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM Content Loaded - Starting initialization...');
             
-            try {
-                // Initialize the app
-                if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
-                    console.log('🚀 Calling StockMintApp.init()...');
-                    window.StockMintApp.init();
-                } else {
-                    console.error('❌ StockMintApp.init is not a function');
-                    showError('StockMintApp not properly initialized');
-                }
-            } catch (error) {
-                console.error('❌ Error initializing app:', error);
-                showError(error.message);
+            // Check authentication
+            if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
+                console.log('🔒 Not authenticated, redirecting to login');
+                window.location.href = 'index.html';
+                return;
             }
-        } else {
-            console.log('⏳ Waiting for scripts to load...');
-        }
-    }, 100);
-    
-    // Timeout after 5 seconds
-    setTimeout(() => {
-        clearInterval(initInterval);
-        if (!checkRequiredScripts()) {
-            console.error('❌ Script loading timeout');
-            showError('Some scripts failed to load. Please refresh the page.');
-        }
-    }, 5000);
-});
-
-// ===== FUNGSI BARU UNTUK DEMO USER =====
-function initAppForDemo() {
-    // Hide loading screen
-    const loadingScreen = document.getElementById('loadingScreen');
-    const appContainer = document.getElementById('appContainer');
-    
-    if (loadingScreen) loadingScreen.style.display = 'none';
-    if (appContainer) {
-        appContainer.classList.remove('hidden');
+            
+            console.log('✅ User authenticated');
+            
+            // Wait a bit more to ensure all scripts are loaded
+            const initInterval = setInterval(() => {
+                if (checkRequiredScripts()) {
+                    clearInterval(initInterval);
+                    console.log('✅ All required scripts loaded, initializing app...');
+                    
+                    try {
+                        // Initialize the app
+                        if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
+                            console.log('🚀 Calling StockMintApp.init()...');
+                            window.StockMintApp.init();
+                        } else {
+                            console.error('❌ StockMintApp.init is not a function');
+                            showError('StockMintApp not properly initialized');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error initializing app:', error);
+                        showError(error.message);
+                    }
+                } else {
+                    console.log('⏳ Waiting for scripts to load...');
+                }
+            }, 100);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(initInterval);
+                if (!checkRequiredScripts()) {
+                    console.error('❌ Script loading timeout');
+                    showError('Some scripts failed to load. Please refresh the page.');
+                }
+            }, 5000);
+        });
         
-        // Initialize basic components
-        if (window.StockMintNavbar && window.StockMintSidebar) {
-            window.StockMintNavbar.init();
-            window.StockMintSidebar.init();
+        // Function to show error message
+        function showError(message) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 48px; margin-bottom: 20px;"></i>
+                        <h3>Failed to Load Application</h3>
+                        <p>Error: ${message}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                            <button onclick="window.location.reload()" style="
+                                background: #19BEBB;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-redo"></i> Reload
+                            </button>
+                            <button onclick="window.location.href='index.html'" style="
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                            ">
+                                <i class="fas fa-sign-out-alt"></i> Back to Login
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
         }
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-            window.location.hash = '#dashboard';
-        }, 100);
-    }
-}
         
         // Handle script loading errors
         window.addEventListener('error', function(event) {
