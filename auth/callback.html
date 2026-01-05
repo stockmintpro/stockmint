@@ -131,32 +131,97 @@
                 <p style="margin: 15px 0; font-size: 14px; color: #666;">
                     You now have full access to all BASIC plan features.
                 </p>
-                <p style="font-weight: 600; color: #19BEBB;">
-                    Redirecting to dashboard...
+                <p style="margin: 10px 0; font-size: 14px; color: #19BEBB;">
+                    <i class="fas fa-sync-alt"></i> Creating your Google Sheets...
                 </p>
-            `;
+                <div style="width: 100%; height: 4px; background: #e9ecef; border-radius: 2px; margin: 15px 0;">
+                    <div id="progressBar" style="width: 0%; height: 100%; background: #19BEBB; border-radius: 2px; transition: width 0.3s;"></div>
+                </div>
+    `         ;
             
-            // 4. Redirect ke dashboard setelah 2 detik
+            // 4. Coba buat Google Sheets
+    createUserSpreadsheet(token, user)
+        .then(spreadsheetInfo => {
+            document.getElementById('progressBar').style.width = '100%';
+            
+            if (spreadsheetInfo) {
+                document.querySelector('.container').innerHTML += `
+                    <p style="color: #10b981; font-weight: 600;">
+                        <i class="fas fa-check"></i> Google Sheets created successfully!
+                    </p>
+                `;
+            } else {
+                document.querySelector('.container').innerHTML += `
+                    <p style="color: #f59e0b; font-weight: 600;">
+                        <i class="fas fa-exclamation-triangle"></i> Using local storage. Google Sheets will be created during setup.
+                    </p>
+                `;
+            }
+            
+            // 5. Redirect ke dashboard setelah 2 detik
             setTimeout(() => {
                 window.location.href = '../app.html';
             }, 2000);
         })
-        .catch(err => {
-            console.error(err);
-            document.querySelector('.container').innerHTML = `
-                <div class="error">❌</div>
-                <h2>Login Error</h2>
-                <p>Failed to get user information from Google.</p>
-                <button onclick="window.location.href='../index.html'">Back to Login</button>`;
+        .catch(error => {
+            console.error('Error creating spreadsheet:', error);
+            document.querySelector('.container').innerHTML += `
+                <p style="color: #ef4444; font-weight: 600;">
+                    <i class="fas fa-exclamation-circle"></i> Using local storage. Google Sheets will be created during setup.
+                </p>
+            `;
+            
+            setTimeout(() => {
+                window.location.href = '../app.html';
+            }, 2000);
         });
-    } else {
-        // Jika tidak ada token, kembali ke login
-        document.querySelector('.container').innerHTML = `
-            <div class="error">❌</div>
-            <h2>No Access Token</h2>
-            <p>Authentication token not found. Please try logging in again.</p>
-            <button onclick="window.location.href='../index.html'">Back to Login</button>`;
-    }
+})
+
+// ... sebelum tag script tutup, tambahkan fungsi ...
+
+function createUserSpreadsheet(token, user) {
+    return new Promise((resolve) => {
+        // Try to create spreadsheet
+        fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                properties: {
+                    title: `StockMint - ${user.name || user.email}`,
+                    locale: 'id_ID'
+                },
+                sheets: [{
+                    properties: {
+                        title: 'StockMint_Data',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                }]
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Failed to create spreadsheet');
+        })
+        .then(data => {
+            // Save spreadsheet info
+            localStorage.setItem('stockmint_google_sheet_id', data.spreadsheetId);
+            localStorage.setItem('stockmint_google_sheet_url', data.spreadsheetUrl);
+            resolve(data);
+        })
+        .catch(error => {
+            console.log('Spreadsheet will be created during setup:', error);
+            resolve(null);
+        });
+    });
+}
     </script>
 </body>
 </html>
