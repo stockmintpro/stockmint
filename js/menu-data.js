@@ -10,6 +10,19 @@ const StockMintMenu = {
       icon: 'fas fa-chart-line',
       url: '#dashboard'
     },
+
+    // Tambahkan menu baru setelah Dashboard
+    {
+      id: 'googlesheets',
+      title: 'Google Sheets',
+      icon: 'fab fa-google-drive',
+      path: '#googlesheets',
+      roles: ['admin', 'owner'],
+      showIf: () => {
+        const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+        return !user.isDemo && localStorage.getItem('stockmint_google_sheet_id');
+      }
+    },
     
     // ========== MASTER DATA ==========
     {
