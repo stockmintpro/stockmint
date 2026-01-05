@@ -174,51 +174,86 @@
         }
         
         // Initialize app when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM Content Loaded - Starting initialization...');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOM Content Loaded - Starting initialization...');
     
-            // Check authentication
-            if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
-                console.log('🔒 Not authenticated, redirecting to login');
-                window.location.href = 'index.html';
-                return;
-            }
+    // ===== CEK KUSUS UNTUK DEMO USER =====
+    const token = localStorage.getItem('stockmint_token');
+    const user = localStorage.getItem('stockmint_user');
     
-            console.log('✅ User authenticated');
+    // Jika demo user, bypass semua pengecekan auth.js
+    if (token && token.startsWith('demo_token_') && user) {
+        console.log('👤 Demo user detected, bypassing auth check...');
+        initAppForDemo();
+        return;
+    }
+    // ===== END CEK DEMO USER =====
     
-            // Wait a bit more to ensure all scripts are loaded
-            const initInterval = setInterval(() => {
-                if (checkRequiredScripts()) {
-                    clearInterval(initInterval);
-                console.log('✅ All required scripts loaded, initializing app...');
+    // Check authentication untuk Google user
+    if (!window.StockMintAuth || !window.StockMintAuth.checkAuth()) {
+        console.log('🔒 Not authenticated, redirecting to login');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    console.log('✅ User authenticated');
+    
+    // Wait a bit more to ensure all scripts are loaded
+    const initInterval = setInterval(() => {
+        if (checkRequiredScripts()) {
+            clearInterval(initInterval);
+            console.log('✅ All required scripts loaded, initializing app...');
             
-                try {
-                    // Initialize the app
-                    if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
-                        console.log('🚀 Calling StockMintApp.init()...');
-                        window.StockMintApp.init();
-                    } else {
-                        console.error('❌ StockMintApp.init is not a function');
-                        showError('StockMintApp not properly initialized');
-                    }
-                } catch (error) {
-                    console.error('❌ Error initializing app:', error);
-                    showError(error.message);
-                }
+            try {
+                // Initialize the app
+                if (window.StockMintApp && typeof window.StockMintApp.init === 'function') {
+                    console.log('🚀 Calling StockMintApp.init()...');
+                    window.StockMintApp.init();
                 } else {
-                    console.log('⏳ Waiting for scripts to load...');
+                    console.error('❌ StockMintApp.init is not a function');
+                    showError('StockMintApp not properly initialized');
                 }
-            }, 100);
+            } catch (error) {
+                console.error('❌ Error initializing app:', error);
+                showError(error.message);
+            }
+        } else {
+            console.log('⏳ Waiting for scripts to load...');
+        }
+    }, 100);
     
-            // Timeout after 5 seconds
-                setTimeout(() => {
-                clearInterval(initInterval);
-                if (!checkRequiredScripts()) {
-                    console.error('❌ Script loading timeout');
-                    showError('Some scripts failed to load. Please refresh the page.');
-                    }
-                }, 5000);
-            });
+    // Timeout after 5 seconds
+    setTimeout(() => {
+        clearInterval(initInterval);
+        if (!checkRequiredScripts()) {
+            console.error('❌ Script loading timeout');
+            showError('Some scripts failed to load. Please refresh the page.');
+        }
+    }, 5000);
+});
+
+// ===== FUNGSI BARU UNTUK DEMO USER =====
+function initAppForDemo() {
+    // Hide loading screen
+    const loadingScreen = document.getElementById('loadingScreen');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (appContainer) {
+        appContainer.classList.remove('hidden');
+        
+        // Initialize basic components
+        if (window.StockMintNavbar && window.StockMintSidebar) {
+            window.StockMintNavbar.init();
+            window.StockMintSidebar.init();
+        }
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+            window.location.hash = '#dashboard';
+        }, 100);
+    }
+}
         
         // Handle script loading errors
         window.addEventListener('error', function(event) {
