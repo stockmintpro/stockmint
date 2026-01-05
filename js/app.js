@@ -391,68 +391,85 @@ class StockMintApp {
     // Update navbar title
     this.updateNavbarTitle(page);
     
-    // Load actual content
+    // Load actual content - INI ADALAH BAGIAN SWITCH CASE YANG DIMINTA
     setTimeout(() => {
       try {
-        // TANGANI HALAMAN GOOGLE SHEETS
-        if (page === 'googlesheets') {
-          if (typeof GoogleSheetsPage !== 'undefined') {
-            const googleSheetsPage = new GoogleSheetsPage();
-            contentArea.innerHTML = googleSheetsPage.render();
-          } else {
-            contentArea.innerHTML = this.getGoogleSheetsPageContent();
-          }
-        }
-        // TANGANI HALAMAN MASTER-DATA KHUSUS
-        else if (page === 'master-data') {
-          if (window.MasterDataPage) {
-            const masterDataPage = new MasterDataPage();
-            contentArea.innerHTML = masterDataPage.render();
-            setTimeout(() => masterDataPage.bindEvents(), 100);
-          } else {
-            contentArea.innerHTML = this.getDefaultPageContent(page);
-          }
-        } 
-        // TANGANI SETUP PAGES
-        else if (page.startsWith('setup/')) {
-          if (typeof SetupWizardMulti === 'undefined') {
-            console.error('❌ SetupWizardMulti not loaded!');
-            contentArea.innerHTML = '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
-          } else {
-            try {
-              const wizard = new SetupWizardMulti();
-              window.currentWizard = wizard;
-              
-              const hash = window.location.hash.substring(1);
-              const route = hash.split('/')[1];
-              
-              let html;
-              if (route === 'migrate') {
-                html = wizard.renderMigratePage();
-              } else {
-                wizard.currentStep = route || wizard.currentStep;
-                html = wizard.render();
-              }
-              
-              contentArea.innerHTML = html;
-              
-              // Bind events setelah DOM dirender
-              setTimeout(() => {
-                if (window.currentWizard && window.currentWizard.bindEvents) {
-                  window.currentWizard.bindEvents();
-                }
-              }, 100);
-            } catch (error) {
-              console.error('❌ Error rendering setup wizard:', error);
-              contentArea.innerHTML = `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
+        // SWITCH CASE UNTUK MENANGANI BERBAGAI JENIS HALAMAN
+        switch(true) {
+          // HALAMAN GOOGLE SHEETS
+          case page === 'googlesheets':
+            if (typeof GoogleSheetsPage !== 'undefined') {
+              const googleSheetsPage = new GoogleSheetsPage();
+              contentArea.innerHTML = googleSheetsPage.render();
+            } else {
+              contentArea.innerHTML = this.getGoogleSheetsPageContent();
             }
-          }
-        } 
-        // HALAMAN LAINNYA
-        else {
-          const html = this.getPageContent(page);
-          contentArea.innerHTML = html;
-          this.initPageScripts(page);
+            break;
+            
+          // HALAMAN MASTER DATA
+          case page === 'master-data':
+            if (window.MasterDataPage) {
+              const masterDataPage = new MasterDataPage();
+              contentArea.innerHTML = masterDataPage.render();
+              setTimeout(() => masterDataPage.bindEvents(), 100);
+            } else {
+              contentArea.innerHTML = this.getDefaultPageContent(page);
+            }
+            break;
+            
+          // HALAMAN SETUP
+          case page.startsWith('setup/'):
+            if (typeof SetupWizardMulti === 'undefined') {
+              console.error('❌ SetupWizardMulti not loaded!');
+              contentArea.innerHTML = '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
+            } else {
+              try {
+                const wizard = new SetupWizardMulti();
+                window.currentWizard = wizard;
+                
+                const hash = window.location.hash.substring(1);
+                const route = hash.split('/')[1];
+                
+                let html;
+                if (route === 'migrate') {
+                  html = wizard.renderMigratePage();
+                } else {
+                  wizard.currentStep = route || wizard.currentStep;
+                  html = wizard.render();
+                }
+                
+                contentArea.innerHTML = html;
+                
+                // Bind events setelah DOM dirender
+                setTimeout(() => {
+                  if (window.currentWizard && window.currentWizard.bindEvents) {
+                    window.currentWizard.bindEvents();
+                  }
+                }, 100);
+              } catch (error) {
+                console.error('❌ Error rendering setup wizard:', error);
+                contentArea.innerHTML = `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
+              }
+            }
+            break;
+            
+          // HALAMAN FEATURE LOCKED
+          case page === 'feature-locked':
+            contentArea.innerHTML = this.getFeatureLockedContent();
+            break;
+            
+          // HALAMAN DASHBOARD
+          case page === 'dashboard':
+            contentArea.innerHTML = this.getDashboardContent();
+            this.initPageScripts(page);
+            break;
+            
+          // HALAMAN DEFAULT LAINNYA
+          default:
+            const html = this.getPageContent(page);
+            contentArea.innerHTML = html;
+            this.initPageScripts(page);
+            break;
         }
         
         console.log(`✅ Page "${page}" loaded`);
