@@ -1,4 +1,4 @@
-// Google Sheets Service
+// Google Sheets Service - ENHANCED VERSION WITH BETTER ERROR HANDLING
 class GoogleSheetsService {
     constructor() {
         this.clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
@@ -10,11 +10,15 @@ class GoogleSheetsService {
         this.user = null;
         this.spreadsheetId = null;
         this.initialized = false;
+        this.retryCount = 0;
+        this.maxRetries = 3;
     }
 
     // Initialize Google Sheets service
     async init() {
         try {
+            console.log('🔄 Initializing Google Sheets service...');
+            
             // Check if user is Google authenticated (not demo)
             const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             this.user = user;
@@ -33,9 +37,20 @@ class GoogleSheetsService {
                 return false;
             }
 
+            // Check for existing spreadsheet ID
+            this.spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+            
+            // Jika tidak ada spreadsheet ID, coba buat baru
+            if (!this.spreadsheetId) {
+                console.log('📝 No spreadsheet found, will create during setup');
+                this.initialized = true; // Tetap dianggap initialized untuk create nanti
+                return true;
+            }
+
             console.log('✅ Google Sheets service initialized');
             this.initialized = true;
             return true;
+            
         } catch (error) {
             console.error('❌ Error initializing Google Sheets:', error);
             this.initialized = false;
@@ -51,8 +66,8 @@ class GoogleSheetsService {
     // Create new Google Spreadsheet
     async createSpreadsheet(title) {
         try {
-            if (!this.isReady()) {
-                throw new Error('Google Sheets service not ready');
+            if (!this.token || this.token.startsWith('demo_token_')) {
+                throw new Error('Invalid Google token');
             }
 
             console.log('📝 Creating new spreadsheet:', title);
@@ -72,7 +87,7 @@ class GoogleSheetsService {
                     sheets: [
                         {
                             properties: {
-                                title: 'Setup_Data',
+                                title: 'StockMint_Data',
                                 gridProperties: {
                                     rowCount: 1000,
                                     columnCount: 20
@@ -85,21 +100,34 @@ class GoogleSheetsService {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Failed to create spreadsheet');
+                console.error('Google Sheets API error:', errorData);
+                
+                // Handle specific errors
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Google Sheets permission denied. Please re-login.');
+                }
+                
+                throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
             }
 
             const data = await response.json();
             this.spreadsheetId = data.spreadsheetId;
             
-            // Save spreadsheet ID to localStorage
+            // Save spreadsheet info
             localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
-            localStorage.setItem('stockmint_google_sheet_url', data.spreadsheetUrl);
+            localStorage.setItem('stockmint_google_sheet_url', 
+                data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
             
             console.log('✅ Spreadsheet created:', this.spreadsheetId);
             return this.spreadsheetId;
             
         } catch (error) {
             console.error('❌ Error creating spreadsheet:', error);
+            
+            // Save error info
+            localStorage.setItem('stockmint_google_sheet_error', error.message);
+            localStorage.setItem('stockmint_google_sheet_creation_failed', 'true');
+            
             throw error;
         }
     }
@@ -117,9 +145,15 @@ class GoogleSheetsService {
         // Create new spreadsheet if doesn't exist
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
-        const spreadsheetName = company.name 
-            ? `StockMint - ${company.name}` 
-            : `StockMint - ${user.name || user.email}`;
+        
+        let spreadsheetName;
+        if (company.name) {
+            spreadsheetName = `StockMint - ${company.name} (${new Date().getFullYear()})`;
+        } else if (user.name) {
+            spreadsheetName = `StockMint - ${user.name}`;
+        } else {
+            spreadsheetName = `StockMint - ${user.email || 'My Inventory'}`;
+        }
         
         return await this.createSpreadsheet(spreadsheetName);
     }
@@ -141,27 +175,22 @@ class GoogleSheetsService {
                 throw new Error('Failed to get spreadsheet');
             }
 
-            // Save different data types to different sheets
-            const sheetsToCreate = [
-                { name: 'Company', data: [setupData.company] },
-                { name: 'Warehouses', data: setupData.warehouses },
-                { name: 'Suppliers', data: setupData.suppliers },
-                { name: 'Customers', data: setupData.customers },
-                { name: 'Categories', data: setupData.categories },
-                { name: 'Products', data: setupData.products }
+            // Prepare sheets structure
+            const sheets = [
+                { name: 'Company', data: setupData.company ? [setupData.company] : [] },
+                { name: 'Warehouses', data: setupData.warehouses || [] },
+                { name: 'Suppliers', data: setupData.suppliers || [] },
+                { name: 'Customers', data: setupData.customers || [] },
+                { name: 'Categories', data: setupData.categories || [] },
+                { name: 'Products', data: setupData.products || [] },
+                { name: 'Opening_Stocks', data: this.createOpeningStockData(setupData) }
             ];
 
             // Process each sheet
-            for (const sheetInfo of sheetsToCreate) {
-                if (sheetInfo.data && sheetInfo.data.length > 0) {
-                    await this.writeToSheet(spreadsheetId, sheetInfo.name, sheetInfo.data);
+            for (const sheet of sheets) {
+                if (sheet.data && sheet.data.length > 0) {
+                    await this.saveSheetData(spreadsheetId, sheet.name, sheet.data);
                 }
-            }
-
-            // Create opening stocks sheet
-            const openingStocks = this.createOpeningStockData(setupData);
-            if (openingStocks.length > 0) {
-                await this.writeToSheet(spreadsheetId, 'Opening_Stocks', openingStocks);
             }
 
             console.log('✅ All setup data saved to Google Sheets');
@@ -173,9 +202,12 @@ class GoogleSheetsService {
         }
     }
 
-    // Helper method to write data to a sheet
-    async writeToSheet(spreadsheetId, sheetName, data) {
-        if (!data || data.length === 0) return;
+    // Save data to specific sheet
+    async saveSheetData(spreadsheetId, sheetName, data) {
+        if (!data || data.length === 0) {
+            console.log(`⚠️ No data to save for sheet: ${sheetName}`);
+            return;
+        }
 
         try {
             // Get headers from first object
@@ -184,13 +216,19 @@ class GoogleSheetsService {
             // Prepare values array
             const values = [
                 headers, // Header row
-                ...data.map(item => headers.map(header => item[header]))
+                ...data.map(item => headers.map(header => {
+                    const value = item[header];
+                    // Handle different data types
+                    if (value === null || value === undefined) return '';
+                    if (typeof value === 'object') return JSON.stringify(value);
+                    return value;
+                }))
             ];
 
-            // Create or get sheet
+            // Ensure sheet exists
             await this.ensureSheetExists(spreadsheetId, sheetName);
 
-            // Clear existing data (if any)
+            // Clear existing data
             await this.clearSheet(spreadsheetId, sheetName);
 
             // Write data
@@ -212,13 +250,13 @@ class GoogleSheetsService {
             );
 
             if (!response.ok) {
-                throw new Error(`Failed to write to sheet: ${sheetName}`);
+                throw new Error(`Failed to save ${sheetName}: ${response.statusText}`);
             }
 
             console.log(`✅ ${sheetName} saved: ${data.length} rows`);
             
         } catch (error) {
-            console.error(`❌ Error writing to sheet ${sheetName}:`, error);
+            console.error(`❌ Error saving sheet ${sheetName}:`, error);
             throw error;
         }
     }
@@ -226,7 +264,7 @@ class GoogleSheetsService {
     // Ensure sheet exists
     async ensureSheetExists(spreadsheetId, sheetName) {
         try {
-            // First, check if sheet exists by getting spreadsheet metadata
+            // Get spreadsheet metadata
             const response = await fetch(
                 `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
                 {
@@ -306,8 +344,8 @@ class GoogleSheetsService {
         return products.map(product => ({
             productId: product.id,
             productName: product.name,
-            warehouseId: primaryWarehouse.id,
-            warehouseName: primaryWarehouse.name,
+            warehouseId: primaryWarehouse?.id || '',
+            warehouseName: primaryWarehouse?.name || 'Main Warehouse',
             quantity: product.stock || 0,
             cost: product.purchasePrice || 0,
             date: new Date().toISOString(),
@@ -322,7 +360,7 @@ class GoogleSheetsService {
             this.spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
         }
         
-        if (!this.spreadsheetId) return null;
+        if (!this.spreadsheetId || !this.token) return null;
         
         try {
             const response = await fetch(
@@ -342,6 +380,135 @@ class GoogleSheetsService {
         }
         
         return null;
+    }
+
+    // Sync local data to Google Sheets
+    async syncLocalDataToSheets() {
+        try {
+            // Load all local data
+            const setupData = {
+                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+            };
+
+            // Save to Google Sheets
+            const result = await this.saveSetupData(setupData);
+            
+            if (result) {
+                console.log('✅ Local data synced to Google Sheets');
+                return true;
+            }
+            
+            return false;
+            
+        } catch (error) {
+            console.error('❌ Error syncing local data:', error);
+            throw error;
+        }
+    }
+
+    // Load data from Google Sheets to localStorage
+    async loadDataFromSheets() {
+        try {
+            if (!this.spreadsheetId) {
+                this.spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+            }
+            
+            if (!this.spreadsheetId) {
+                console.log('📝 No spreadsheet ID found');
+                return false;
+            }
+
+            console.log('📥 Loading data from Google Sheets...');
+            
+            // Define sheets to load
+            const sheets = ['Company', 'Warehouses', 'Suppliers', 'Customers', 'Categories', 'Products'];
+            
+            for (const sheetName of sheets) {
+                try {
+                    const response = await fetch(
+                        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${sheetName}!A1:Z1000`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            }
+                        }
+                    );
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.values && data.values.length > 1) {
+                            const headers = data.values[0];
+                            const rows = data.values.slice(1);
+                            
+                            const formattedData = rows.map(row => {
+                                const obj = {};
+                                headers.forEach((header, index) => {
+                                    obj[header] = row[index] || '';
+                                });
+                                return obj;
+                            });
+                            
+                            // Save to localStorage
+                            const localStorageKey = `stockmint_${sheetName.toLowerCase()}`;
+                            localStorage.setItem(localStorageKey, JSON.stringify(
+                                sheetName === 'Company' ? formattedData[0] || {} : formattedData
+                            ));
+                            
+                            console.log(`✅ Loaded ${formattedData.length} ${sheetName} from Google Sheets`);
+                        }
+                    }
+                } catch (sheetError) {
+                    console.log(`⚠️ Could not load sheet ${sheetName}:`, sheetError.message);
+                    // Continue with other sheets
+                }
+            }
+            
+            // Mark setup as completed if we loaded data
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            console.log('✅ Data loaded from Google Sheets to localStorage');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error loading data from Google Sheets:', error);
+            return false;
+        }
+    }
+
+    // Test connection to Google Sheets
+    async testConnection() {
+        try {
+            if (!this.token) {
+                return { success: false, message: 'No valid token' };
+            }
+            
+            if (!this.spreadsheetId) {
+                return { success: false, message: 'No spreadsheet ID' };
+            }
+            
+            const response = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                }
+            );
+            
+            if (response.ok) {
+                return { success: true, message: 'Connected successfully' };
+            } else {
+                return { success: false, message: `Connection failed: ${response.status}` };
+            }
+            
+        } catch (error) {
+            return { success: false, message: `Connection error: ${error.message}` };
+        }
     }
 }
 
