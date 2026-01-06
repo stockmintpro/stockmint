@@ -1,5 +1,32 @@
 // Authentication Module
 const StockMintAuth = {
+        // Validate Google token
+            validateGoogleToken: async function() {
+            const token = localStorage.getItem('stockmint_token');
+            const user = localStorage.getItem('stockmint_user');
+    
+            if (!token || token.startsWith('demo_token_') || !user) {
+                return false;
+            }
+    
+            try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        
+            if (response.status === 401) {
+                // Token expired
+                this.clearAuth();
+                return false;
+            }
+        
+            return response.ok;
+            } catch (error) {
+            console.warn('Token validation failed:', error);
+            return false;
+        }
+    },
+
     // Check if user is authenticated
     checkAuth: function() {
         const token = localStorage.getItem('stockmint_token');
