@@ -3,11 +3,12 @@ class SyncService {
     constructor() {
         this.syncInterval = null;
         this.isSyncing = false;
-        this.lastSyncTime = null;
+        this.lastSyncTime = localStorage.getItem('stockmint_last_sync');
+        this.autoSyncEnabled = true;
     }
     
     // Initialize sync service
-    init() {
+    async init() {
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         
         // Hanya untuk Google users yang bukan demo
@@ -18,34 +19,33 @@ class SyncService {
         
         console.log('🔄 Initializing sync service...');
         
-        // Setup periodic sync (every 5 minutes)
-        this.startPeriodicSync();
+        // Setup periodic sync (every 10 minutes)
+        this.startPeriodicSync(600000);
         
-        // Listen for storage changes
-        this.setupStorageListener();
+        // Sync immediately jika sudah setup tapi belum pernah sync
+        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+        const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
         
-        // Sync immediately if last sync was more than 1 hour ago
-        const lastSync = localStorage.getItem('stockmint_last_sync');
-        if (!lastSync || (Date.now() - new Date(lastSync).getTime()) > 3600000) {
-            setTimeout(() => this.syncAllData(), 5000);
+        if (setupCompleted && hasGoogleSheet && !this.lastSyncTime) {
+            setTimeout(() => this.syncAllData(), 10000);
         }
     }
     
-    // Start periodic sync
-    startPeriodicSync() {
+    // Start periodic sync dengan interval yang bisa diatur
+    startPeriodicSync(interval = 600000) { // Default 10 minutes
         // Clear existing interval
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
         }
         
-        // Sync every 5 minutes (300000 ms)
         this.syncInterval = setInterval(() => {
-            if (!this.isSyncing) {
+            if (!this.isSyncing && this.autoSyncEnabled) {
+                console.log('🔄 Auto-syncing data...');
                 this.syncAllData();
             }
-        }, 300000);
+        }, interval);
         
-        console.log('✅ Periodic sync started (5 minutes interval)');
+        console.log(`✅ Periodic sync started (${interval/60000} minutes interval)`);
     }
     
     // Setup storage change listener
