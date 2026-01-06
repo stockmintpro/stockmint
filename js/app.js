@@ -14,69 +14,75 @@ class StockMintApp {
   }
   
   // Initialize application
-  async init() {
-    console.log('🚀 StockMintApp initializing...');
+    // Kemudian modifikasi method init() di StockMintApp:
+      async init() {
+          console.log('🚀 StockMintApp initializing...');
 
     // Tampilkan app container dulu, sembunyikan loading screen nanti
-    const loadingScreen = document.getElementById('loadingScreen');
-    const appContainer = document.getElementById('appContainer');
+      const loadingScreen = document.getElementById('loadingScreen');
+      const appContainer = document.getElementById('appContainer');
     
-    if (loadingScreen && appContainer) {
-        loadingScreen.classList.add('hidden');
-        appContainer.classList.remove('hidden');
-    }
+      if (loadingScreen && appContainer) {
+          loadingScreen.classList.add('hidden');
+          appContainer.classList.remove('hidden');
+      }
     
-    try {
-      // Step 1: Load user data
-      this.loadUserData();
-      
-      // Step 2: Setup configuration
-      this.setupConfig();
-      
-      // Step 3: Initialize Google Sheets for Google users
-      if (!this.user?.isDemo) {
-        await this.initGoogleSheets();
-      }
-      
-      // Step 4: Check if first-time setup is needed
-      const shouldSetup = this.checkFirstTimeSetup();
-      
-      if (shouldSetup) {
-        console.log('🔄 First-time setup required, showing welcome modal');
-        // Skip loading components for now, go directly to setup
-        this.showWelcomeModal();
-        return; // Keluar dari init sementara
-      }
-      
-      // Step 5: Load UI components (jika sudah setup)
-      this.loadComponents();
-      
-      // Step 6: Setup routing
-      this.setupRouting();
-      
-      // Step 7: Load initial page
-      this.loadInitialPage();
-      
-      // Step 8: Mark as initialized
-      this.initialized = true;
-      
-      console.log('✅ StockMintApp initialized successfully');
-      
-      // Hide loading screen
-      setTimeout(() => {
-        if (document.getElementById('loadingScreen')) {
-          document.getElementById('loadingScreen').classList.add('hidden');
+      try {
+        // Step 1: Load user data
+        this.loadUserData();
+        
+        // Step 2: Setup configuration
+        this.setupConfig();
+        
+        // Step 3: Check and load data from Google Sheets if needed
+        if (!this.user?.isDemo) {
+            await this.checkAndLoadGoogleSheetsData();
         }
-        if (document.getElementById('appContainer')) {
-          document.getElementById('appContainer').classList.remove('hidden');
+        
+        // Step 4: Initialize Google Sheets for Google users
+        if (!this.user?.isDemo) {
+            await this.initGoogleSheets();
         }
-      }, 500);
-      
+        
+        // Step 5: Check if first-time setup is needed
+        const shouldSetup = this.checkFirstTimeSetup();
+        
+        if (shouldSetup) {
+            console.log('🔄 First-time setup required, showing welcome modal');
+            // Skip loading components for now, go directly to setup
+            this.showWelcomeModal();
+            return; // Keluar dari init sementara
+        }
+        
+        // Step 6: Load UI components (jika sudah setup)
+        this.loadComponents();
+        
+        // Step 7: Setup routing
+        this.setupRouting();
+        
+        // Step 8: Load initial page
+        this.loadInitialPage();
+        
+        // Step 9: Mark as initialized
+        this.initialized = true;
+        
+        console.log('✅ StockMintApp initialized successfully');
+        
+        // Hide loading screen
+        setTimeout(() => {
+            if (document.getElementById('loadingScreen')) {
+                document.getElementById('loadingScreen').classList.add('hidden');
+            }
+            if (document.getElementById('appContainer')) {
+                document.getElementById('appContainer').classList.remove('hidden');
+            }
+        }, 500);
+        
     } catch (error) {
-      console.error('❌ Failed to initialize app:', error);
-      this.showCriticalError(error);
+        console.error('❌ Failed to initialize app:', error);
+        this.showCriticalError(error);
     }
-  }
+}
   
   // Initialize Google Sheets service
   async initGoogleSheets() {
@@ -121,6 +127,71 @@ class StockMintApp {
       return false;
     }
   }
+
+  // Di dalam class StockMintApp, tambahkan method ini:
+async checkAndLoadGoogleSheetsData() {
+    try {
+        const user = this.user;
+        const isDemo = user?.isDemo || false;
+        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+        const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
+        
+        // Jika user Google, sudah setup, dan punya Google Sheet ID
+        if (!isDemo && setupCompleted && hasGoogleSheet) {
+            console.log('📥 Checking Google Sheets for existing data...');
+            
+            // Initialize Google Sheets service
+            if (window.GoogleSheetsService) {
+                const sheetsService = window.GoogleSheetsService;
+                
+                // Test connection
+                const connection = await sheetsService.testConnection();
+                
+                if (connection.success) {
+                    console.log('✅ Google Sheets connection successful');
+                    
+                    // Cek apakah data lokal sudah lengkap
+                    const localCompany = localStorage.getItem('stockmint_company');
+                    const localProducts = localStorage.getItem('stockmint_products');
+                    
+                    // Jika data lokal tidak lengkap, coba load dari Google Sheets
+                    if (!localCompany || !localProducts || 
+                        JSON.parse(localCompany || '{}').name === undefined ||
+                        JSON.parse(localProducts || '[]').length === 0) {
+                        
+                        console.log('🔄 Loading data from Google Sheets...');
+                        const loaded = await sheetsService.loadDataFromSheets();
+                        
+                        if (loaded) {
+                            console.log('✅ Data loaded from Google Sheets');
+                            // Reload setup data
+                            this.setupData = {
+                                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+                                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+                                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+                                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+                                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+                                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+                            };
+                            return true;
+                        }
+                    } else {
+                        console.log('✅ Local data is complete, no need to load from Google Sheets');
+                    }
+                } else {
+                    console.warn('⚠️ Google Sheets connection failed:', connection.message);
+                }
+            }
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('❌ Error checking Google Sheets data:', error);
+        return false;
+    }
+}
+
   
   // Load user data from localStorage
   loadUserData() {
