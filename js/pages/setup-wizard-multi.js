@@ -1248,7 +1248,7 @@ class SetupWizardMulti {
     // ===== COMPLETE SETUP =====
     
     // Replace method completeSetup dengan:
-async completeSetup() {
+    async completeSetup() {
     try {
         console.log('✅ Completing setup process...');
         
@@ -1330,8 +1330,8 @@ async completeSetup() {
 }
     
     // Di dalam class SetupWizardMulti, cari method saveToGoogleSheets dan replace dengan:
-async saveToGoogleSheets() {
-    try {
+        async saveToGoogleSheets() {
+            try {
         console.log('💾 Attempting to save to Google Sheets...');
         
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
@@ -1340,65 +1340,127 @@ async saveToGoogleSheets() {
             return { success: true, message: 'Demo user - saved locally only' };
         }
         
-        // Check token
+        // Check token - HARUS token Google, bukan demo token
         const token = localStorage.getItem('stockmint_token');
         if (!token || token.startsWith('demo_token_')) {
             console.log('🚫 No valid Google token');
-            return { success: false, message: 'No valid Google token' };
+            return { success: false, message: 'No valid Google token. Please login with Google.' };
         }
         
-        // Initialize Google Sheets service
-        if (!window.GoogleSheetsService) {
+        // Periksa apakah Google Sheets service tersedia
+        if (typeof window.GoogleSheetsService === 'undefined') {
             console.error('❌ GoogleSheetsService not available');
-            return { success: false, message: 'Google Sheets service not available' };
+            return { success: false, message: 'Google Sheets service not loaded' };
         }
         
-        // Initialize the service
         const sheetsService = window.GoogleSheetsService;
+        
+        // Inisialisasi service dengan token
         sheetsService.token = token;
         sheetsService.user = user;
         
+        console.log('🔧 Initializing Google Sheets service with token...');
         const initialized = await sheetsService.init();
         if (!initialized) {
             console.error('❌ Failed to initialize Google Sheets');
-            return { success: false, message: 'Failed to initialize Google Sheets' };
+            return { success: false, message: 'Failed to initialize Google Sheets service' };
         }
         
-        // Get or create spreadsheet
+        // Get existing spreadsheet ID atau buat baru
         let spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        
         if (!spreadsheetId) {
             console.log('📝 Creating new spreadsheet...');
             
+            // Buat nama spreadsheet yang informatif
             const companyName = this.setupData.company?.name || user.name || 'My Business';
-            spreadsheetId = await sheetsService.createSpreadsheet(`StockMint - ${companyName}`);
+            const currentYear = new Date().getFullYear();
+            const spreadsheetName = `StockMint - ${companyName} (${currentYear})`;
             
-            if (!spreadsheetId) {
-                throw new Error('Failed to create spreadsheet');
-            }
-        } else {
+            try {
+                spreadsheetId = await sheetsService.createSpreadsheet(spreadsheetName);
+                
+                if (!spreadsheetId) {
+                    throw new Error('Failed to get spreadsheet ID');
+                }
+                
+                console.log('✅ Spreadsheet created:', spreadsheetId);
+                
+                // Simpan info spreadsheet
+                localStorage.setItem('stockmint_google_sheet_id', spreadsheetId);
+                localStorage.setItem('stockmint_google_sheet_url', 
+                    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
+                    
+            } catch (createError) {
+                console.error('❌ Error creating spreadsheet:', createError);
+                return { 
+                    success: false, 
+                    message: `Failed to create spreadsheet: ${createError.message}` 
+                };
+                }
+            } else {
+            // Gunakan spreadsheet yang sudah ada
             sheetsService.spreadsheetId = spreadsheetId;
-        }
+            console.log('📊 Using existing spreadsheet:', spreadsheetId);
+            }
         
-        console.log('📊 Saving setup data to Google Sheets...');
+            console.log('📤 Saving setup data to Google Sheets...');
         
-        // Save all setup data
-        await sheetsService.saveSetupData(this.setupData);
+            try {
+            // Siapkan data untuk disimpan
+            const dataToSave = {
+                company: this.setupData.company || {},
+                warehouses: this.setupData.warehouses || [],
+                suppliers: this.setupData.suppliers || [],
+                customers: this.setupData.customers || [],
+                categories: this.setupData.categories || [],
+                products: this.setupData.products || []
+            };
+            
+            // Pastikan ada data yang akan disimpan
+            if (!dataToSave.company || Object.keys(dataToSave.company).length === 0) {
+                dataToSave.company = { 
+                    name: user.name || 'My Company',
+                    email: user.email || '',
+                    setupDate: new Date().toISOString() 
+                };
+            }
+            
+            // Simpan data
+            const saveResult = await sheetsService.saveSetupData(dataToSave);
+            
+            if (!saveResult) {
+                throw new Error('Save operation returned false');
+            }
+            
+            console.log('✅ Setup data saved to Google Sheets successfully');
+            
+            // Update last sync time
+            localStorage.setItem('stockmint_last_sync', new Date().toISOString());
+            localStorage.removeItem('stockmint_google_sheet_pending_sync');
+            
+            return { 
+                success: true, 
+                message: 'Data saved to Google Sheets successfully',
+                spreadsheetId: spreadsheetId
+            };
+            
+            } catch (saveError) {
+            console.error('❌ Error saving to Google Sheets:', saveError);
+            return { 
+                success: false, 
+                message: `Failed to save data: ${saveError.message}` 
+               };
+            }
         
-        console.log('✅ Setup data saved to Google Sheets');
-        return { 
-            success: true, 
-            message: 'Data saved to Google Sheets',
-            spreadsheetId: spreadsheetId
-        };
-        
-    } catch (error) {
-        console.error('❌ Google Sheets save failed:', error);
-        return { 
+            } catch (error) {
+            console.error('❌ Unexpected error in saveToGoogleSheets:', error);
+            return { 
             success: false, 
-            message: `Google Sheets save failed: ${error.message}` 
-        };
+            message: `Unexpected error: ${error.message}` 
+            };
+        }
     }
-}
     
     clearSessionStorage() {
         sessionStorage.removeItem('stockmint_temp_company');
