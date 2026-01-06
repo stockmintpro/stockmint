@@ -21,6 +21,52 @@ class StockMintApp {
     };
   }
   
+  // ===== NEW METHOD =====
+  async initializeSyncServices() {
+    try {
+        console.log('🔄 Initializing sync and recovery services...');
+        
+        const user = this.user;
+        const isDemo = user?.isDemo || false;
+        
+        if (!isDemo) {
+            // Initialize Google Sheets service
+            if (window.GoogleSheetsService) {
+                const sheetsInitialized = await window.GoogleSheetsService.init();
+                if (sheetsInitialized) {
+                    console.log('✅ Google Sheets service initialized');
+                    
+                    // Check if we need to sync pending data
+                    const pendingSync = localStorage.getItem('stockmint_google_sheet_pending_sync');
+                    if (pendingSync === 'true') {
+                        console.log('🔄 Syncing pending data to Google Sheets...');
+                        await window.GoogleSheetsService.syncLocalDataToSheets();
+                        localStorage.removeItem('stockmint_google_sheet_pending_sync');
+                    }
+                }
+            }
+            
+            // Initialize sync service
+            if (window.SyncService) {
+                window.SyncService.init();
+                console.log('✅ Sync service initialized');
+            }
+            
+            // Check for data recovery
+            if (window.DataRecovery && window.DataRecovery.needsRecovery()) {
+                console.log('🔄 Data recovery needed');
+                setTimeout(() => {
+                    window.DataRecovery.showRecoveryModal();
+                }, 2000);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error initializing sync services:', error);
+    }
+  }
+  
+  // ===== UPDATED METHOD =====
   // Initialize application
   async init() {
     console.log('🚀 StockMintApp initializing...');
@@ -41,17 +87,10 @@ class StockMintApp {
       // Step 2: Setup configuration
       this.setupConfig();
       
-      // Step 3: Initialize Google Sheets for Google users
-      if (!this.user?.isDemo) {
-        await this.initGoogleSheets();
-      }
+      // Step 3: Initialize sync services (Google Sheets, Sync, Recovery)
+      await this.initializeSyncServices();
       
-      // Step 4: Check and load data from Google Sheets if needed
-      if (!this.user?.isDemo) {
-        await this.checkAndLoadGoogleSheetsData();
-      }
-      
-      // Step 5: Check if first-time setup is needed
+      // Step 4: Check if first-time setup is needed
       const shouldSetup = this.checkFirstTimeSetup();
       
       if (shouldSetup) {
@@ -61,16 +100,16 @@ class StockMintApp {
         return; // Keluar dari init sementara
       }
       
-      // Step 6: Load UI components (jika sudah setup)
+      // Step 5: Load UI components (jika sudah setup)
       this.loadComponents();
       
-      // Step 7: Setup routing
+      // Step 6: Setup routing
       this.setupRouting();
       
-      // Step 8: Load initial page
+      // Step 7: Load initial page
       this.loadInitialPage();
       
-      // Step 9: Mark as initialized
+      // Step 8: Mark as initialized
       this.initialized = true;
       
       console.log('✅ StockMintApp initialized successfully');
@@ -91,7 +130,7 @@ class StockMintApp {
     }
   }
   
-  // Initialize Google Sheets service
+  // Initialize Google Sheets service - KEEP THIS METHOD
   async initGoogleSheets() {
     try {
       console.log('🔄 Initializing Google Sheets service...');
@@ -133,6 +172,120 @@ class StockMintApp {
       this.googleSheetsReady = false;
       return false;
     }
+  }
+  
+  // ===== UPDATED METHOD =====
+  // Load page content
+  loadPage(page) {
+    const contentArea = document.getElementById('contentArea');
+    if (!contentArea) {
+      console.error('❌ Content area not found');
+      return;
+    }
+    
+    console.log('📄 Loading page:', page);
+    
+    // Show loading
+    contentArea.innerHTML = `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading ${this.getPageTitle(page)}...</p>
+      </div>
+    `;
+    
+    // Update navbar title
+    this.updateNavbarTitle(page);
+    
+    // Load actual content - INI ADALAH BAGIAN SWITCH CASE YANG DIMINTA
+    setTimeout(() => {
+      try {
+        // SWITCH CASE UNTUK MENANGANI BERBAGAI JENIS HALAMAN
+        switch(true) {
+          // HALAMAN GOOGLE SHEETS - UPDATED
+          case page === 'googlesheets':
+            if (typeof GoogleSheetsPage !== 'undefined') {
+              const googleSheetsPage = new GoogleSheetsPage();
+              contentArea.innerHTML = googleSheetsPage.render();
+              // Bind events untuk update connection status
+              setTimeout(() => googleSheetsPage.bindEvents(), 100);
+            } else {
+              contentArea.innerHTML = this.getGoogleSheetsPageContent();
+            }
+            break;
+            
+          // HALAMAN MASTER DATA
+          case page === 'master-data':
+            if (window.MasterDataPage) {
+              const masterDataPage = new MasterDataPage();
+              contentArea.innerHTML = masterDataPage.render();
+              setTimeout(() => masterDataPage.bindEvents(), 100);
+            } else {
+              contentArea.innerHTML = this.getDefaultPageContent(page);
+            }
+            break;
+            
+          // HALAMAN SETUP
+          case page.startsWith('setup/'):
+            if (typeof SetupWizardMulti === 'undefined') {
+              console.error('❌ SetupWizardMulti not loaded!');
+              contentArea.innerHTML = '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
+            } else {
+              try {
+                const wizard = new SetupWizardMulti();
+                window.currentWizard = wizard;
+                
+                const hash = window.location.hash.substring(1);
+                const route = hash.split('/')[1];
+                
+                let html;
+                if (route === 'migrate') {
+                  html = wizard.renderMigratePage();
+                } else {
+                  wizard.currentStep = route || wizard.currentStep;
+                  html = wizard.render();
+                }
+                
+                contentArea.innerHTML = html;
+                
+                // Bind events setelah DOM dirender
+                setTimeout(() => {
+                  if (window.currentWizard && window.currentWizard.bindEvents) {
+                    window.currentWizard.bindEvents();
+                  }
+                }, 100);
+              } catch (error) {
+                console.error('❌ Error rendering setup wizard:', error);
+                contentArea.innerHTML = `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
+              }
+            }
+            break;
+            
+          // HALAMAN FEATURE LOCKED
+          case page === 'feature-locked':
+            contentArea.innerHTML = this.getFeatureLockedContent();
+            break;
+            
+          // HALAMAN DASHBOARD
+          case page === 'dashboard':
+            contentArea.innerHTML = this.getDashboardContent();
+            this.initPageScripts(page);
+            break;
+            
+          // HALAMAN DEFAULT LAINNYA
+          default:
+            const html = this.getPageContent(page);
+            contentArea.innerHTML = html;
+            this.initPageScripts(page);
+            break;
+        }
+        
+        console.log(`✅ Page "${page}" loaded`);
+        
+      } catch (error) {
+        console.error(`❌ Error loading page "${page}":`, error);
+        contentArea.innerHTML = this.getErrorPage(page, error);
+      }
+    }, 300);
   }
   
   // Check and load data from Google Sheets if needed
@@ -445,117 +598,6 @@ class StockMintApp {
     const hash = window.location.hash.substring(1) || 'dashboard';
     this.currentPage = hash;
     this.loadPage(hash);
-  }
-  
-  // Load page content
-  loadPage(page) {
-    const contentArea = document.getElementById('contentArea');
-    if (!contentArea) {
-      console.error('❌ Content area not found');
-      return;
-    }
-    
-    console.log('📄 Loading page:', page);
-    
-    // Show loading
-    contentArea.innerHTML = `
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Loading ${this.getPageTitle(page)}...</p>
-      </div>
-    `;
-    
-    // Update navbar title
-    this.updateNavbarTitle(page);
-    
-    // Load actual content - INI ADALAH BAGIAN SWITCH CASE YANG DIMINTA
-    setTimeout(() => {
-      try {
-        // SWITCH CASE UNTUK MENANGANI BERBAGAI JENIS HALAMAN
-        switch(true) {
-          // HALAMAN GOOGLE SHEETS
-          case page === 'googlesheets':
-            if (typeof GoogleSheetsPage !== 'undefined') {
-              const googleSheetsPage = new GoogleSheetsPage();
-              contentArea.innerHTML = googleSheetsPage.render();
-            } else {
-              contentArea.innerHTML = this.getGoogleSheetsPageContent();
-            }
-            break;
-            
-          // HALAMAN MASTER DATA
-          case page === 'master-data':
-            if (window.MasterDataPage) {
-              const masterDataPage = new MasterDataPage();
-              contentArea.innerHTML = masterDataPage.render();
-              setTimeout(() => masterDataPage.bindEvents(), 100);
-            } else {
-              contentArea.innerHTML = this.getDefaultPageContent(page);
-            }
-            break;
-            
-          // HALAMAN SETUP
-          case page.startsWith('setup/'):
-            if (typeof SetupWizardMulti === 'undefined') {
-              console.error('❌ SetupWizardMulti not loaded!');
-              contentArea.innerHTML = '<div class="error">Setup wizard failed to load. Please refresh the page.</div>';
-            } else {
-              try {
-                const wizard = new SetupWizardMulti();
-                window.currentWizard = wizard;
-                
-                const hash = window.location.hash.substring(1);
-                const route = hash.split('/')[1];
-                
-                let html;
-                if (route === 'migrate') {
-                  html = wizard.renderMigratePage();
-                } else {
-                  wizard.currentStep = route || wizard.currentStep;
-                  html = wizard.render();
-                }
-                
-                contentArea.innerHTML = html;
-                
-                // Bind events setelah DOM dirender
-                setTimeout(() => {
-                  if (window.currentWizard && window.currentWizard.bindEvents) {
-                    window.currentWizard.bindEvents();
-                  }
-                }, 100);
-              } catch (error) {
-                console.error('❌ Error rendering setup wizard:', error);
-                contentArea.innerHTML = `<div class="error">Failed to load setup wizard: ${error.message}</div>`;
-              }
-            }
-            break;
-            
-          // HALAMAN FEATURE LOCKED
-          case page === 'feature-locked':
-            contentArea.innerHTML = this.getFeatureLockedContent();
-            break;
-            
-          // HALAMAN DASHBOARD
-          case page === 'dashboard':
-            contentArea.innerHTML = this.getDashboardContent();
-            this.initPageScripts(page);
-            break;
-            
-          // HALAMAN DEFAULT LAINNYA
-          default:
-            const html = this.getPageContent(page);
-            contentArea.innerHTML = html;
-            this.initPageScripts(page);
-            break;
-        }
-        
-        console.log(`✅ Page "${page}" loaded`);
-        
-      } catch (error) {
-        console.error(`❌ Error loading page "${page}":`, error);
-        contentArea.innerHTML = this.getErrorPage(page, error);
-      }
-    }, 300);
   }
   
   // Update navbar title
