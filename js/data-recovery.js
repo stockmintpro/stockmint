@@ -4,13 +4,24 @@ class DataRecovery {
         this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
     }
     
-    // Check if recovery is needed
+    // Check if recovery is needed - LOGIKA YANG LEBIH AKURAT
     needsRecovery() {
+        // Hanya untuk Google users
+        if (this.user.isDemo) {
+            return false;
+        }
+        
         const setupCompleted = localStorage.getItem('stockmint_setup_completed');
         const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
+        const hasLocalData = localStorage.getItem('stockmint_company');
         
-        // Jika user Google, setup completed false, tapi punya Google Sheet
-        if (!this.user.isDemo && !setupCompleted && hasGoogleSheet) {
+        // Jika punya Google Sheet tapi setup belum completed atau data lokal kosong
+        if (hasGoogleSheet && (!setupCompleted || !hasLocalData || hasLocalData === '{}')) {
+            return true;
+        }
+        
+        // Jika ada flag pending sync
+        if (localStorage.getItem('stockmint_google_sheet_pending_sync') === 'true') {
             return true;
         }
         
@@ -27,21 +38,29 @@ class DataRecovery {
             }
             
             // Initialize Google Sheets service
-            const initialized = await window.GoogleSheetsService.init();
+            const sheetsService = window.GoogleSheetsService;
+            const initialized = await sheetsService.init();
+            
             if (!initialized) {
                 throw new Error('Failed to initialize Google Sheets service');
             }
             
             // Load data dari Google Sheets
-            const loaded = await window.GoogleSheetsService.loadDataFromGoogleSheets();
+            const loaded = await sheetsService.loadDataFromSheets();
             
             if (loaded) {
                 // Verifikasi data yang di-load
                 const companyData = localStorage.getItem('stockmint_company');
-                if (companyData && companyData !== '{}') {
+                const productsData = localStorage.getItem('stockmint_products');
+                
+                if (companyData && companyData !== '{}' && productsData) {
                     console.log('✅ Data recovery successful!');
+                    
+                    // Mark setup as completed
                     localStorage.setItem('stockmint_setup_completed', 'true');
                     localStorage.setItem('stockmint_recovery_date', new Date().toISOString());
+                    localStorage.removeItem('stockmint_google_sheet_pending_sync');
+                    
                     return true;
                 }
             }
@@ -50,6 +69,8 @@ class DataRecovery {
             
         } catch (error) {
             console.error('Data recovery failed:', error);
+            // Jika recovery gagal, set flag untuk sync nanti
+            localStorage.setItem('stockmint_google_sheet_pending_sync', 'true');
             return false;
         }
     }
