@@ -1255,7 +1255,7 @@ class SetupWizardMulti {
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         const isDemo = user.isDemo || false;
         
-        // 1. Simpan SEMUA data ke localStorage TERLEBIH DAHULU
+        // 1. SIMPAN SEMUA DATA KE LOCALSTORAGE TERLEBIH DAHULU
         localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
@@ -1273,52 +1273,38 @@ class SetupWizardMulti {
         // 4. Clear session storage
         this.clearSessionStorage();
         
-        // 5. SAVE TO GOOGLE SHEETS (for Google users only) - dengan retry mechanism
+        // 5. Tampilkan sukses message SEKARANG - data sudah aman di localStorage
+        this.showAlert('✅ Setup completed! Data saved locally.', 'success');
+        
+        // 6. SAVE TO GOOGLE SHEETS (for Google users only) - ASYNC tanpa menghapus data
         if (!isDemo) {
-            this.showAlert('💾 Saving to Google Sheets...', 'info');
-            
-            let retryCount = 0;
-            let googleSheetsResult = null;
-            
-            while (retryCount < 3 && !googleSheetsResult?.success) {
+            setTimeout(async () => {
                 try {
-                    googleSheetsResult = await this.saveToGoogleSheets();
+                    this.showAlert('💾 Syncing to Google Sheets...', 'info');
+                    
+                    const googleSheetsResult = await this.saveToGoogleSheets();
                     
                     if (googleSheetsResult.success) {
-                        this.showAlert('✅ Data saved to Google Sheets!', 'success');
-                        
-                        // Save spreadsheet info if created
-                        if (googleSheetsResult.spreadsheetId) {
-                            localStorage.setItem('stockmint_google_sheet_id', googleSheetsResult.spreadsheetId);
-                        }
-                        
-                        break;
+                        this.showAlert('✅ Data synced to Google Sheets!', 'success');
                     } else {
-                        retryCount++;
-                        if (retryCount < 3) {
-                            this.showAlert(`⚠️ Retrying Google Sheets save... (${retryCount}/3)`, 'warning');
-                            await new Promise(resolve => setTimeout(resolve, 2000)); // Tunggu 2 detik
-                        }
+                        // JANGAN hapus data lokal jika Google Sheets gagal!
+                        // Cukup simpan flag untuk sync nanti
+                        localStorage.setItem('stockmint_google_sheet_pending_sync', 'true');
+                        localStorage.setItem('stockmint_google_sheet_error', googleSheetsResult.message);
+                        
+                        this.showAlert('⚠️ Data saved locally. Google Sheets sync failed: ' + googleSheetsResult.message, 'warning');
                     }
-                } catch (retryError) {
-                    retryCount++;
-                    console.error(`Retry ${retryCount} failed:`, retryError);
+                } catch (googleError) {
+                    console.error('Google Sheets sync error:', googleError);
+                    localStorage.setItem('stockmint_google_sheet_pending_sync', 'true');
+                    this.showAlert('⚠️ Data saved locally. Google Sheets error: ' + googleError.message, 'warning');
                 }
-            }
-            
-            // Jika semua percobaan gagal
-            if (!googleSheetsResult?.success) {
-                this.showAlert('⚠️ Data saved locally. Google Sheets will sync later.', 'warning');
-                localStorage.setItem('stockmint_google_sheet_pending_sync', 'true');
-            }
-        } else {
-            // For demo users, show message
-            this.showAlert('✅ Setup completed (Demo Mode - Data saved locally)', 'success');
+            }, 2000);
         }
         
-        console.log('✅ Setup completed');
+        console.log('✅ Setup completed - data saved to localStorage');
         
-        // 6. Redirect to dashboard setelah 3 detik
+        // 7. Redirect to dashboard setelah 3 detik
         setTimeout(() => {
             window.location.hash = '#dashboard';
         }, 3000);
