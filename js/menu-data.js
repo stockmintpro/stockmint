@@ -16,11 +16,11 @@ const StockMintMenu = {
       id: 'googlesheets',
       title: 'Google Sheets',
       icon: 'fab fa-google-drive',
-      path: '#googlesheets',
-      roles: ['admin', 'owner'],
+      url: '#googlesheets',
       showIf: () => {
-        const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
-        return !user.isDemo && localStorage.getItem('stockmint_google_sheet_id');
+          const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+          // Tampilkan untuk semua user Google, bahkan jika belum ada spreadsheet
+          return !user.isDemo;
       }
     },
     
