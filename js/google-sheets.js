@@ -109,72 +109,168 @@ class GoogleSheetsService {
 
     // Create new Google Spreadsheet
     async createSpreadsheet(title) {
-        try {
-            if (!this.token || this.token.startsWith('demo_token_')) {
-                throw new Error('Invalid Google token');
-            }
-
-            console.log('📝 Creating new spreadsheet:', title);
-
-            const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    properties: {
-                        title: title || `StockMint_${new Date().toISOString().split('T')[0]}`,
-                        locale: 'id_ID',
-                        timeZone: 'Asia/Jakarta'
-                    },
-                    sheets: [
-                        {
-                            properties: {
-                                title: 'StockMint_Data',
-                                gridProperties: {
-                                    rowCount: 1000,
-                                    columnCount: 20
-                                }
-                            }
-                        }
-                    ]
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Google Sheets API error:', errorData);
-                
-                // Handle specific errors
-                if (response.status === 401 || response.status === 403) {
-                    throw new Error('Google Sheets permission denied. Please re-login.');
-                }
-                
-                throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
-            }
-
-            const data = await response.json();
-            this.spreadsheetId = data.spreadsheetId;
-            
-            // Save spreadsheet info
-            localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
-            localStorage.setItem('stockmint_google_sheet_url', 
-                data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
-            
-            console.log('✅ Spreadsheet created:', this.spreadsheetId);
-            return this.spreadsheetId;
-            
-        } catch (error) {
-            console.error('❌ Error creating spreadsheet:', error);
-            
-            // Save error info
-            localStorage.setItem('stockmint_google_sheet_error', error.message);
-            localStorage.setItem('stockmint_google_sheet_creation_failed', 'true');
-            
-            throw error;
+    try {
+        if (!this.token || this.token.startsWith('demo_token_')) {
+            throw new Error('Invalid Google token');
         }
+
+        console.log('📝 Creating new spreadsheet:', title);
+
+        // ⚠️ HAPUS locale dan timeZone - tidak didukung oleh API!
+        const spreadsheetData = {
+            properties: {
+                title: title || `StockMint_${new Date().toISOString().split('T')[0]}`
+            },
+            sheets: [
+                {
+                    properties: {
+                        title: 'StockMint_Data',
+                        gridProperties: {
+                            rowCount: 1000,
+                            columnCount: 20
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Company',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Warehouses',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Suppliers',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Customers',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Categories',
+                        gridProperties: {
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                },
+                {
+                    properties: {
+                        title: 'Products',
+                        gridProperties: {
+                            rowCount: 1000,
+                            columnCount: 20
+                        }
+                    }
+                }
+            ]
+        };
+
+        const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(spreadsheetData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Google Sheets API error:', errorData);
+            
+            // Coba lagi dengan format yang lebih sederhana
+            if (errorData.error?.message?.includes('locale') || errorData.error?.message?.includes('timeZone')) {
+                console.log('🔄 Retrying with simplified request...');
+                return await this.createSpreadsheetSimplified(title);
+            }
+            
+            throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.spreadsheetId = data.spreadsheetId;
+        
+        // Save spreadsheet info
+        localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+        localStorage.setItem('stockmint_google_sheet_url', 
+            data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
+        
+        console.log('✅ Spreadsheet created:', this.spreadsheetId);
+        return this.spreadsheetId;
+        
+    } catch (error) {
+        console.error('❌ Error creating spreadsheet:', error);
+        
+        // Save error info
+        localStorage.setItem('stockmint_google_sheet_error', error.message);
+        localStorage.setItem('stockmint_google_sheet_creation_failed', 'true');
+        
+        throw error;
     }
+}
+
+// Tambahkan method baru untuk request yang lebih sederhana
+async createSpreadsheetSimplified(title) {
+    try {
+        console.log('📝 Creating spreadsheet (simplified):', title);
+        
+        const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                properties: {
+                    title: title || 'StockMint Data'
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Simplified creation failed: ${errorData.error?.message || response.statusText}`);
+        }
+
+        const data = await response.json();
+        this.spreadsheetId = data.spreadsheetId;
+        
+        // Save spreadsheet info
+        localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+        localStorage.setItem('stockmint_google_sheet_url', 
+            data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
+        
+        console.log('✅ Spreadsheet created (simplified):', this.spreadsheetId);
+        return this.spreadsheetId;
+        
+      } catch (error) {
+        console.error('❌ Simplified creation failed:', error);
+        throw error;
+     }
+   }
 
     // Get or create spreadsheet
     async getSpreadsheet() {
