@@ -32,17 +32,41 @@ class StockMintApp {
         if (!isDemo) {
             // Initialize Google Sheets service
             if (window.GoogleSheetsService) {
-                const sheetsInitialized = await window.GoogleSheetsService.init();
-                if (sheetsInitialized) {
-                    console.log('✅ Google Sheets service initialized');
+                try {
+                    const sheetsInitialized = await window.GoogleSheetsService.init();
                     
-                    // Check if we need to sync pending data
-                    const pendingSync = localStorage.getItem('stockmint_google_sheet_pending_sync');
-                    if (pendingSync === 'true') {
-                        console.log('🔄 Syncing pending data to Google Sheets...');
-                        await window.GoogleSheetsService.syncLocalDataToSheets();
-                        localStorage.removeItem('stockmint_google_sheet_pending_sync');
+                    if (sheetsInitialized) {
+                        console.log('✅ Google Sheets service initialized');
+                        
+                        // Check if we have a spreadsheet but setup not completed
+                        const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
+                        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+                        
+                        if (hasGoogleSheet && !setupCompleted) {
+                            console.log('🔄 Loading existing data from Google Sheets...');
+                            await window.GoogleSheetsService.loadDataFromSheets();
+                        }
+                        
+                        // Check pending sync
+                        const pendingSync = localStorage.getItem('stockmint_google_sheet_pending_sync');
+                        if (pendingSync === 'true') {
+                            console.log('🔄 Syncing pending data to Google Sheets...');
+                            
+                            // Tunggu 5 detik sebelum sync
+                            setTimeout(async () => {
+                                try {
+                                    await window.GoogleSheetsService.syncLocalDataToSheets();
+                                    localStorage.removeItem('stockmint_google_sheet_pending_sync');
+                                    console.log('✅ Pending sync completed');
+                                } catch (syncError) {
+                                    console.error('Pending sync failed:', syncError);
+                                }
+                            }, 5000);
+                        }
                     }
+                } catch (sheetsError) {
+                    console.error('❌ Google Sheets service init failed:', sheetsError);
+                    // Tetap lanjut meskipun Google Sheets gagal
                 }
             }
             
@@ -57,14 +81,15 @@ class StockMintApp {
                 console.log('🔄 Data recovery needed');
                 setTimeout(() => {
                     window.DataRecovery.showRecoveryModal();
-                }, 2000);
+                }, 3000);
             }
         }
         
     } catch (error) {
         console.error('❌ Error initializing sync services:', error);
+        // Jangan crash app jika service gagal
     }
-  }
+}
   
   // ===== UPDATED METHOD =====
   // Initialize application
