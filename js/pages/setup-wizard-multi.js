@@ -1247,8 +1247,7 @@ class SetupWizardMulti {
 
     // ===== COMPLETE SETUP =====
     
-    // Di method completeSetup, ganti dengan:
-
+    // Replace method completeSetup dengan:
 async completeSetup() {
     try {
         console.log('✅ Completing setup process...');
@@ -1256,7 +1255,7 @@ async completeSetup() {
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         const isDemo = user.isDemo || false;
         
-        // 1. Save to localStorage (cache/offline backup)
+        // 1. Simpan SEMUA data ke localStorage TERLEBIH DAHULU
         localStorage.setItem('stockmint_company', JSON.stringify(this.setupData.company));
         localStorage.setItem('stockmint_warehouses', JSON.stringify(this.setupData.warehouses));
         localStorage.setItem('stockmint_suppliers', JSON.stringify(this.setupData.suppliers));
@@ -1274,16 +1273,43 @@ async completeSetup() {
         // 4. Clear session storage
         this.clearSessionStorage();
         
-        // 5. SAVE TO GOOGLE SHEETS (for Google users only)
+        // 5. SAVE TO GOOGLE SHEETS (for Google users only) - dengan retry mechanism
         if (!isDemo) {
-            try {
-                this.showAlert('💾 Saving to Google Sheets...', 'info');
-                await this.saveToGoogleSheets();
-                this.showAlert('✅ Data saved to Google Sheets!', 'success');
-            } catch (googleError) {
-                console.error('Google Sheets error:', googleError);
-                this.showAlert('⚠️ Data saved locally. Google Sheets error: ' + googleError.message, 'warning');
-                // Still continue - data is saved locally
+            this.showAlert('💾 Saving to Google Sheets...', 'info');
+            
+            let retryCount = 0;
+            let googleSheetsResult = null;
+            
+            while (retryCount < 3 && !googleSheetsResult?.success) {
+                try {
+                    googleSheetsResult = await this.saveToGoogleSheets();
+                    
+                    if (googleSheetsResult.success) {
+                        this.showAlert('✅ Data saved to Google Sheets!', 'success');
+                        
+                        // Save spreadsheet info if created
+                        if (googleSheetsResult.spreadsheetId) {
+                            localStorage.setItem('stockmint_google_sheet_id', googleSheetsResult.spreadsheetId);
+                        }
+                        
+                        break;
+                    } else {
+                        retryCount++;
+                        if (retryCount < 3) {
+                            this.showAlert(`⚠️ Retrying Google Sheets save... (${retryCount}/3)`, 'warning');
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // Tunggu 2 detik
+                        }
+                    }
+                } catch (retryError) {
+                    retryCount++;
+                    console.error(`Retry ${retryCount} failed:`, retryError);
+                }
+            }
+            
+            // Jika semua percobaan gagal
+            if (!googleSheetsResult?.success) {
+                this.showAlert('⚠️ Data saved locally. Google Sheets will sync later.', 'warning');
+                localStorage.setItem('stockmint_google_sheet_pending_sync', 'true');
             }
         } else {
             // For demo users, show message
@@ -1292,52 +1318,85 @@ async completeSetup() {
         
         console.log('✅ Setup completed');
         
-        // 6. Redirect to dashboard
+        // 6. Redirect to dashboard setelah 3 detik
         setTimeout(() => {
             window.location.hash = '#dashboard';
-        }, 2000);
+        }, 3000);
         
     } catch (error) {
         console.error('Error completing setup:', error);
         this.showAlert(`Setup error: ${error.message}`, 'error');
     }
 }
-
-// Ganti method saveToGoogleSheets dengan:
+    
+    // Di dalam class SetupWizardMulti, cari method saveToGoogleSheets dan replace dengan:
 async saveToGoogleSheets() {
     try {
-        // Check if Google Sheets service is available
+        console.log('💾 Attempting to save to Google Sheets...');
+        
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         if (user.isDemo) {
             console.log('🔄 Demo user - skipping Google Sheets save');
-            return false;
+            return { success: true, message: 'Demo user - saved locally only' };
         }
         
-        if (!window.GoogleSheetsService || !window.GoogleSheetsService.isReady()) {
-            console.log('⚠️ Google Sheets not ready, trying to initialize...');
-            const initialized = await window.GoogleSheetsService.init();
-            if (!initialized) {
-                throw new Error('Google Sheets service not available');
+        // Check token
+        const token = localStorage.getItem('stockmint_token');
+        if (!token || token.startsWith('demo_token_')) {
+            console.log('🚫 No valid Google token');
+            return { success: false, message: 'No valid Google token' };
+        }
+        
+        // Initialize Google Sheets service
+        if (!window.GoogleSheetsService) {
+            console.error('❌ GoogleSheetsService not available');
+            return { success: false, message: 'Google Sheets service not available' };
+        }
+        
+        // Initialize the service
+        const sheetsService = window.GoogleSheetsService;
+        sheetsService.token = token;
+        sheetsService.user = user;
+        
+        const initialized = await sheetsService.init();
+        if (!initialized) {
+            console.error('❌ Failed to initialize Google Sheets');
+            return { success: false, message: 'Failed to initialize Google Sheets' };
+        }
+        
+        // Get or create spreadsheet
+        let spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        if (!spreadsheetId) {
+            console.log('📝 Creating new spreadsheet...');
+            
+            const companyName = this.setupData.company?.name || user.name || 'My Business';
+            spreadsheetId = await sheetsService.createSpreadsheet(`StockMint - ${companyName}`);
+            
+            if (!spreadsheetId) {
+                throw new Error('Failed to create spreadsheet');
             }
+        } else {
+            sheetsService.spreadsheetId = spreadsheetId;
         }
         
-        this.showAlert('Saving data to Google Sheets...', 'info');
+        console.log('📊 Saving setup data to Google Sheets...');
         
         // Save all setup data
-        await window.GoogleSheetsService.saveSetupData(this.setupData);
+        await sheetsService.saveSetupData(this.setupData);
         
-        // Get spreadsheet info to show success
-        const spreadsheetInfo = await window.GoogleSheetsService.getSpreadsheetInfo();
-        if (spreadsheetInfo) {
-            console.log('✅ Setup data saved to Google Sheets:', spreadsheetInfo.spreadsheetId);
-            this.showAlert(`✅ Data saved to Google Sheets: ${spreadsheetInfo.properties.title}`, 'success');
-        }
-        
-        return true;
+        console.log('✅ Setup data saved to Google Sheets');
+        return { 
+            success: true, 
+            message: 'Data saved to Google Sheets',
+            spreadsheetId: spreadsheetId
+        };
         
     } catch (error) {
         console.error('❌ Google Sheets save failed:', error);
-        throw error;
+        return { 
+            success: false, 
+            message: `Google Sheets save failed: ${error.message}` 
+        };
     }
 }
     
