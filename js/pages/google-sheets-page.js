@@ -1,42 +1,25 @@
-// GoogleSheetsPage - Enhanced Version
+// GoogleSheetsPage - Fixed Version (Non-Async Render)
 class GoogleSheetsPage {
     constructor() {
         this.user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         this.spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
         this.spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
         this.connectionStatus = 'unknown';
+        this.lastSync = localStorage.getItem('stockmint_last_sync') || 'Never';
     }
     
-    async render() {
-        // Check connection status
-        await this.checkConnection();
-        
+    render() {
+        // Render non-async, data akan di-update setelah bindEvents
         return `
         <div class="page-content">
             <h1><i class="fab fa-google-drive"></i> Google Sheets Integration</h1>
             <p class="page-subtitle">Manage your cloud storage and data sync</p>
             
-            ${this.user.isDemo ? this.renderDemoView() : this.renderGoogleUserView()}
+            <div id="googleSheetsContent">
+                ${this.user.isDemo ? this.renderDemoView() : this.renderGoogleUserView()}
+            </div>
         </div>
         `;
-    }
-    
-    async checkConnection() {
-        if (this.user.isDemo || !this.spreadsheetId) {
-            this.connectionStatus = 'not_connected';
-            return;
-        }
-        
-        try {
-            if (window.GoogleSheetsService) {
-                const result = await window.GoogleSheetsService.testConnection();
-                this.connectionStatus = result.success ? 'connected' : 'error';
-            } else {
-                this.connectionStatus = 'service_unavailable';
-            }
-        } catch (error) {
-            this.connectionStatus = 'error';
-        }
     }
     
     renderDemoView() {
@@ -90,7 +73,6 @@ class GoogleSheetsPage {
             'connected': { color: '#10b981', icon: 'fa-check-circle', text: 'Connected' },
             'error': { color: '#ef4444', icon: 'fa-exclamation-circle', text: 'Connection Error' },
             'not_connected': { color: '#f59e0b', icon: 'fa-exclamation-triangle', text: 'Not Connected' },
-            'service_unavailable': { color: '#6c757d', icon: 'fa-times-circle', text: 'Service Unavailable' },
             'unknown': { color: '#6c757d', icon: 'fa-question-circle', text: 'Checking...' }
         };
         
@@ -114,7 +96,7 @@ class GoogleSheetsPage {
                         </p>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <span style="
+                        <span id="connectionStatus" style="
                             display: inline-block;
                             padding: 8px 16px;
                             background: ${status.color}20;
@@ -128,7 +110,9 @@ class GoogleSheetsPage {
                     </div>
                 </div>
                 
-                ${this.spreadsheetId ? this.renderSpreadsheetInfo() : this.renderNoSpreadsheet()}
+                <div id="spreadsheetInfo">
+                    ${this.spreadsheetId ? this.renderSpreadsheetInfo() : this.renderNoSpreadsheet()}
+                </div>
                 
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                     <h4><i class="fas fa-sync-alt"></i> Sync Actions</h4>
@@ -157,6 +141,7 @@ class GoogleSheetsPage {
                             <i class="fas fa-plus"></i> Create New Sheet
                         </button>
                     </div>
+                    <p id="syncMessage" style="margin-top: 10px; font-size: 13px; color: #666;"></p>
                 </div>
                 
                 <div style="margin-top: 30px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #c8e6c9;">
@@ -177,7 +162,7 @@ class GoogleSheetsPage {
     renderSpreadsheetInfo() {
         const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
         const products = JSON.parse(localStorage.getItem('stockmint_products') || '[]');
-        const lastSync = localStorage.getItem('stockmint_last_sync') || 'Never';
+        const lastSync = this.lastSync === 'Never' ? 'Never' : new Date(this.lastSync).toLocaleString();
         
         return `
         <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
@@ -194,7 +179,7 @@ class GoogleSheetsPage {
                 </div>
                 <div>
                     <p style="margin: 5px 0; color: #666; font-size: 14px;">Last Synced:</p>
-                    <p style="margin: 5px 0; font-weight: 600;">${lastSync}</p>
+                    <p style="margin: 5px 0; font-weight: 600;" id="lastSyncTime">${lastSync}</p>
                 </div>
                 <div>
                     <p style="margin: 5px 0; color: #666; font-size: 14px;">Data Size:</p>
@@ -204,6 +189,7 @@ class GoogleSheetsPage {
             
             <div style="margin-top: 15px; font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all;">
                 <strong>Spreadsheet ID:</strong> ${this.spreadsheetId}
+                ${this.spreadsheetUrl ? `<br><strong>URL:</strong> <a href="${this.spreadsheetUrl}" target="_blank">${this.spreadsheetUrl}</a>` : ''}
             </div>
         </div>
         `;
@@ -242,67 +228,151 @@ class GoogleSheetsPage {
         return counts.reduce((a, b) => a + b, 0);
     }
     
+    async checkConnection() {
+        if (this.user.isDemo || !this.spreadsheetId) {
+            this.connectionStatus = 'not_connected';
+            return;
+        }
+        
+        try {
+            if (window.GoogleSheetsService) {
+                const result = await window.GoogleSheetsService.testConnection();
+                this.connectionStatus = result.success ? 'connected' : 'error';
+            } else {
+                this.connectionStatus = 'error';
+            }
+        } catch (error) {
+            this.connectionStatus = 'error';
+        }
+    }
+    
+    async bindEvents() {
+        // Update connection status
+        await this.checkConnection();
+        
+        // Update UI
+        this.updateConnectionStatus();
+        this.updateLastSyncTime();
+    }
+    
+    updateConnectionStatus() {
+        const statusElement = document.getElementById('connectionStatus');
+        if (!statusElement) return;
+        
+        const statusConfig = {
+            'connected': { color: '#10b981', icon: 'fa-check-circle', text: 'Connected' },
+            'error': { color: '#ef4444', icon: 'fa-exclamation-circle', text: 'Connection Error' },
+            'not_connected': { color: '#f59e0b', icon: 'fa-exclamation-triangle', text: 'Not Connected' },
+            'unknown': { color: '#6c757d', icon: 'fa-question-circle', text: 'Checking...' }
+        };
+        
+        const status = statusConfig[this.connectionStatus] || statusConfig.unknown;
+        
+        statusElement.innerHTML = `<i class="fas ${status.icon}"></i> ${status.text}`;
+        statusElement.style.background = `${status.color}20`;
+        statusElement.style.color = status.color;
+        statusElement.style.borderColor = `${status.color}40`;
+    }
+    
+    updateLastSyncTime() {
+        const lastSyncElement = document.getElementById('lastSyncTime');
+        if (lastSyncElement && this.lastSync !== 'Never') {
+            lastSyncElement.textContent = new Date(this.lastSync).toLocaleString();
+        }
+    }
+    
+    // Static methods
     static async forceSync() {
         try {
-            if (!window.GoogleSheetsService) {
-                alert('Google Sheets service not available');
-                return;
-            }
-            
             const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
             if (user.isDemo) {
                 alert('This feature is not available in demo mode');
                 return;
             }
             
+            if (!window.GoogleSheetsService) {
+                alert('Google Sheets service not available');
+                return;
+            }
+            
             const sheetsService = window.GoogleSheetsService;
+            const initialized = await sheetsService.init();
+            
+            if (!initialized) {
+                alert('Google Sheets service not initialized. Please check your Google login.');
+                return;
+            }
             
             // Show loading
-            const button = event?.target?.closest('button');
-            if (button) {
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-                button.disabled = true;
-                
-                try {
-                    const result = await sheetsService.syncLocalDataToSheets();
-                    
-                    if (result) {
-                        localStorage.setItem('stockmint_last_sync', new Date().toLocaleString());
-                        alert('✅ Sync completed successfully!');
-                    } else {
-                        alert('⚠️ Sync completed with warnings. Some data may not have been saved.');
-                    }
-                } finally {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    setTimeout(() => location.reload(), 1000);
-                }
+            const syncMessage = document.getElementById('syncMessage');
+            if (syncMessage) {
+                syncMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing data to Google Sheets...';
+                syncMessage.style.color = '#19BEBB';
             }
+            
+            // Prepare data
+            const setupData = {
+                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+            };
+            
+            // Save to Google Sheets
+            const result = await sheetsService.saveSetupData(setupData);
+            
+            if (result) {
+                // Update last sync time
+                const now = new Date().toISOString();
+                localStorage.setItem('stockmint_last_sync', now);
+                
+                if (syncMessage) {
+                    syncMessage.innerHTML = '<i class="fas fa-check-circle"></i> Sync completed successfully!';
+                    syncMessage.style.color = '#10b981';
+                }
+                
+                // Refresh the page after 2 seconds
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                throw new Error('Save operation failed');
+            }
+            
         } catch (error) {
             console.error('Sync error:', error);
-            alert(`❌ Sync failed: ${error.message}`);
+            const syncMessage = document.getElementById('syncMessage');
+            if (syncMessage) {
+                syncMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Sync failed: ${error.message}`;
+                syncMessage.style.color = '#ef4444';
+            }
         }
     }
     
     static openSpreadsheet() {
-        const spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
-        if (spreadsheetUrl) {
-            window.open(spreadsheetUrl, '_blank');
+        const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        if (spreadsheetId) {
+            window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
         } else {
-            const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-            if (spreadsheetId) {
-                window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
-            } else {
-                alert('No spreadsheet available');
-            }
+            alert('No spreadsheet available. Please create one first.');
         }
     }
     
     static async createNewSpreadsheet() {
         try {
-            const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
             const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+            if (user.isDemo) {
+                alert('This feature is not available in demo mode');
+                return;
+            }
+            
+            const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
+            const name = prompt('Enter name for new spreadsheet:', 
+                `StockMint - ${company.name || user.name || 'New Spreadsheet'}`);
+            
+            if (!name) return;
             
             if (!window.GoogleSheetsService) {
                 alert('Google Sheets service not available');
@@ -310,29 +380,22 @@ class GoogleSheetsPage {
             }
             
             const sheetsService = window.GoogleSheetsService;
-            const name = prompt('Enter name for new spreadsheet:', 
-                `StockMint - ${company.name || user.name || 'New Spreadsheet'}`);
+            const initialized = await sheetsService.init();
             
-            if (!name) return;
+            if (!initialized) {
+                alert('Google Sheets service not initialized');
+                return;
+            }
             
-            const button = event?.target?.closest('button');
-            if (button) {
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-                button.disabled = true;
+            const spreadsheetId = await sheetsService.createSpreadsheet(name);
+            
+            if (spreadsheetId) {
+                localStorage.setItem('stockmint_google_sheet_id', spreadsheetId);
+                localStorage.setItem('stockmint_google_sheet_url', 
+                    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
                 
-                try {
-                    const spreadsheetId = await sheetsService.createSpreadsheet(name);
-                    
-                    if (spreadsheetId) {
-                        // Sync existing data to new spreadsheet
-                        await sheetsService.syncLocalDataToSheets();
-                        alert('✅ New spreadsheet created and data synced!');
-                        setTimeout(() => location.reload(), 1000);
-                    }
-                } finally {
-                    button.innerHTML = '<i class="fas fa-plus"></i> Create New Sheet';
-                    button.disabled = false;
-                }
+                alert('✅ New spreadsheet created successfully!');
+                location.reload();
             }
         } catch (error) {
             console.error('Create spreadsheet error:', error);
@@ -341,54 +404,6 @@ class GoogleSheetsPage {
     }
     
     static async createFirstSpreadsheet() {
-        try {
-            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
-            if (user.isDemo) {
-                alert('Please login with Google to use this feature');
-                return;
-            }
-            
-            if (!window.GoogleSheetsService) {
-                alert('Google Sheets service not available. Please refresh the page.');
-                return;
-            }
-            
-            const sheetsService = window.GoogleSheetsService;
-            
-            const button = event?.target?.closest('button');
-            if (button) {
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-                button.disabled = true;
-                
-                try {
-                    const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
-                    const spreadsheetName = company.name ? 
-                        `StockMint - ${company.name}` : 
-                        `StockMint - ${user.name || user.email}`;
-                    
-                    const spreadsheetId = await sheetsService.createSpreadsheet(spreadsheetName);
-                    
-                    if (spreadsheetId) {
-                        // If we have data, sync it
-                        const hasData = localStorage.getItem('stockmint_setup_completed') === 'true';
-                        if (hasData) {
-                            await sheetsService.syncLocalDataToSheets();
-                        }
-                        
-                        alert('✅ Spreadsheet created successfully!');
-                        setTimeout(() => location.reload(), 1000);
-                    }
-                } finally {
-                    button.innerHTML = '<i class="fas fa-plus-circle"></i> Create Your First Spreadsheet';
-                    button.disabled = false;
-                }
-            }
-        } catch (error) {
-            console.error('Create first spreadsheet error:', error);
-            alert(`❌ Failed to create spreadsheet: ${error.message}`);
-        }
+        await this.createNewSpreadsheet();
     }
 }
-
-// Export
-window.GoogleSheetsPage = GoogleSheetsPage;
