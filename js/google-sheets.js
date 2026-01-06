@@ -14,6 +14,43 @@ class GoogleSheetsService {
         this.maxRetries = 3;
     }
 
+    // ===== NEW METHOD =====
+    // Tambahkan method untuk menangani token expired
+    async refreshTokenIfNeeded() {
+        // Untuk sekarang, kita redirect ke login ulang jika token expired
+        // Di production, ini akan menggunakan refresh token
+        const token = localStorage.getItem('stockmint_token');
+        
+        if (!token || token.startsWith('demo_token_')) {
+            return false;
+        }
+        
+        // Cek apakah token masih valid dengan request sederhana
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.status === 401) {
+                // Token expired, perlu login ulang
+                console.log('🔑 Google token expired, redirecting to login...');
+                localStorage.removeItem('stockmint_token');
+                localStorage.removeItem('stockmint_user');
+                localStorage.removeItem('stockmint_plan');
+                localStorage.setItem('stockmint_token_expired', 'true');
+                alert('Your Google session has expired. Please login again.');
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            return response.ok;
+        } catch (error) {
+            console.warn('Token check failed:', error);
+            return false;
+        }
+    }
+
+    // ===== UPDATED METHOD =====
     // Initialize Google Sheets service
     async init() {
         try {
@@ -33,6 +70,13 @@ class GoogleSheetsService {
             this.token = localStorage.getItem('stockmint_token');
             if (!this.token || this.token.startsWith('demo_token_')) {
                 console.log('🚫 No valid Google token found');
+                this.initialized = false;
+                return false;
+            }
+            
+            // Cek apakah token masih valid
+            const tokenValid = await this.refreshTokenIfNeeded();
+            if (!tokenValid) {
                 this.initialized = false;
                 return false;
             }
