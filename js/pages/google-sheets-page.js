@@ -471,194 +471,251 @@ class GoogleSheetsPage {
     
     // ========== RESET DATA METHODS ==========
     
-    // Static method: Reset all data
-    static async resetAllData() {
-        try {
-            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
-            const isDemo = user.isDemo || false;
-            
-            if (isDemo) {
-                alert('Reset data is not available in demo mode. Login with Google to enable this feature.');
-                return;
-            }
-            
-            // Step 1: Backup current data to Google Sheets first
-            try {
-                if (window.GoogleSheetsService) {
-                    const sheetsService = window.GoogleSheetsService;
-                    const initialized = await sheetsService.init();
-                    
-                    if (initialized) {
-                        // Backup data before reset
-                        const setupData = {
-                            company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
-                            warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
-                            suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
-                            customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
-                            categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
-                            products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
-                        };
-                        
-                        await sheetsService.saveSetupData(setupData);
-                        console.log('✅ Data backed up to Google Sheets before reset');
-                    }
-                }
-            } catch (backupError) {
-                console.warn('⚠️ Backup failed, continuing with reset:', backupError);
-            }
-            
-            // Step 2: Create new spreadsheet
-            const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
-            const newSpreadsheetName = `StockMint Reset - ${company.name || user.name} (${new Date().toLocaleDateString()})`;
-            
-            let newSpreadsheetId = null;
-            if (window.GoogleSheetsService) {
-                const sheetsService = window.GoogleSheetsService;
-                newSpreadsheetId = await sheetsService.createSpreadsheet(newSpreadsheetName);
-            }
-            
-            // Step 3: Clear ALL local data
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('stockmint_')) {
-                    keysToRemove.push(key);
-                }
-            }
-            
-            keysToRemove.forEach(key => {
-                localStorage.removeItem(key);
-            });
-            
-            // Step 4: Clear session storage
-            sessionStorage.clear();
-            
-            // Step 5: Preserve user and new spreadsheet info
-            localStorage.setItem('stockmint_user', JSON.stringify(user));
-            if (newSpreadsheetId) {
-                localStorage.setItem('stockmint_google_sheet_id', newSpreadsheetId);
-            }
-            
-            // Step 6: Set plan to basic for Google users
-            localStorage.setItem('stockmint_plan', 'basic');
-            
-            // Step 7: Show success message
-            alert('✅ All data has been reset successfully!\n\nA fresh Google Sheets has been created.\nYou will be redirected to the setup wizard.');
-            
-            // Step 8: Redirect to setup
-            setTimeout(() => {
-                window.location.hash = '#setup/start-new';
-            }, 1500);
-            
-        } catch (error) {
-            console.error('❌ Reset data error:', error);
-            alert(`Reset failed: ${error.message}\n\nYour data is still intact.`);
-        }
-    }
-    
-    // Static method: Show reset confirmation modal
-    static showResetConfirmation() {
+    // Static method: Reset all data - PERBAIKI
+static async resetAllData() {
+    try {
         const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
         const isDemo = user.isDemo || false;
         
         if (isDemo) {
-            alert('This feature requires Google login. Please login with Google to enable data reset.');
+            alert('Reset data is not available in demo mode. Login with Google to enable this feature.');
             return;
         }
         
-        const modalHTML = `
-            <div id="resetConfirmationModal" style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.7);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-                padding: 20px;
+        // **TAMBAHKAN: Tutup modal konfirmasi terlebih dahulu**
+        const modal = document.getElementById('resetConfirmationModal');
+        if (modal) {
+            modal.remove();
+        }
+        
+        // Step 1: Inisialisasi Google Sheets Service
+        if (!window.GoogleSheetsService) {
+            alert('Google Sheets service not available');
+            return;
+        }
+        
+        const sheetsService = window.GoogleSheetsService;
+        let initialized = await sheetsService.init();
+        
+        if (!initialized) {
+            alert('Google Sheets service not initialized. Please check your Google login.');
+            return;
+        }
+        
+        // Step 2: Gunakan spreadsheet yang sudah ada
+        let spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        let spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
+        const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
+        
+        if (!spreadsheetId) {
+            // Jika tidak ada spreadsheet, buat yang baru
+            const spreadsheetName = `StockMint - ${company.name || user.name || 'My Business'}`;
+            spreadsheetId = await sheetsService.createSpreadsheet(spreadsheetName);
+            
+            if (!spreadsheetId) {
+                throw new Error('Failed to create spreadsheet');
+            }
+            
+            spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+            localStorage.setItem('stockmint_google_sheet_id', spreadsheetId);
+            localStorage.setItem('stockmint_google_sheet_url', spreadsheetUrl);
+        }
+        
+        // Step 3: HAPUS HANYA DATA DI SHEETS, BUKAN FILE BARU
+        console.log('🧹 Clearing all data in existing spreadsheet...');
+        
+        // Siapkan data kosong untuk semua sheets
+        const emptyData = {
+            company: {
+                name: company.name || user.name || 'My Business',
+                email: user.email || '',
+                setupDate: new Date().toISOString(),
+                resetDate: new Date().toISOString()
+            },
+            warehouses: [],
+            suppliers: [],
+            customers: [],
+            categories: [],
+            products: []
+        };
+        
+        // Simpan data kosong ke Google Sheets
+        await sheetsService.saveSetupData(emptyData);
+        
+        // Step 4: Hapus data lokal TAPI pertahankan:
+        // - User info
+        // - Google Sheets info
+        // - Setup completed flag
+        
+        const preserveKeys = [
+            'stockmint_user',
+            'stockmint_plan',
+            'stockmint_google_sheet_id',
+            'stockmint_google_sheet_url',
+            'stockmint_setup_completed',
+            'stockmint_setup_date',
+            'stockmint_token'
+        ];
+        
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('stockmint_') && !preserveKeys.includes(key)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        // Step 5: Reset juga session storage
+        sessionStorage.clear();
+        
+        // Step 6: Simpan data perusahaan kosong
+        localStorage.setItem('stockmint_company', JSON.stringify(emptyData.company));
+        localStorage.setItem('stockmint_warehouses', JSON.stringify(emptyData.warehouses));
+        localStorage.setItem('stockmint_suppliers', JSON.stringify(emptyData.suppliers));
+        localStorage.setItem('stockmint_customers', JSON.stringify(emptyData.customers));
+        localStorage.setItem('stockmint_categories', JSON.stringify(emptyData.categories));
+        localStorage.setItem('stockmint_products', JSON.stringify(emptyData.products));
+        
+        // Step 7: Update last sync time
+        localStorage.setItem('stockmint_last_sync', new Date().toISOString());
+        
+        // Step 8: Show success message
+        alert('✅ All data has been reset successfully!\n\nYour Google Sheets file has been cleared and is ready for new setup.');
+        
+        // Step 9: Redirect to setup wizard
+        setTimeout(() => {
+            window.location.hash = '#setup/company';
+        }, 1500);
+        
+    } catch (error) {
+        console.error('❌ Reset data error:', error);
+        alert(`Reset failed: ${error.message}\n\nYour data is still intact.`);
+    }
+}
+
+// Static method: Show reset confirmation modal - PERBAIKI
+static showResetConfirmation() {
+    const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+    const isDemo = user.isDemo || false;
+    
+    if (isDemo) {
+        alert('This feature requires Google login. Please login with Google to enable data reset.');
+        return;
+    }
+    
+    // Cek apakah sudah ada modal, jika ya, jangan buat duplikat
+    if (document.getElementById('resetConfirmationModal')) {
+        return;
+    }
+    
+    const modalHTML = `
+        <div id="resetConfirmationModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        ">
+            <div style="
+                background: white;
+                border-radius: 15px;
+                padding: 30px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             ">
-                <div style="
-                    background: white;
-                    border-radius: 15px;
-                    padding: 30px;
-                    max-width: 500px;
-                    width: 100%;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                ">
-                    <div style="text-align: center; margin-bottom: 25px;">
-                        <div style="font-size: 48px; color: #ef4444; margin-bottom: 15px;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h3 style="color: #333; margin-bottom: 10px;">Reset All Data</h3>
-                        <p style="color: #666; line-height: 1.6;">
-                            This will delete ALL your local data and create a fresh Google Sheets.
-                            Your current data will be backed up before reset.
-                        </p>
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="font-size: 48px; color: #ef4444; margin-bottom: 15px;">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                    
-                    <div style="background: #fee2e2; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
-                        <h4 style="color: #dc2626; margin-top: 0;">
-                            <i class="fas fa-skull-crossbones"></i> Warning
-                        </h4>
-                        <ul style="color: #dc2626; margin: 0; padding-left: 20px;">
-                            <li>All local data will be deleted</li>
-                            <li>A new Google Sheets will be created</li>
-                            <li>You'll need to setup your data again</li>
-                            <li>This action cannot be undone</li>
-                        </ul>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px;">
-                        <button id="cancelResetBtn" style="
-                            background: #6c757d;
-                            color: white;
-                            border: none;
-                            padding: 12px 24px;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            flex: 1;
-                        ">
-                            Cancel
-                        </button>
-                        <button id="confirmResetBtn" style="
-                            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                            color: white;
-                            border: none;
-                            padding: 12px 24px;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            flex: 1;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 8px;
-                        ">
-                            <i class="fas fa-broom"></i> Reset All Data
-                        </button>
+                    <h3 style="color: #333; margin-bottom: 10px;">Reset All Data</h3>
+                    <p style="color: #666; line-height: 1.6;">
+                        This will delete ALL your local data and clear your Google Sheets.
+                        Your Google Sheets file will be kept but all data inside will be removed.
+                    </p>
+                </div>
+                
+                <div style="background: #fee2e2; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
+                    <h4 style="color: #dc2626; margin-top: 0;">
+                        <i class="fas fa-skull-crossbones"></i> Warning
+                    </h4>
+                    <ul style="color: #dc2626; margin: 0; padding-left: 20px;">
+                        <li>All local data will be deleted</li>
+                        <li>Your Google Sheets will be cleared</li>
+                        <li>You'll need to setup your data again</li>
+                        <li>This action cannot be undone</li>
+                    </ul>
+                </div>
+                
+                <div style="display: flex; gap: 15px;">
+                    <button id="cancelResetBtn" style="
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        flex: 1;
+                    ">
+                        Cancel
+                    </button>
+                    <button id="confirmResetBtn" style="
+                        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        flex: 1;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    ">
+                        <i class="fas fa-broom"></i> Reset All Data
+                    </button>
                     </div>
                 </div>
             </div>
-        `;
-        
+    `    ;
+    
         document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
+    
         // Bind events
         document.getElementById('cancelResetBtn').addEventListener('click', () => {
-            document.getElementById('resetConfirmationModal').remove();
+            const modal = document.getElementById('resetConfirmationModal');
+            if (modal) {
+                modal.remove();
+            }
         });
-        
+    
         document.getElementById('confirmResetBtn').addEventListener('click', async () => {
-            document.getElementById('confirmResetBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
-            document.getElementById('confirmResetBtn').disabled = true;
-            
-            await GoogleSheetsPage.resetAllData();
-            
-            // Modal akan dihapus oleh redirect
+            const confirmBtn = document.getElementById('confirmResetBtn');
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
+            confirmBtn.disabled = true;
+        
+            try {
+                await GoogleSheetsPage.resetAllData();
+                } catch (error) {
+                console.error('Reset error:', error);
+                const modal = document.getElementById('resetConfirmationModal');
+                if (modal) {
+                    modal.remove();
+                }
+                alert(`Reset failed: ${error.message}`);
+            }
         });
     }
 }
