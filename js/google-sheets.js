@@ -107,30 +107,51 @@ class GoogleSheetsService {
         return this.initialized && this.token && !this.user?.isDemo;
     }
 
-    // Create new Google Spreadsheet
+    // Di method createSpreadsheet() - TAMBAHKAN pengecekan duplikasi:
     async createSpreadsheet(title) {
-    try {
-        if (!this.token || this.token.startsWith('demo_token_')) {
-            throw new Error('Invalid Google token');
+        try {
+            if (!this.token || this.token.startsWith('demo_token_')) {
+                throw new Error('Invalid Google token');
+            }
+
+            console.log('📝 Creating new spreadsheet:', title);
+
+        // Cek apakah spreadsheet dengan nama yang sama sudah ada
+        try {
+            const searchResponse = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(title)}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name)`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                }
+            );
+            
+            if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                if (searchData.files && searchData.files.length > 0) {
+                    // Gunakan spreadsheet yang sudah ada
+                    console.log('📊 Found existing spreadsheet with same name');
+                    this.spreadsheetId = searchData.files[0].id;
+                    
+                    // Save spreadsheet info
+                    localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+                    localStorage.setItem('stockmint_google_sheet_url', 
+                        `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
+                    
+                    return this.spreadsheetId;
+                }
+            }
+        } catch (searchError) {
+            console.log('🔍 Could not search for existing spreadsheet, creating new one');
         }
 
-        console.log('📝 Creating new spreadsheet:', title);
-
-        // ⚠️ HAPUS locale dan timeZone - tidak didukung oleh API!
+        // Jika tidak ada, buat yang baru
         const spreadsheetData = {
             properties: {
                 title: title || `StockMint_${new Date().toISOString().split('T')[0]}`
             },
             sheets: [
-                {
-                    properties: {
-                        title: 'StockMint_Data',
-                        gridProperties: {
-                            rowCount: 1000,
-                            columnCount: 20
-                        }
-                    }
-                },
                 {
                     properties: {
                         title: 'Company',
@@ -199,14 +220,6 @@ class GoogleSheetsService {
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Google Sheets API error:', errorData);
-            
-            // Coba lagi dengan format yang lebih sederhana
-            if (errorData.error?.message?.includes('locale') || errorData.error?.message?.includes('timeZone')) {
-                console.log('🔄 Retrying with simplified request...');
-                return await this.createSpreadsheetSimplified(title);
-            }
-            
             throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
         }
 
@@ -223,15 +236,10 @@ class GoogleSheetsService {
         
     } catch (error) {
         console.error('❌ Error creating spreadsheet:', error);
-        
-        // Save error info
-        localStorage.setItem('stockmint_google_sheet_error', error.message);
-        localStorage.setItem('stockmint_google_sheet_creation_failed', 'true');
-        
         throw error;
     }
 }
-
+    
 // Tambahkan method baru untuk request yang lebih sederhana
 async createSpreadsheetSimplified(title) {
     try {
