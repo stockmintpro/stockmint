@@ -1,4 +1,4 @@
-// StockMint Main Application - COMPLETE VERSION WITH GOOGLE SHEETS INTEGRATION
+// StockMint Main Application - COMPLETE VERSION WITH GOOGLE SHEETS INTEGRATION (FIXED VERSION)
 
 class StockMintApp {
   constructor() {
@@ -89,7 +89,62 @@ class StockMintApp {
         console.error('❌ Error initializing sync services:', error);
         // Jangan crash app jika service gagal
     }
-}
+  }
+  
+  // ===== NEW METHOD: Check and restore Google Sheets connection =====
+  async checkAndRestoreGoogleSheetsConnection() {
+    try {
+      const user = this.user;
+      if (user?.isDemo) return false;
+      
+      const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+      const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+      
+      if (spreadsheetId && !setupCompleted) {
+        console.log('🔄 Found existing Google Sheet, trying to restore connection...');
+        
+        // Coba inisialisasi Google Sheets service
+        if (window.GoogleSheetsService) {
+          const sheetsService = window.GoogleSheetsService;
+          const initialized = await sheetsService.init();
+          
+          if (initialized) {
+            console.log('✅ Google Sheets service initialized with existing spreadsheet');
+            
+            // Coba load data dari Google Sheets
+            const loaded = await sheetsService.loadDataFromSheets();
+            
+            if (loaded) {
+              console.log('✅ Data loaded from Google Sheets');
+              // Update setup data
+              this.setupData = {
+                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+              };
+              
+              // Set flag setup completed
+              localStorage.setItem('stockmint_setup_completed', 'true');
+              return true;
+            } else {
+              console.warn('⚠️ Could not load data from Google Sheets, but spreadsheet exists');
+              // Tetap set flag setup completed karena spreadsheet ada
+              localStorage.setItem('stockmint_setup_completed', 'true');
+              return false;
+            }
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('❌ Error restoring Google Sheets connection:', error);
+      return false;
+    }
+  }
   
   // ===== UPDATED METHOD =====
   // Initialize application
@@ -108,6 +163,9 @@ class StockMintApp {
     try {
       // Step 1: Load user data
       this.loadUserData();
+      
+      // Step 1.5: Cek dan restore koneksi Google Sheets jika sudah ada spreadsheet
+      await this.checkAndRestoreGoogleSheetsConnection();
       
       // Step 2: Setup configuration
       this.setupConfig();
@@ -153,6 +211,40 @@ class StockMintApp {
       console.error('❌ Failed to initialize app:', error);
       this.showCriticalError(error);
     }
+  }
+  
+  // ===== UPDATED METHOD: Check if first-time setup is needed =====
+  checkFirstTimeSetup() {
+    const user = this.user;
+    
+    // Jika user adalah demo, langsung lanjut tanpa setup
+    if (user?.isDemo) {
+      console.log('👤 Demo user detected, skipping setup');
+      return false;
+    }
+    
+    // CEK: Jika sudah ada spreadsheetId, maka anggap setup sudah selesai
+    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+    const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+    
+    if (spreadsheetId) {
+      console.log('📊 Spreadsheet found, setup considered completed');
+      
+      // Pastikan flag setup completed diset
+      if (!setupCompleted) {
+        localStorage.setItem('stockmint_setup_completed', 'true');
+      }
+      
+      return false;
+    }
+    
+    // Jika belum setup, tampilkan wizard
+    if (!setupCompleted) {
+      console.log('🔄 First-time setup required');
+      return true;
+    }
+    
+    return false;
   }
   
   // Initialize Google Sheets service - KEEP THIS METHOD
@@ -417,26 +509,6 @@ class StockMintApp {
     
     // Set Google Sheets availability
     this.config.googleSheetsAvailable = this.googleSheetsReady && !this.user?.isDemo;
-  }
-  
-  // Check if first-time setup is needed
-  checkFirstTimeSetup() {
-    const setupCompleted = localStorage.getItem('stockmint_setup_completed');
-    const user = this.user;
-    
-    // Jika user adalah demo, langsung lanjut tanpa setup
-    if (user?.isDemo) {
-      console.log('👤 Demo user detected, skipping setup');
-      return false;
-    }
-    
-    // Jika belum setup, tampilkan wizard
-    if (!setupCompleted) {
-      console.log('🔄 First-time setup required');
-      return true;
-    }
-    
-    return false;
   }
   
   // Load UI components (sidebar, navbar)
@@ -1890,7 +1962,7 @@ class StockMintApp {
 
 // Create global instance
 window.StockMintApp = new StockMintApp();
-console.log('✅ StockMintApp instance created - WITH GOOGLE SHEETS INTEGRATION');
+console.log('✅ StockMintApp instance created - WITH GOOGLE SHEETS INTEGRATION (FIXED VERSION)');
 
 // ===== TEMPORARY PATCH FOR SETUP WIZARD =====
 // Ini akan memastikan setup wizard berfungsi meskipun routing bermasalah
