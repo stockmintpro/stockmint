@@ -1,4 +1,4 @@
-// Google Sheets Service - ENHANCED VERSION WITH BETTER ERROR HANDLING
+// Google Sheets Service - ENHANCED VERSION WITH PERSISTENT SPREADSHEET MANAGEMENT
 class GoogleSheetsService {
     constructor() {
         this.clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
@@ -84,14 +84,23 @@ class GoogleSheetsService {
             // Check for existing spreadsheet ID
             this.spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
             
-            // Jika tidak ada spreadsheet ID, coba buat baru
+            // Jika tidak ada spreadsheet ID, coba cari spreadsheet yang sudah ada
             if (!this.spreadsheetId) {
-                console.log('📝 No spreadsheet found, will create during setup');
-                this.initialized = true; // Tetap dianggap initialized untuk create nanti
+                console.log('🔍 No spreadsheet ID in localStorage, searching for existing spreadsheet...');
+                const existingSheet = await this.findExistingSpreadsheet();
+                if (existingSheet) {
+                    this.spreadsheetId = existingSheet.id;
+                    localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
+                    localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+                    console.log('✅ Found existing spreadsheet:', existingSheet.name);
+                } else {
+                    console.log('📝 No spreadsheet found, will create during setup');
+                }
+                this.initialized = true;
                 return true;
             }
 
-            console.log('✅ Google Sheets service initialized');
+            console.log('✅ Google Sheets service initialized with existing spreadsheet');
             this.initialized = true;
             return true;
             
@@ -102,24 +111,25 @@ class GoogleSheetsService {
         }
     }
 
-    // Check if service is ready
-    isReady() {
-        return this.initialized && this.token && !this.user?.isDemo;
-    }
-
-    // Di method createSpreadsheet() - TAMBAHKAN pengecekan duplikasi:
-    async createSpreadsheet(title) {
+    // ===== NEW METHOD =====
+    // Cari spreadsheet yang sudah ada untuk user ini
+    async findExistingSpreadsheet() {
         try {
-            if (!this.token || this.token.startsWith('demo_token_')) {
-                throw new Error('Invalid Google token');
-            }
-
-            console.log('📝 Creating new spreadsheet:', title);
-
-        // Cek apakah spreadsheet dengan nama yang sama sudah ada
-        try {
+            const user = this.user;
+            if (user.isDemo || !user.email || !this.token) return null;
+            
+            // Cari berdasarkan uniqueId atau email
+            const userIdentifier = user.uniqueId ? 
+                user.uniqueId.substring(0, 8) : 
+                user.email.split('@')[0];
+            
+            if (!userIdentifier) return null;
+            
+            // Query untuk mencari spreadsheet dengan pola "StockMint" dan user identifier
+            const searchQuery = `name contains 'StockMint' and name contains '${userIdentifier}' and mimeType='application/vnd.google-apps.spreadsheet'`;
+            
             const searchResponse = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(title)}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name)`,
+                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,webViewLink,createdTime,modifiedTime)`,
                 {
                     headers: {
                         'Authorization': `Bearer ${this.token}`
@@ -130,155 +140,280 @@ class GoogleSheetsService {
             if (searchResponse.ok) {
                 const searchData = await searchResponse.json();
                 if (searchData.files && searchData.files.length > 0) {
-                    // Gunakan spreadsheet yang sudah ada
-                    console.log('📊 Found existing spreadsheet with same name');
-                    this.spreadsheetId = searchData.files[0].id;
+                    // Ambil spreadsheet yang paling baru dimodifikasi
+                    const latestSheet = searchData.files.sort((a, b) => 
+                        new Date(b.modifiedTime || b.createdTime || 0) - 
+                        new Date(a.modifiedTime || a.createdTime || 0)
+                    )[0];
                     
-                    // Save spreadsheet info
-                    localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
-                    localStorage.setItem('stockmint_google_sheet_url', 
-                        `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
-                    
-                    return this.spreadsheetId;
+                    console.log('📊 Found existing user spreadsheet:', latestSheet.name);
+                    return {
+                        id: latestSheet.id,
+                        name: latestSheet.name,
+                        url: latestSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${latestSheet.id}/edit`,
+                        created: latestSheet.createdTime,
+                        modified: latestSheet.modifiedTime
+                    };
                 }
             }
+            
+            // Jika tidak ditemukan dengan pola, coba cari semua spreadsheet StockMint
+            const backupSearch = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=name contains 'StockMint' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
+                {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                }
+            );
+            
+            if (backupSearch.ok) {
+                const backupData = await backupSearch.json();
+                if (backupData.files && backupData.files.length > 0) {
+                    // Ambil yang pertama
+                    const sheet = backupData.files[0];
+                    console.log('📊 Found StockMint spreadsheet:', sheet.name);
+                    return {
+                        id: sheet.id,
+                        name: sheet.name,
+                        url: sheet.webViewLink || `https://docs.google.com/spreadsheets/d/${sheet.id}/edit`
+                    };
+                }
+            }
+            
+            return null;
+            
         } catch (searchError) {
-            console.log('🔍 Could not search for existing spreadsheet, creating new one');
+            console.log('🔍 Could not search for existing spreadsheet:', searchError.message);
+            return null;
         }
-
-        // Jika tidak ada, buat yang baru
-        const spreadsheetData = {
-            properties: {
-                title: title || `StockMint_${new Date().toISOString().split('T')[0]}`
-            },
-            sheets: [
-                {
-                    properties: {
-                        title: 'Company',
-                        gridProperties: {
-                            rowCount: 100,
-                            columnCount: 10
-                        }
-                    }
-                },
-                {
-                    properties: {
-                        title: 'Warehouses',
-                        gridProperties: {
-                            rowCount: 100,
-                            columnCount: 10
-                        }
-                    }
-                },
-                {
-                    properties: {
-                        title: 'Suppliers',
-                        gridProperties: {
-                            rowCount: 100,
-                            columnCount: 10
-                        }
-                    }
-                },
-                {
-                    properties: {
-                        title: 'Customers',
-                        gridProperties: {
-                            rowCount: 100,
-                            columnCount: 10
-                        }
-                    }
-                },
-                {
-                    properties: {
-                        title: 'Categories',
-                        gridProperties: {
-                            rowCount: 100,
-                            columnCount: 10
-                        }
-                    }
-                },
-                {
-                    properties: {
-                        title: 'Products',
-                        gridProperties: {
-                            rowCount: 1000,
-                            columnCount: 20
-                        }
-                    }
-                }
-            ]
-        };
-
-        const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(spreadsheetData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
-        }
-
-        const data = await response.json();
-        this.spreadsheetId = data.spreadsheetId;
-        
-        // Save spreadsheet info
-        localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
-        localStorage.setItem('stockmint_google_sheet_url', 
-            data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
-        
-        console.log('✅ Spreadsheet created:', this.spreadsheetId);
-        return this.spreadsheetId;
-        
-    } catch (error) {
-        console.error('❌ Error creating spreadsheet:', error);
-        throw error;
     }
-}
-    
-// Tambahkan method baru untuk request yang lebih sederhana
-async createSpreadsheetSimplified(title) {
-    try {
-        console.log('📝 Creating spreadsheet (simplified):', title);
-        
-        const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+
+    // Check if service is ready
+    isReady() {
+        return this.initialized && this.token && !this.user?.isDemo;
+    }
+
+    // ===== PERBAIKAN METHOD createSpreadsheet() =====
+    async createSpreadsheet(title) {
+        try {
+            if (!this.token || this.token.startsWith('demo_token_')) {
+                throw new Error('Invalid Google token');
+            }
+
+            console.log('📝 Creating new spreadsheet:', title);
+            
+            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+            
+            // GENERATE NAMA UNIK BERDASARKAN USER + COMPANY
+            let spreadsheetName = title;
+            
+            // Jika user punya uniqueId, tambahkan ke nama untuk identifikasi
+            if (user.uniqueId && !spreadsheetName.includes(user.uniqueId)) {
+                spreadsheetName = `${title} [${user.uniqueId.substring(0, 8)}]`;
+            }
+            
+            // Cari spreadsheet yang sudah ada berdasarkan pola
+            const existingSheet = await this.findExistingSpreadsheet();
+            if (existingSheet) {
+                console.log('📊 Using existing spreadsheet:', existingSheet.name);
+                this.spreadsheetId = existingSheet.id;
+                
+                // Save spreadsheet info
+                localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+                localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+                
+                return this.spreadsheetId;
+            }
+
+            // Buat spreadsheet baru dengan nama yang unik
+            const spreadsheetData = {
                 properties: {
-                    title: title || 'StockMint Data'
-                }
-            })
-        });
+                    title: spreadsheetName
+                },
+                sheets: this.getDefaultSheets()
+            };
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Simplified creation failed: ${errorData.error?.message || response.statusText}`);
+            const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(spreadsheetData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Failed to create spreadsheet: ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            this.spreadsheetId = data.spreadsheetId;
+            
+            // SIMPAN JUGA DI indexedDB ATAU sessionStorage SEBAGAI BACKUP
+            this.saveSpreadsheetToBackup(this.spreadsheetId, spreadsheetName);
+            
+            // Save spreadsheet info
+            localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+            localStorage.setItem('stockmint_google_sheet_url', 
+                data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
+            
+            console.log('✅ Spreadsheet created:', {
+                id: this.spreadsheetId,
+                name: spreadsheetName
+            });
+            
+            return this.spreadsheetId;
+            
+        } catch (error) {
+            console.error('❌ Error creating spreadsheet:', error);
+            throw error;
         }
+    }
+    
+    // ===== NEW METHOD: getDefaultSheets() =====
+    getDefaultSheets() {
+        return [
+            {
+                properties: {
+                    title: 'Company',
+                    gridProperties: {
+                        rowCount: 100,
+                        columnCount: 10
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Warehouses',
+                    gridProperties: {
+                        rowCount: 100,
+                        columnCount: 10
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Suppliers',
+                    gridProperties: {
+                        rowCount: 100,
+                        columnCount: 10
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Customers',
+                    gridProperties: {
+                        rowCount: 100,
+                        columnCount: 10
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Categories',
+                    gridProperties: {
+                        rowCount: 100,
+                        columnCount: 10
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Products',
+                    gridProperties: {
+                        rowCount: 1000,
+                        columnCount: 20
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Transactions',
+                    gridProperties: {
+                        rowCount: 1000,
+                        columnCount: 15
+                    }
+                }
+            },
+            {
+                properties: {
+                    title: 'Settings',
+                    gridProperties: {
+                        rowCount: 50,
+                        columnCount: 10
+                    }
+                }
+            }
+        ];
+    }
+    
+    // ===== NEW METHOD: saveSpreadsheetToBackup() =====
+    saveSpreadsheetToBackup(spreadsheetId, spreadsheetName) {
+        try {
+            // Simpan di sessionStorage (bertahan selama tab terbuka)
+            sessionStorage.setItem('stockmint_sheet_backup', JSON.stringify({
+                id: spreadsheetId,
+                name: spreadsheetName,
+                timestamp: Date.now(),
+                user: this.user?.email || 'unknown'
+            }));
+            
+            // Juga simpan di localStorage dengan key yang berbeda
+            const backupKey = `stockmint_sheet_${this.user?.uniqueId || this.user?.email || 'unknown'}`;
+            localStorage.setItem(backupKey, JSON.stringify({
+                id: spreadsheetId,
+                name: spreadsheetName,
+                created: new Date().toISOString(),
+                lastAccess: new Date().toISOString()
+            }));
+            
+            console.log('💾 Spreadsheet info backed up');
+            
+        } catch (error) {
+            console.warn('Failed to backup spreadsheet:', error);
+        }
+    }
 
-        const data = await response.json();
-        this.spreadsheetId = data.spreadsheetId;
-        
-        // Save spreadsheet info
-        localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
-        localStorage.setItem('stockmint_google_sheet_url', 
-            data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
-        
-        console.log('✅ Spreadsheet created (simplified):', this.spreadsheetId);
-        return this.spreadsheetId;
-        
-      } catch (error) {
-        console.error('❌ Simplified creation failed:', error);
-        throw error;
-     }
-   }
+    // Tambahkan method baru untuk request yang lebih sederhana
+    async createSpreadsheetSimplified(title) {
+        try {
+            console.log('📝 Creating spreadsheet (simplified):', title);
+            
+            const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    properties: {
+                        title: title || 'StockMint Data'
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Simplified creation failed: ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            this.spreadsheetId = data.spreadsheetId;
+            
+            // Save spreadsheet info
+            localStorage.setItem('stockmint_google_sheet_id', this.spreadsheetId);
+            localStorage.setItem('stockmint_google_sheet_url', 
+                data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`);
+            
+            console.log('✅ Spreadsheet created (simplified):', this.spreadsheetId);
+            return this.spreadsheetId;
+            
+        } catch (error) {
+            console.error('❌ Simplified creation failed:', error);
+            throw error;
+        }
+    }
 
     // Get or create spreadsheet
     async getSpreadsheet() {
@@ -296,11 +431,16 @@ async createSpreadsheetSimplified(title) {
         
         let spreadsheetName;
         if (company.name) {
-            spreadsheetName = `StockMint - ${company.name} (${new Date().getFullYear()})`;
+            spreadsheetName = `StockMint - ${company.name}`;
         } else if (user.name) {
             spreadsheetName = `StockMint - ${user.name}`;
         } else {
             spreadsheetName = `StockMint - ${user.email || 'My Inventory'}`;
+        }
+        
+        // Tambahkan tahun jika belum ada
+        if (!spreadsheetName.includes(new Date().getFullYear())) {
+            spreadsheetName += ` (${new Date().getFullYear()})`;
         }
         
         return await this.createSpreadsheet(spreadsheetName);
@@ -656,6 +796,51 @@ async createSpreadsheetSimplified(title) {
             
         } catch (error) {
             return { success: false, message: `Connection error: ${error.message}` };
+        }
+    }
+    
+    // ===== NEW METHOD: Clear ALL data in spreadsheet =====
+    async clearAllSheetsData() {
+        try {
+            if (!this.spreadsheetId || !this.token) {
+                throw new Error('Not connected to Google Sheets');
+            }
+            
+            console.log('🧹 Clearing all sheets data...');
+            
+            // Dapatkan semua sheets dalam spreadsheet
+            const response = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                throw new Error('Failed to get spreadsheet info');
+            }
+            
+            const spreadsheet = await response.json();
+            const sheetNames = spreadsheet.sheets.map(sheet => sheet.properties.title);
+            
+            // Kosongkan setiap sheet
+            for (const sheetName of sheetNames) {
+                try {
+                    await this.clearSheet(this.spreadsheetId, sheetName);
+                    console.log(`✅ Cleared sheet: ${sheetName}`);
+                } catch (clearError) {
+                    console.warn(`Could not clear sheet ${sheetName}:`, clearError.message);
+                }
+            }
+            
+            console.log('✅ All sheets cleared successfully');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error clearing sheets:', error);
+            throw error;
         }
     }
 }
