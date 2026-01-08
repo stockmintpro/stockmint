@@ -471,132 +471,108 @@ class GoogleSheetsPage {
     
     // ========== RESET DATA METHODS ==========
     
-    // Static method: Reset all data - PERBAIKI
+    // Di google-sheets-page.js - resetAllData() method - PERBAIKI
 static async resetAllData() {
-    try {
-        const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
-        const isDemo = user.isDemo || false;
-        
-        if (isDemo) {
-            alert('Reset data is not available in demo mode. Login with Google to enable this feature.');
-            return;
-        }
-        
-        // **TAMBAHKAN: Tutup modal konfirmasi terlebih dahulu**
-        const modal = document.getElementById('resetConfirmationModal');
-        if (modal) {
-            modal.remove();
-        }
-        
-        // Step 1: Inisialisasi Google Sheets Service
-        if (!window.GoogleSheetsService) {
-            alert('Google Sheets service not available');
-            return;
-        }
-        
-        const sheetsService = window.GoogleSheetsService;
-        let initialized = await sheetsService.init();
-        
-        if (!initialized) {
-            alert('Google Sheets service not initialized. Please check your Google login.');
-            return;
-        }
-        
-        // Step 2: Gunakan spreadsheet yang sudah ada
-        let spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-        let spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
-        const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
-        
-        if (!spreadsheetId) {
-            // Jika tidak ada spreadsheet, buat yang baru
-            const spreadsheetName = `StockMint - ${company.name || user.name || 'My Business'}`;
-            spreadsheetId = await sheetsService.createSpreadsheet(spreadsheetName);
-            
-            if (!spreadsheetId) {
-                throw new Error('Failed to create spreadsheet');
-            }
-            
-            spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
-            localStorage.setItem('stockmint_google_sheet_id', spreadsheetId);
-            localStorage.setItem('stockmint_google_sheet_url', spreadsheetUrl);
-        }
-        
-        // Step 3: HAPUS HANYA DATA DI SHEETS, BUKAN FILE BARU
-        console.log('🧹 Clearing all data in existing spreadsheet...');
-        
-        // Siapkan data kosong untuk semua sheets
-        const emptyData = {
-            company: {
-                name: company.name || user.name || 'My Business',
-                email: user.email || '',
-                setupDate: new Date().toISOString(),
-                resetDate: new Date().toISOString()
-            },
-            warehouses: [],
-            suppliers: [],
-            customers: [],
-            categories: [],
-            products: []
-        };
-        
-        // Simpan data kosong ke Google Sheets
-        await sheetsService.saveSetupData(emptyData);
-        
-        // Step 4: Hapus data lokal TAPI pertahankan:
-        // - User info
-        // - Google Sheets info
-        // - Setup completed flag
-        
-        const preserveKeys = [
-            'stockmint_user',
-            'stockmint_plan',
-            'stockmint_google_sheet_id',
-            'stockmint_google_sheet_url',
-            'stockmint_setup_completed',
-            'stockmint_setup_date',
-            'stockmint_token'
-        ];
-        
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('stockmint_') && !preserveKeys.includes(key)) {
-                keysToRemove.push(key);
-            }
-        }
-        
-        keysToRemove.forEach(key => {
-            localStorage.removeItem(key);
-        });
-        
-        // Step 5: Reset juga session storage
-        sessionStorage.clear();
-        
-        // Step 6: Simpan data perusahaan kosong
-        localStorage.setItem('stockmint_company', JSON.stringify(emptyData.company));
-        localStorage.setItem('stockmint_warehouses', JSON.stringify(emptyData.warehouses));
-        localStorage.setItem('stockmint_suppliers', JSON.stringify(emptyData.suppliers));
-        localStorage.setItem('stockmint_customers', JSON.stringify(emptyData.customers));
-        localStorage.setItem('stockmint_categories', JSON.stringify(emptyData.categories));
-        localStorage.setItem('stockmint_products', JSON.stringify(emptyData.products));
-        
-        // Step 7: Update last sync time
-        localStorage.setItem('stockmint_last_sync', new Date().toISOString());
-        
-        // Step 8: Show success message
-        alert('✅ All data has been reset successfully!\n\nYour Google Sheets file has been cleared and is ready for new setup.');
-        
-        // Step 9: Redirect to setup wizard
-        setTimeout(() => {
-            window.location.hash = '#setup/company';
-        }, 1500);
-        
-    } catch (error) {
-        console.error('❌ Reset data error:', error);
-        alert(`Reset failed: ${error.message}\n\nYour data is still intact.`);
+  try {
+    const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+    
+    if (user.isDemo) {
+      alert('Reset data is not available in demo mode. Login with Google to enable this feature.');
+      return;
     }
+    
+    // Tutup modal konfirmasi
+    const modal = document.getElementById('resetConfirmationModal');
+    if (modal) {
+      modal.remove();
+    }
+    
+    // Step 1: Backup data saat ini (opsional)
+    const backupData = {
+      company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+      products: JSON.parse(localStorage.getItem('stockmint_products') || '[]'),
+      timestamp: new Date().toISOString()
+    };
+    
+    // Step 2: Inisialisasi Google Sheets Service
+    if (!window.GoogleSheetsService) {
+      alert('Google Sheets service not available');
+      return;
+    }
+    
+    const sheetsService = window.GoogleSheetsService;
+    await sheetsService.init();
+    
+    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+    if (!spreadsheetId) {
+      throw new Error('No spreadsheet found');
+    }
+    
+    // Step 3: KOSONGKAN SEMUA SHEETS (bukan hapus file)
+    console.log('🧹 Clearing all sheets in Google Sheets...');
+    
+    // Data kosong untuk setiap sheet
+    const emptySetupData = {
+      company: {
+        name: 'Reset - ' + new Date().toLocaleDateString(),
+        resetDate: new Date().toISOString(),
+        previousData: `Backup at ${backupData.timestamp}`
+      },
+      warehouses: [],
+      suppliers: [],
+      customers: [],
+      categories: [],
+      products: []
+    };
+    
+    // Simpan data kosong ke Google Sheets
+    await sheetsService.saveSetupData(emptySetupData);
+    
+    // Step 4: Reset localStorage TAPI pertahankan:
+    const preserveKeys = [
+      'stockmint_user',
+      'stockmint_plan',
+      'stockmint_google_sheet_id',
+      'stockmint_google_sheet_url',
+      'stockmint_token'
+    ];
+    
+    // Hapus semua data stockmint kecuali yang di-preserve
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('stockmint_') && !preserveKeys.includes(key)) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Step 5: Set ulang setup status
+    localStorage.setItem('stockmint_setup_completed', 'false');
+    localStorage.removeItem('stockmint_setup_date');
+    
+    // Simpan data perusahaan reset
+    localStorage.setItem('stockmint_company', JSON.stringify(emptySetupData.company));
+    
+    // Step 6: Reset session storage
+    sessionStorage.removeItem('stockmint_current_setup');
+    
+    // Step 7: Show success
+    alert('✅ All data has been reset successfully!\n\nGoogle Sheets has been cleared and ready for new setup.');
+    
+    // Step 8: Redirect ke setup company
+    setTimeout(() => {
+      window.location.hash = '#setup/company';
+      location.reload();
+    }, 1500);
+    
+  } catch (error) {
+    console.error('❌ Reset data error:', error);
+    alert(`Reset failed: ${error.message}\n\nYour data is still intact.`);
+  }
 }
-
+    
 // Static method: Show reset confirmation modal - PERBAIKI
 static showResetConfirmation() {
     const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
