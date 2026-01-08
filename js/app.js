@@ -166,6 +166,21 @@ class StockMintApp {
       
       // Step 1.5: Cek dan restore koneksi Google Sheets jika sudah ada spreadsheet
       await this.checkAndRestoreGoogleSheetsConnection();
+
+      // Step 1.75: Coba restore data jika user Google login ulang
+      if (this.user && !this.user.isDemo) {
+            const sheetId = localStorage.getItem('stockmint_google_sheet_id');
+            const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+            
+            if (sheetId && !setupCompleted) {
+                console.log('🔄 Attempting to restore data on login...');
+                if (window.SetupWizardMulti) {
+                    const wizard = new SetupWizardMulti();
+                    await wizard.handleRestoreOnLogin();
+                    return; // Keluar dari init, biarkan restore process handle
+                }
+            }
+        }
       
       // Step 2: Setup configuration
       this.setupConfig();
