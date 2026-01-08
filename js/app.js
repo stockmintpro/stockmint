@@ -216,36 +216,72 @@ class StockMintApp {
   // ===== UPDATED METHOD: Check if first-time setup is needed =====
   checkFirstTimeSetup() {
     const user = this.user;
-    
+  
     // Jika user adalah demo, langsung lanjut tanpa setup
     if (user?.isDemo) {
       console.log('👤 Demo user detected, skipping setup');
       return false;
     }
-    
-    // CEK: Jika sudah ada spreadsheetId, maka anggap setup sudah selesai
+  
+  // CEK LEBIH DETAIL: 
+  // 1. Apakah sudah ada Google Sheet ID?
+  // 2. Apakah sudah setup sebelumnya?
+  // 3. Apakah data lokal masih ada?
     const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
     const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-    
-    if (spreadsheetId) {
-      console.log('📊 Spreadsheet found, setup considered completed');
-      
-      // Pastikan flag setup completed diset
-      if (!setupCompleted) {
-        localStorage.setItem('stockmint_setup_completed', 'true');
-      }
-      
-      return false;
-    }
-    
-    // Jika belum setup, tampilkan wizard
-    if (!setupCompleted) {
-      console.log('🔄 First-time setup required');
-      return true;
-    }
-    
+    const hasCompanyData = localStorage.getItem('stockmint_company');
+    const hasProductsData = localStorage.getItem('stockmint_products');
+  
+    console.log('🔍 Setup Check:', {
+      spreadsheetId,
+      setupCompleted,
+      hasCompanyData: !!hasCompanyData,
+      hasProductsData: !!hasProductsData
+    });
+  
+  // KASUS 1: Sudah ada spreadsheet dan data lengkap
+  if (spreadsheetId && setupCompleted && hasCompanyData && hasProductsData) {
+    console.log('✅ Sudah setup lengkap, tidak perlu setup ulang');
     return false;
   }
+  
+  // KASUS 2: Ada spreadsheet tapi data lokal kosong (butuh recovery)
+  if (spreadsheetId && (!hasCompanyData || !hasProductsData)) {
+    console.log('🔄 Data recovery needed');
+    
+    // Tandai untuk recovery otomatis
+    if (window.GoogleSheetsService) {
+      setTimeout(async () => {
+        try {
+          const sheetsService = window.GoogleSheetsService;
+          await sheetsService.init();
+          await sheetsService.loadDataFromSheets();
+          console.log('✅ Data recovered from Google Sheets');
+          location.reload();
+        } catch (error) {
+          console.error('Recovery failed:', error);
+        }
+      }, 1000);
+    }
+    
+    return false; // Jangan tampilkan setup card, biarkan recovery handle
+  }
+  
+  // KASUS 3: Tidak ada spreadsheet sama sekali (first time)
+  if (!spreadsheetId) {
+    console.log('🆕 First-time setup required');
+    return true;
+  }
+  
+  // KASUS 4: Spreadsheet ada tapi setup belum completed
+  if (spreadsheetId && !setupCompleted) {
+    console.log('📊 Spreadsheet found but setup not completed');
+    localStorage.setItem('stockmint_setup_completed', 'true');
+    return false;
+  }
+  
+  return false;
+}
   
   // Initialize Google Sheets service - KEEP THIS METHOD
   async initGoogleSheets() {
@@ -470,20 +506,42 @@ class StockMintApp {
   }
   
   // Load user data from localStorage
-  loadUserData() {
-    try {
-      const userData = localStorage.getItem('stockmint_user');
-      if (userData) {
-        this.user = JSON.parse(userData);
-        console.log('👤 User loaded:', this.user.name, 'isDemo:', this.user.isDemo);
-      } else {
-        console.warn('⚠️ No user data found');
-        this.user = { name: 'Guest', isDemo: true };
+  // Di app.js - loadUserData() method - TAMBAHKAN
+loadUserData() {
+  try {
+    const userData = localStorage.getItem('stockmint_user');
+    if (userData) {
+      this.user = JSON.parse(userData);
+      
+      // SIMPAN USER ID UNTUK IDENTIFIKASI UNIK
+      if (this.user.email && !this.user.uniqueId) {
+        // Generate unique ID dari email + timestamp
+        this.user.uniqueId = btoa(this.user.email + '_' + Date.now()).substring(0, 20);
+        localStorage.setItem('stockmint_user', JSON.stringify(this.user));
+      }
+      
+      console.log('👤 User loaded:', {
+        name: this.user.name,
+        email: this.user.email,
+        uniqueId: this.user.uniqueId,
+        isDemo: this.user.isDemo
+      });
+    } else {
+      console.warn('⚠️ No user data found');
+      this.user = { 
+        name: 'Guest', 
+        isDemo: true,
+        uniqueId: 'demo_' + Date.now()
+        };
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      this.user = { name: 'Guest', isDemo: true };
-    }
+      this.user = { 
+        name: 'Guest', 
+        isDemo: true,
+        uniqueId: 'error_' + Date.now()
+        };
+      }
   }
   
   // Setup configuration based on user plan
