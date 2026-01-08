@@ -46,6 +46,145 @@ class SetupWizardMulti {
         }
     }
 
+        // ===== BARU: RESTORE ON LOGIN METHOD =====
+    async handleRestoreOnLogin() {
+        try {
+            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+            if (user.isDemo) return;
+            
+            // Cek apakah sudah ada spreadsheet
+            const sheetId = localStorage.getItem('stockmint_google_sheet_id');
+            const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+            
+            if (sheetId && !setupCompleted) {
+                console.log('🔄 Restoring existing setup...');
+                
+                // Tampilkan loading screen
+                this.showLoading('Restoring your data...');
+                
+                // Load data dari Google Sheets
+                if (window.GoogleSheetsService) {
+                    const sheetsService = window.GoogleSheetsService;
+                    
+                    // Inisialisasi service
+                    const initialized = await sheetsService.init();
+                    if (!initialized) {
+                        console.warn('⚠️ Google Sheets service not initialized');
+                        this.hideLoading();
+                        return;
+                    }
+                    
+                    // Load data dari Google Sheets
+                    const loaded = await sheetsService.loadDataFromSheets();
+                    
+                    if (loaded) {
+                        // Update setup data lokal dari localStorage (yang sudah diload oleh sheetsService)
+                        this.setupData = {
+                            company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+                            warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+                            suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+                            customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+                            categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+                            products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+                        };
+                        
+                        // Update flag
+                        localStorage.setItem('stockmint_setup_completed', 'true');
+                        localStorage.setItem('stockmint_restored_on_login', new Date().toISOString());
+                        
+                        this.hideLoading();
+                        this.showAlert('✅ Data restored from Google Sheets!', 'success');
+                        
+                        // Redirect ke dashboard
+                        setTimeout(() => {
+                            window.location.hash = '#dashboard';
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        this.hideLoading();
+                        console.warn('⚠️ Failed to load data from Google Sheets');
+                        // Biarkan user setup manual
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Restore failed:', error);
+            this.hideLoading();
+            // Biarkan user setup manual
+        }
+    }
+    
+    // ===== HELPER: SHOW/HIDE LOADING =====
+    showLoading(message) {
+        // Hapus loading screen yang ada
+        const existingLoading = document.getElementById('restoreLoadingScreen');
+        if (existingLoading) {
+            existingLoading.remove();
+        }
+        
+        // Buat loading screen baru
+        const loadingHTML = `
+            <div id="restoreLoadingScreen" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 0.95);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 99999;
+            ">
+                <div class="loading-spinner" style="
+                    width: 60px;
+                    height: 60px;
+                    border: 5px solid #f3f3f3;
+                    border-top: 5px solid #19BEBB;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin-bottom: 20px;
+                "></div>
+                <div class="loading-text" style="
+                    color: #333;
+                    font-size: 18px;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                ">${message}</div>
+                <div class="loading-subtext" style="
+                    color: #666;
+                    font-size: 14px;
+                    max-width: 300px;
+                    text-align: center;
+                ">Restoring your data from Google Sheets...</div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', loadingHTML);
+        
+        // Tambahkan style untuk animasi
+        if (!document.querySelector('#loading-animations')) {
+            const style = document.createElement('style');
+            style.id = 'loading-animations';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    hideLoading() {
+        const loadingScreen = document.getElementById('restoreLoadingScreen');
+        if (loadingScreen) {
+            loadingScreen.remove();
+        }
+    }
+
+
     // ===== CORE METHODS =====
     
     getCurrentStepFromHash() {
@@ -83,7 +222,7 @@ class SetupWizardMulti {
                 products: JSON.parse(sessionStorage.getItem('stockmint_temp_products') || '[]')
             };
         }
-    }
+    }    
 
     // ===== EVENT BINDING =====
     
