@@ -521,7 +521,7 @@ class StockMintApp {
   }
   
   // Load user data from localStorage
-  // Di app.js - loadUserData() method - TAMBAHKAN
+// Di app.js - loadUserData() method - TAMBAHKAN
 loadUserData() {
   try {
     const userData = localStorage.getItem('stockmint_user');
@@ -547,17 +547,17 @@ loadUserData() {
         name: 'Guest', 
         isDemo: true,
         uniqueId: 'demo_' + Date.now()
-        };
-      }
-    } catch (error) {
-      console.error('Error loading user:', error);
-      this.user = { 
-        name: 'Guest', 
-        isDemo: true,
-        uniqueId: 'error_' + Date.now()
-        };
-      }
+      };
+    }
+  } catch (error) {
+    console.error('Error loading user:', error);
+    this.user = { 
+      name: 'Guest', 
+      isDemo: true,
+      uniqueId: 'error_' + Date.now()
+    };
   }
+} 
   
   // Setup configuration based on user plan
   setupConfig() {
