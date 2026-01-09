@@ -95,44 +95,60 @@ const StockMintAuth = {
     
     // ===== GOOGLE LOGIN FUNCTIONS =====
     loginWithGoogle: function() {
-        try {
-            const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
-            
-            // Scope yang minimal dan sudah disetujui
-            const scopes = [
-                'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
-                'https://www.googleapis.com/auth/spreadsheets'
-            ].join(' ');
-            
-            // 🚨 PERBAIKAN PENTING: Build redirect URI dengan benar
-            const currentOrigin = window.location.origin;
-            const redirectPath = '/auth/callback.html';
-            const redirectURI = encodeURIComponent(currentOrigin + redirectPath);
-            
-            // State parameter untuk security
-            const state = 'stockmint_' + Date.now();
-            localStorage.setItem('stockmint_oauth_state', state);
-            
-            // Build OAuth URL dengan parameter yang benar
-            const authURL = `${googleAuthURL}?` +
-                `client_id=${this.clientId}&` +
-                `redirect_uri=${redirectURI}&` +
-                `response_type=token&` +
-                `scope=${encodeURIComponent(scopes)}&` +
-                `state=${state}&` +
-                `prompt=select_account&` +
-                `include_granted_scopes=true`;
-            
-            console.log('🔗 Google OAuth URL details:', {
-                clientId: this.clientId,
-                redirectURI: currentOrigin + redirectPath,
-                fullURL: authURL
-            });
-            
-            // Redirect ke Google OAuth
-            window.location.href = authURL;
-            
+    try {
+        const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
+        
+        // Scope yang minimal dan sudah disetujui
+        const scopes = [
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive.file'
+        ].join(' ');
+        
+        // 🚨 PERBAIKAN PENTING: Redirect URI untuk GitHub Pages
+        // Untuk GitHub Pages dengan repository name "stockmint"
+        const githubPagesBase = 'https://stockmintpro.github.io/stockmint';
+        const localBase = window.location.origin;
+        
+        // Gunakan path yang sesuai dengan environment
+        let baseURL;
+        if (window.location.hostname.includes('github.io')) {
+            baseURL = githubPagesBase;
+        } else {
+            baseURL = localBase;
+        }
+        
+        const redirectPath = '/auth/callback.html';
+        const redirectURI = encodeURIComponent(baseURL + redirectPath);
+        
+        console.log('🔗 Google OAuth Configuration:', {
+            hostname: window.location.hostname,
+            baseURL: baseURL,
+            redirectURI: baseURL + redirectPath,
+            isGithubPages: window.location.hostname.includes('github.io')
+        });
+        
+        // State parameter untuk security
+        const state = 'stockmint_' + Date.now();
+        localStorage.setItem('stockmint_oauth_state', state);
+        
+        // Build OAuth URL dengan parameter yang benar
+        const authURL = `${googleAuthURL}?` +
+            `client_id=${this.clientId}&` +
+            `redirect_uri=${redirectURI}&` +
+            `response_type=token&` +
+            `scope=${encodeURIComponent(scopes)}&` +
+            `state=${state}&` +
+            `prompt=select_account&` +
+            `include_granted_scopes=true`;
+        
+        console.log('🔗 Redirecting to Google OAuth...');
+        console.log('Full URL (first 100 chars):', authURL.substring(0, 100) + '...');
+        
+        // Redirect ke Google OAuth
+        window.location.href = authURL;
+        
         } catch (error) {
             console.error('❌ Error in loginWithGoogle:', error);
             alert('Failed to start Google login. Please check console for details.');
