@@ -1,4 +1,4 @@
-// setup-wizard-multi.js - FINAL WORKING VERSION WITH ALL FIXES
+// setup-wizard-multi.js - FINAL WORKING VERSION
 
 console.log('🔄 setup-wizard-multi.js LOADED - FINAL WORKING VERSION');
 
