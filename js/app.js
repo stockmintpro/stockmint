@@ -21,77 +21,66 @@ class StockMintApp {
     };
   }
   
-  // ===== NEW METHOD =====
+  // ===== PERBAIKAN METODE initializeSyncServices() =====
   async initializeSyncServices() {
     try {
-        console.log('🔄 Initializing sync and recovery services...');
-        
-        const user = this.user;
-        const isDemo = user?.isDemo || false;
-        
-        if (!isDemo) {
-            // Initialize Google Sheets service
-            if (window.GoogleSheetsService) {
-                try {
-                    const sheetsInitialized = await window.GoogleSheetsService.init();
-                    
-                    if (sheetsInitialized) {
-                        console.log('✅ Google Sheets service initialized');
-                        
-                        // Check if we have a spreadsheet but setup not completed
-                        const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
-                        const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-                        
-                        if (hasGoogleSheet && !setupCompleted) {
-                            console.log('🔄 Loading existing data from Google Sheets...');
-                            await window.GoogleSheetsService.loadDataFromSheets();
-                        }
-                        
-                        // Check pending sync
-                        const pendingSync = localStorage.getItem('stockmint_google_sheet_pending_sync');
-                        if (pendingSync === 'true') {
-                            console.log('🔄 Syncing pending data to Google Sheets...');
-                            
-                            // Tunggu 5 detik sebelum sync
-                            setTimeout(async () => {
-                                try {
-                                    await window.GoogleSheetsService.syncLocalDataToSheets();
-                                    localStorage.removeItem('stockmint_google_sheet_pending_sync');
-                                    console.log('✅ Pending sync completed');
-                                } catch (syncError) {
-                                    console.error('Pending sync failed:', syncError);
-                                }
-                            }, 5000);
-                        }
-                    }
-                } catch (sheetsError) {
-                    console.error('❌ Google Sheets service init failed:', sheetsError);
-                    // Tetap lanjut meskipun Google Sheets gagal
+      console.log('🔄 Initializing sync and recovery services...');
+      
+      const user = this.user;
+      const isDemo = user?.isDemo || false;
+      
+      if (!isDemo) {
+        // Initialize Google Sheets service
+        if (window.GoogleSheetsService) {
+          try {
+            const sheetsInitialized = await window.GoogleSheetsService.init();
+            
+            if (sheetsInitialized) {
+              console.log('✅ Google Sheets service initialized');
+              
+              // **PERBAIKAN**: Cek apakah kita sudah punya spreadsheet ID
+              const hasGoogleSheet = localStorage.getItem('stockmint_google_sheet_id');
+              const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+              
+              // Jika sudah ada spreadsheet tapi belum setup, load data
+              if (hasGoogleSheet && !setupCompleted) {
+                console.log('🔄 Loading existing data from Google Sheets...');
+                const loaded = await window.GoogleSheetsService.loadDataFromSheets();
+                
+                if (loaded) {
+                  console.log('✅ Data loaded from Google Sheets, marking setup as completed');
+                  localStorage.setItem('stockmint_setup_completed', 'true');
                 }
-            }
-            
-            // Initialize sync service
-            if (window.SyncService) {
-                window.SyncService.init();
-                console.log('✅ Sync service initialized');
-            }
-            
-            // Check for data recovery
-            if (window.DataRecovery && window.DataRecovery.needsRecovery()) {
-                console.log('🔄 Data recovery needed');
-                setTimeout(() => {
-                    window.DataRecovery.showRecoveryModal();
+              }
+              
+              // Check pending sync
+              const pendingSync = localStorage.getItem('stockmint_google_sheet_pending_sync');
+              if (pendingSync === 'true') {
+                console.log('🔄 Syncing pending data to Google Sheets...');
+                
+                setTimeout(async () => {
+                  try {
+                    await window.GoogleSheetsService.syncLocalDataToSheets();
+                    localStorage.removeItem('stockmint_google_sheet_pending_sync');
+                    console.log('✅ Pending sync completed');
+                  } catch (syncError) {
+                    console.error('Pending sync failed:', syncError);
+                  }
                 }, 3000);
+              }
             }
+          } catch (sheetsError) {
+            console.error('❌ Google Sheets service init failed:', sheetsError);
+          }
         }
-        
+      }
+      
     } catch (error) {
-        console.error('❌ Error initializing sync services:', error);
-        // Jangan crash app jika service gagal
+      console.error('❌ Error initializing sync services:', error);
     }
   }
   
-  // ===== NEW METHOD: Check and restore Google Sheets connection =====
+  // ===== METODE checkAndRestoreGoogleSheetsConnection =====
   async checkAndRestoreGoogleSheetsConnection() {
     try {
       const user = this.user;
@@ -146,9 +135,137 @@ class StockMintApp {
     }
   }
   
-  // ===== UPDATED METHOD =====
-  // Di app.js - init() method - UPDATE BAGIAN INI
-async init() {
+  // ===== METODE checkFirstTimeSetup() YANG DIPERBAIKI =====
+  checkFirstTimeSetup() {
+    const user = this.user;
+    
+    // Jika user adalah demo, langsung lanjut tanpa setup
+    if (user?.isDemo) {
+      console.log('👤 Demo user detected, skipping setup');
+      return false;
+    }
+    
+    // CEK: Jika sudah ada spreadsheetId DAN setup sudah completed, skip setup
+    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+    const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
+    
+    // CRITICAL FIX: Jika sudah ada spreadsheet DAN setup sudah selesai, jangan tampilkan setup lagi
+    if (spreadsheetId && setupCompleted) {
+      console.log('📊 Spreadsheet found and setup completed, skipping setup');
+      return false;
+    }
+    
+    // Jika belum ada spreadsheet, tampilkan setup
+    if (!spreadsheetId) {
+      console.log('🔄 No spreadsheet found, setup required');
+      return true;
+    }
+    
+    // Jika ada spreadsheet tapi setup belum selesai, tetap tampilkan setup
+    // (ini untuk case migrasi data dari spreadsheet yang sudah ada)
+    console.log('🔄 Spreadsheet found but setup not completed, showing setup');
+    return true;
+  }
+  
+  // ===== METODE checkGoogleSheetsOnLogin() =====
+  async checkGoogleSheetsOnLogin() {
+    try {
+      const user = this.user;
+      if (!user || user.isDemo) return;
+      
+      const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+      
+      // Jika tidak ada spreadsheet ID, cari yang sudah ada
+      if (!spreadsheetId) {
+        console.log('🔍 No spreadsheet ID in localStorage, searching in Google Drive...');
+        
+        if (window.GoogleSheetsService) {
+          const sheetsService = window.GoogleSheetsService;
+          await sheetsService.init();
+          
+          // Cari spreadsheet yang sudah ada
+          const existingSheet = await sheetsService.findExistingSpreadsheet();
+          
+          if (existingSheet) {
+            console.log('📊 Found existing spreadsheet:', existingSheet.name);
+            
+            // Simpan ke localStorage
+            localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
+            localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+            localStorage.setItem('stockmint_setup_completed', 'true');
+            
+            // Load data dari spreadsheet
+            await sheetsService.loadDataFromSheets();
+            
+            console.log('✅ Connected to existing spreadsheet');
+            return true;
+          }
+        }
+      } else {
+        // Sudah ada spreadsheet ID, langsung connect
+        console.log('✅ Already have spreadsheet ID:', spreadsheetId);
+        
+        if (window.GoogleSheetsService) {
+          const sheetsService = window.GoogleSheetsService;
+          await sheetsService.init();
+          
+          // Test connection
+          const connection = await sheetsService.testConnection();
+          if (connection.success) {
+            console.log('✅ Google Sheets connection successful');
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking Google Sheets on login:', error);
+      return false;
+    }
+  }
+  
+  // ===== METODE handleExistingSpreadsheet() =====
+  async handleExistingSpreadsheet() {
+    try {
+      const user = this.user;
+      if (user?.isDemo) return false;
+      
+      const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+      const spreadsheetName = localStorage.getItem('stockmint_spreadsheet_name');
+      
+      if (spreadsheetId && spreadsheetName) {
+        console.log(`📊 Found existing spreadsheet: ${spreadsheetName} (${spreadsheetId})`);
+        
+        // Test connection
+        if (window.GoogleSheetsService) {
+          const sheetsService = window.GoogleSheetsService;
+          await sheetsService.init();
+          sheetsService.spreadsheetId = spreadsheetId;
+          
+          const connection = await sheetsService.testConnection();
+          if (connection.success) {
+            console.log('✅ Connected to existing spreadsheet');
+            
+            // Load data dari spreadsheet
+            const loaded = await sheetsService.loadDataFromSheets();
+            if (loaded) {
+              console.log('✅ Data loaded from existing spreadsheet');
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error handling existing spreadsheet:', error);
+      return false;
+    }
+  }
+  
+  // ===== METODE init() YANG DIPERBAIKI =====
+  async init() {
     console.log('🚀 StockMintApp initializing...');
 
     // Tampilkan app container dulu, sembunyikan loading screen nanti
@@ -156,244 +273,105 @@ async init() {
     const appContainer = document.getElementById('appContainer');
     
     if (loadingScreen && appContainer) {
-        loadingScreen.classList.add('hidden');
-        appContainer.classList.remove('hidden');
+      loadingScreen.classList.add('hidden');
+      appContainer.classList.remove('hidden');
     }
     
     try {
-        // Step 1: Load user data
-        this.loadUserData();
-        
-        // Step 1.5: Untuk user Google, cek koneksi Google Sheets
-        if (this.user && !this.user.isDemo) {
-            console.log('🔗 Checking Google Sheets connection for Google user...');
-            await this.checkGoogleSheetsOnLogin();
+      // Step 1: Load user data
+      this.loadUserData();
+      
+      // Step 1.5: Untuk user Google, cek koneksi Google Sheets
+      if (this.user && !this.user.isDemo) {
+        console.log('🔗 Checking Google Sheets connection for Google user...');
+        await this.checkGoogleSheetsOnLogin();
+      }
+      
+      // Step 2: Setup configuration
+      this.setupConfig();
+      
+      // Step 3: Initialize sync services (Google Sheets, Sync, Recovery)
+      await this.initializeSyncServices();
+      
+      // Step 4: Check if first-time setup is needed
+      const shouldSetup = this.checkFirstTimeSetup();
+      
+      if (shouldSetup) {
+        console.log('🔄 First-time setup required, showing welcome modal');
+        // Skip loading components for now, go directly to setup
+        this.showWelcomeModal();
+        return; // Keluar dari init sementara
+      }
+      
+      // Step 5: Load UI components (jika sudah setup)
+      this.loadComponents();
+      
+      // Step 6: Setup routing
+      this.setupRouting();
+      
+      // Step 7: Load initial page
+      this.loadInitialPage();
+      
+      // Step 8: Mark as initialized
+      this.initialized = true;
+      
+      console.log('✅ StockMintApp initialized successfully');
+      
+      // Hide loading screen
+      setTimeout(() => {
+        if (document.getElementById('loadingScreen')) {
+          document.getElementById('loadingScreen').classList.add('hidden');
         }
-        
-        // Step 2: Setup configuration
-        this.setupConfig();
-        
-        // Step 3: Initialize sync services (Google Sheets, Sync, Recovery)
-        await this.initializeSyncServices();
-        
-        // Step 4: Check if first-time setup is needed
-        const shouldSetup = this.checkFirstTimeSetup();
-        
-        if (shouldSetup) {
-            console.log('🔄 First-time setup required, showing welcome modal');
-            // Skip loading components for now, go directly to setup
-            this.showWelcomeModal();
-            return; // Keluar dari init sementara
+        if (document.getElementById('appContainer')) {
+          document.getElementById('appContainer').classList.remove('hidden');
         }
-        
-        // Step 5: Load UI components (jika sudah setup)
-        this.loadComponents();
-        
-        // Step 6: Setup routing
-        this.setupRouting();
-        
-        // Step 7: Load initial page
-        this.loadInitialPage();
-        
-        // Step 8: Mark as initialized
-        this.initialized = true;
-        
-        console.log('✅ StockMintApp initialized successfully');
-        
-        // Hide loading screen
-        setTimeout(() => {
-            if (document.getElementById('loadingScreen')) {
-                document.getElementById('loadingScreen').classList.add('hidden');
-            }
-            if (document.getElementById('appContainer')) {
-                document.getElementById('appContainer').classList.remove('hidden');
-            }
-        }, 500);
-        
+      }, 500);
+      
     } catch (error) {
-        console.error('❌ Failed to initialize app:', error);
-        this.showCriticalError(error);
+      console.error('❌ Failed to initialize app:', error);
+      this.showCriticalError(error);
     }
-}
+  }
   
-    // app.js - checkFirstTimeSetup() - VERSI BARU
-    checkFirstTimeSetup() {
-    const user = this.user;
-    
-    // Jika user adalah demo, langsung lanjut tanpa setup
-    if (user?.isDemo) {
-        console.log('👤 Demo user detected, skipping setup');
-        return false;
-    }
-    
-    console.log('🔍 Checking if setup is needed for Google user:', user.email);
-    
-    // CEK 1: Apakah sudah ada spreadsheet ID dari pencarian sebelumnya?
-    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-    const spreadsheetFound = localStorage.getItem('stockmint_spreadsheet_found') === 'true';
-    
-    // CEK 2: Apakah data setup sudah lengkap?
-    const hasCompanyData = localStorage.getItem('stockmint_company') !== null;
-    const hasProductsData = localStorage.getItem('stockmint_products') !== null;
-    
-    console.log('📊 Status:', {
-        spreadsheetId: spreadsheetId ? '✅' : '❌',
-        spreadsheetFound,
-        hasCompanyData,
-        hasProductsData
-    });
-    
-    // KASUS 1: Sudah ada spreadsheet dan data lengkap → LANGSUNG MASUK
-    if (spreadsheetId && hasCompanyData && hasProductsData) {
-        console.log('✅ Already setup with existing spreadsheet');
-        localStorage.setItem('stockmint_setup_completed', 'true');
-        return false;
-    }
-    
-    // KASUS 2: Ada spreadsheet tapi data lokal kosong → LOAD DATA DARI GOOGLE SHEETS
-    if (spreadsheetId && (!hasCompanyData || !hasProductsData)) {
-        console.log('🔄 Spreadsheet found but local data missing, loading from Google Sheets...');
-        
-        // Jalankan async load
-        setTimeout(async () => {
-            try {
-                if (window.GoogleSheetsService) {
-                    const sheetsService = window.GoogleSheetsService;
-                    await sheetsService.init();
-                    
-                    // Set spreadsheet ID
-                    sheetsService.spreadsheetId = spreadsheetId;
-                    
-                    // Load data
-                    const loaded = await sheetsService.loadDataFromSheets();
-                    
-                    if (loaded) {
-                        console.log('✅ Data loaded from Google Sheets');
-                        localStorage.setItem('stockmint_setup_completed', 'true');
-                        
-                        // Refresh untuk update UI
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1000);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load from Google Sheets:', error);
-            }
-        }, 500);
-        
-        return false; // Jangan tampilkan setup card
-    }
-    
-    // KASUS 3: Tidak ada spreadsheet sama sekali → PERLU SETUP BARU
-    if (!spreadsheetId) {
-        console.log('🆕 No spreadsheet found, need first-time setup');
-        
-        // Tandai pencarian spreadsheet sudah dilakukan
-        if (localStorage.getItem('stockmint_spreadsheet_found') === 'false') {
-            console.log('📭 Previous search found no spreadsheets');
-            return true; // Tampilkan setup card
-        }
-        
-        // Jika belum pernah mencari, coba cari dulu
-        if (!localStorage.getItem('stockmint_spreadsheet_found')) {
-            console.log('🔍 No spreadsheet search performed yet');
-            
-            // Coba cari spreadsheet dengan Google Sheets Service
-            setTimeout(async () => {
-                if (window.GoogleSheetsService) {
-                    try {
-                        const sheetsService = window.GoogleSheetsService;
-                        await sheetsService.init();
-                        
-                        const existingSheet = await sheetsService.findExistingSpreadsheet();
-                        
-                        if (existingSheet) {
-                            console.log('🎉 Found spreadsheet on delayed search!');
-                            localStorage.setItem('stockmint_setup_completed', 'true');
-                            location.reload();
-                        } else {
-                            localStorage.setItem('stockmint_spreadsheet_found', 'false');
-                            console.log('❌ No spreadsheet found in delayed search');
-                        }
-                    } catch (error) {
-                        console.error('Delayed search failed:', error);
-                    }
-                }
-            }, 1000);
-            
-            // Return true untuk sementara, akan diupdate setelah pencarian
-            return true;
-        }
-        
-        return true;
-    }
-    
-    // Default: perlu setup
-    return true;
-} 
-
-  // Di app.js - TAMBAHKAN method ini setelah checkFirstTimeSetup()
-  async checkGoogleSheetsOnLogin() {
+  // ===== METODE loadUserData() YANG DIPERBAIKI =====
+  loadUserData() {
     try {
-        const user = this.user;
-        if (!user || user.isDemo) return;
+      const userData = localStorage.getItem('stockmint_user');
+      if (userData) {
+        this.user = JSON.parse(userData);
         
-        const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-        
-        // Jika tidak ada spreadsheet ID, cari yang sudah ada
-        if (!spreadsheetId) {
-            console.log('🔍 No spreadsheet ID in localStorage, searching in Google Drive...');
-            
-            if (window.GoogleSheetsService) {
-                const sheetsService = window.GoogleSheetsService;
-                await sheetsService.init();
-                
-                // Cari spreadsheet yang sudah ada
-                const existingSheet = await sheetsService.findExistingSpreadsheet();
-                
-                if (existingSheet) {
-                    console.log('📊 Found existing spreadsheet:', existingSheet.name);
-                    
-                    // Simpan ke localStorage
-                    localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
-                    localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
-                    localStorage.setItem('stockmint_setup_completed', 'true');
-                    
-                    // Load data dari spreadsheet
-                    await sheetsService.loadDataFromSheets();
-                    
-                    console.log('✅ Connected to existing spreadsheet');
-                    return true;
-                }
-            }
-        } else {
-            // Sudah ada spreadsheet ID, langsung connect
-            console.log('✅ Already have spreadsheet ID:', spreadsheetId);
-            
-            if (window.GoogleSheetsService) {
-                const sheetsService = window.GoogleSheetsService;
-                await sheetsService.init();
-                
-                // Test connection
-                const connection = await sheetsService.testConnection();
-                if (connection.success) {
-                    console.log('✅ Google Sheets connection successful');
-                    return true;
-                }
-            }
+        // SIMPAN USER ID UNTUK IDENTIFIKASI UNIK
+        if (this.user.email && !this.user.uniqueId) {
+          // Generate unique ID dari email + timestamp
+          this.user.uniqueId = btoa(this.user.email + '_' + Date.now()).substring(0, 20);
+          localStorage.setItem('stockmint_user', JSON.stringify(this.user));
         }
         
-        return false;
+        console.log('👤 User loaded:', {
+          name: this.user.name,
+          email: this.user.email,
+          uniqueId: this.user.uniqueId,
+          isDemo: this.user.isDemo
+        });
+      } else {
+        console.warn('⚠️ No user data found');
+        this.user = { 
+          name: 'Guest', 
+          isDemo: true,
+          uniqueId: 'demo_' + Date.now()
+        };
+      }
     } catch (error) {
-        console.error('Error checking Google Sheets on login:', error);
-        return false;
+      console.error('Error loading user:', error);
+      this.user = { 
+        name: 'Guest', 
+        isDemo: true,
+        uniqueId: 'error_' + Date.now()
+      };
     }
-}
-
+  }
   
-  // ===== UPDATED METHOD =====
-  // Load page content
+  // ===== METODE loadPage() (SAMA) =====
   loadPage(page) {
     const contentArea = document.getElementById('contentArea');
     if (!contentArea) {
@@ -414,7 +392,7 @@ async init() {
     // Update navbar title
     this.updateNavbarTitle(page);
     
-    // Load actual content - INI ADALAH BAGIAN SWITCH CASE YANG DIMINTA
+    // Load actual content
     setTimeout(() => {
       try {
         // SWITCH CASE UNTUK MENANGANI BERBAGAI JENIS HALAMAN
@@ -506,7 +484,7 @@ async init() {
     }, 300);
   }
   
-  // Check and load data from Google Sheets if needed
+  // ===== METODE checkAndLoadGoogleSheetsData() (SAMA) =====
   async checkAndLoadGoogleSheetsData() {
     try {
       const user = this.user;
@@ -570,46 +548,7 @@ async init() {
     }
   }
   
-  // Load user data from localStorage
-// Di app.js - loadUserData() method - TAMBAHKAN
-loadUserData() {
-  try {
-    const userData = localStorage.getItem('stockmint_user');
-    if (userData) {
-      this.user = JSON.parse(userData);
-      
-      // SIMPAN USER ID UNTUK IDENTIFIKASI UNIK
-      if (this.user.email && !this.user.uniqueId) {
-        // Generate unique ID dari email + timestamp
-        this.user.uniqueId = btoa(this.user.email + '_' + Date.now()).substring(0, 20);
-        localStorage.setItem('stockmint_user', JSON.stringify(this.user));
-      }
-      
-      console.log('👤 User loaded:', {
-        name: this.user.name,
-        email: this.user.email,
-        uniqueId: this.user.uniqueId,
-        isDemo: this.user.isDemo
-      });
-    } else {
-      console.warn('⚠️ No user data found');
-      this.user = { 
-        name: 'Guest', 
-        isDemo: true,
-        uniqueId: 'demo_' + Date.now()
-      };
-    }
-  } catch (error) {
-    console.error('Error loading user:', error);
-    this.user = { 
-      name: 'Guest', 
-      isDemo: true,
-      uniqueId: 'error_' + Date.now()
-    };
-  }
-} 
-  
-  // Setup configuration based on user plan
+  // ===== METODE setupConfig() (SAMA) =====
   setupConfig() {
     this.currentPlan = localStorage.getItem('stockmint_plan') || 'basic';
     
@@ -634,7 +573,7 @@ loadUserData() {
     this.config.googleSheetsAvailable = this.googleSheetsReady && !this.user?.isDemo;
   }
   
-  // Load UI components (sidebar, navbar)
+  // ===== METODE loadComponents() (SAMA) =====
   loadComponents() {
     console.log('🛠️ Loading components...');
     
@@ -687,7 +626,7 @@ loadUserData() {
     }
   }
   
-  // Setup routing and navigation
+  // ===== METODE setupRouting() (SAMA) =====
   setupRouting() {
     console.log('📍 Setting up routing...');
     
@@ -710,7 +649,7 @@ loadUserData() {
     }, 300);
   }
   
-  // Handle route changes
+  // ===== METODE handleRouteChange() (SAMA) =====
   handleRouteChange() {
     try {
       const hash = window.location.hash.substring(1) || 'dashboard';
@@ -765,7 +704,7 @@ loadUserData() {
     }
   }
   
-  // Check if page is allowed for current plan
+  // ===== METODE isPageAllowedForPlan() (SAMA) =====
   isPageAllowedForPlan(page) {
     // Demo restrictions
     if (this.currentPlan === 'demo') {
@@ -813,14 +752,14 @@ loadUserData() {
     return true;
   }
   
-  // Load initial page
+  // ===== METODE loadInitialPage() (SAMA) =====
   loadInitialPage() {
     const hash = window.location.hash.substring(1) || 'dashboard';
     this.currentPage = hash;
     this.loadPage(hash);
   }
   
-  // Update navbar title
+  // ===== METODE updateNavbarTitle() (SAMA) =====
   updateNavbarTitle(page) {
     const title = this.getPageTitle(page);
     const subtitle = this.getPageSubtitle(page);
@@ -833,7 +772,7 @@ loadUserData() {
     if (subtitleEl) subtitleEl.textContent = subtitle;
   }
   
-  // Get page title
+  // ===== METODE getPageTitle() (SAMA) =====
   getPageTitle(page) {
     const titles = {
       'dashboard': 'Dashboard',
@@ -895,14 +834,14 @@ loadUserData() {
     return titles[page] || this.formatPageName(page);
   }
   
-  // Format page name (kebab-case to Title Case)
+  // ===== METODE formatPageName() (SAMA) =====
   formatPageName(page) {
     return page.split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
   
-  // Get page subtitle
+  // ===== METODE getPageSubtitle() (SAMA) =====
   getPageSubtitle(page) {
     const subtitles = {
       'dashboard': 'Overview of your business performance',
@@ -922,7 +861,7 @@ loadUserData() {
     return subtitles[page] || 'Manage your business operations';
   }
   
-  // Get page content
+  // ===== METODE getPageContent() (SAMA) =====
   getPageContent(page) {
     // Feature locked page for demo users
     if (page === 'feature-locked') {
@@ -938,7 +877,7 @@ loadUserData() {
     return this.getDefaultPageContent(page);
   }
   
-  // Google Sheets page content (fallback jika GoogleSheetsPage tidak tersedia)
+  // ===== METODE getGoogleSheetsPageContent() (SAMA) =====
   getGoogleSheetsPageContent() {
     const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
     const spreadsheetUrl = localStorage.getItem('stockmint_google_sheet_url');
@@ -1039,7 +978,7 @@ loadUserData() {
     `;
   }
   
-  // Dashboard content
+  // ===== METODE getDashboardContent() (SAMA) =====
   getDashboardContent() {
     const userName = this.user?.name || 'User';
     const plan = this.currentPlan.toUpperCase();
@@ -1257,7 +1196,7 @@ loadUserData() {
     `;
   }
   
-  // Feature locked content (for demo users)
+  // ===== METODE getFeatureLockedContent() (SAMA) =====
   getFeatureLockedContent() {
     const attemptedPage = this.attemptedPage || 'dashboard';
     const attemptedPageTitle = this.getPageTitle(attemptedPage);
@@ -1496,7 +1435,7 @@ loadUserData() {
     `;
   }
   
-  // Default page content (for other pages)
+  // ===== METODE getDefaultPageContent() (SAMA) =====
   getDefaultPageContent(page) {
     const title = this.getPageTitle(page);
     
@@ -1524,7 +1463,7 @@ loadUserData() {
     `;
   }
   
-  // Error page
+  // ===== METODE getErrorPage() (SAMA) =====
   getErrorPage(page, error) {
     return `
       <div class="error-container">
@@ -1539,7 +1478,7 @@ loadUserData() {
     `;
   }
   
-  // Initialize page-specific scripts
+  // ===== METODE initPageScripts() (SAMA) =====
   initPageScripts(page) {
     if (page === 'dashboard') {
       this.initDashboard();
@@ -1547,7 +1486,7 @@ loadUserData() {
     // Note: MasterDataPage meng-handle event-nya sendiri
   }
   
-  // Initialize dashboard
+  // ===== METODE initDashboard() (SAMA) =====
   initDashboard() {
     // Refresh button
     const refreshBtn = document.getElementById('refreshBtn');
@@ -1558,7 +1497,7 @@ loadUserData() {
     }
   }
   
-  // Show welcome modal for first-time users
+  // ===== METODE showWelcomeModal() (SAMA) =====
   showWelcomeModal() {
     // Sembunyikan loading screen
     const loadingScreen = document.getElementById('loadingScreen');
@@ -1637,7 +1576,7 @@ loadUserData() {
     }, 100);
   }
   
-  // Start setup process
+  // ===== METODE startSetup() (SAMA) =====
   startSetup(type) {
     // Hapus modal welcome
     const welcomeModal = document.getElementById('welcomeModal');
@@ -1668,7 +1607,7 @@ loadUserData() {
     }
   }
   
-  // Load minimal components for setup mode
+  // ===== METODE loadMinimalComponents() (SAMA) =====
   loadMinimalComponents() {
     console.log('🛠️ Loading minimal components for setup...');
     
@@ -1710,7 +1649,7 @@ loadUserData() {
     }
   }
   
-  // Skip setup
+  // ===== METODE skipSetup() (SAMA) =====
   skipSetup() {
     // Tandai setup sebagai selesai
     localStorage.setItem('stockmint_setup_completed', 'true');
@@ -1738,7 +1677,7 @@ loadUserData() {
     console.log('✅ Setup skipped, continuing to dashboard');
   }
   
-  // Show notification
+  // ===== METODE showNotification() (SAMA) =====
   showNotification(message, type = 'info') {
     // Check if notification system exists
     if (window.StockMintCommon && window.StockMintCommon.showNotification) {
@@ -1770,7 +1709,7 @@ loadUserData() {
     });
   }
   
-  // Force sync to Google Sheets
+  // ===== METODE forceSyncToGoogleSheets() (SAMA) =====
   async forceSyncToGoogleSheets() {
     try {
       if (!window.GoogleSheetsService || this.user?.isDemo) {
@@ -1806,7 +1745,7 @@ loadUserData() {
     }
   }
   
-  // Show critical error
+  // ===== METODE showCriticalError() (SAMA) =====
   showCriticalError(error) {
     console.error('Critical error:', error);
     
@@ -1825,12 +1764,12 @@ loadUserData() {
     }
   }
   
-  // Show feature locked message
+  // ===== METODE showFeatureLocked() (SAMA) =====
   static showFeatureLocked(featureName) {
     alert(`"${featureName}" is only available in BASIC, PRO, or ADVANCE plans. Please upgrade to unlock this feature.`);
   }
   
-  // Show upgrade modal
+  // ===== METODE showUpgradeModal() (SAMA) =====
   static showUpgradeModal() {
     const plans = [
       { name: 'BASIC', price: '$19/month', features: ['All demo features', 'Multi-scenario marketplace fees', 'Returned products management', 'Data migration'] },
@@ -2005,7 +1944,7 @@ loadUserData() {
     document.body.appendChild(modal);
   }
   
-  // Select plan (for demo purposes)
+  // ===== METODE selectPlan() (SAMA) =====
   static selectPlan(plan) {
     localStorage.setItem('stockmint_plan', plan);
     alert(`Plan upgraded to ${plan.toUpperCase()}! Page will reload to apply changes.`);
@@ -2014,7 +1953,7 @@ loadUserData() {
     }, 1000);
   }
   
-  // LOGOUT FUNCTION - PRESERVE SETUP DATA
+  // ===== METODE logout() (SAMA) =====
   logout() {
     if (confirm('Are you sure you want to logout?')) {
       console.log('🚪 Logging out...');
