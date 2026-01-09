@@ -91,30 +91,31 @@ const StockMintAuth = {
         window.location.href = 'index.html';
     },
     
-        // ===== GOOGLE LOGIN FUNCTIONS =====
-        loginWithGoogle: function() {
-            const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
-            const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
+   // ===== GOOGLE LOGIN FUNCTIONS =====
+loginWithGoogle: function() {
+    const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
+    const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
     
-            // 🔴 FIX: Gunakan scope yang minimal dan valid
-            const scopes = [
-                'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
-                'https://www.googleapis.com/auth/spreadsheets'
-            ].join(' ');
+    // Scope yang minimal dan valid
+    const scopes = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/spreadsheets'
+    ].join(' ');
     
-            // 🔴 FIX: Redirect ke index.html untuk handle callback
-            const redirectURI = encodeURIComponent(window.location.origin + '/index.html');
-        
-            // 🔴 FIX: Tambahkan state parameter untuk security
-            const state = 'stockmint_' + Date.now();
-            localStorage.setItem('stockmint_oauth_state', state);
+    // 🔴 PERBAIKAN PENTING: Redirect ke auth/callback.html
+    const redirectURI = encodeURIComponent(window.location.origin + '/auth/callback.html');
     
-            const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&prompt=select_account&state=${state}`;
+    // State parameter untuk security
+    const state = 'stockmint_' + Date.now();
+    localStorage.setItem('stockmint_oauth_state', state);
     
-            console.log('🔗 Google OAuth URL:', authURL);
-            window.location.href = authURL;
-     },
+    const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&state=${state}&prompt=select_account`;
+    
+    console.log('🔗 Redirecting to Google OAuth...');
+    console.log('Redirect URI:', redirectURI);
+    window.location.href = authURL;
+},
     
 // ===== UPDATED: Handle OAuth Callback =====
 handleOAuthCallback: function() {
