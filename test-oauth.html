@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test OAuth Configuration</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .info { background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>StockMint OAuth Configuration Test</h1>
+    
+    <div id="currentConfig" class="info">
+        <h3>Current Configuration:</h3>
+        <p>Loading...</p>
+    </div>
+    
+    <div id="testResults" class="info">
+        <h3>Test Results:</h3>
+        <p>Run tests below...</p>
+    </div>
+    
+    <h3>Test Commands:</h3>
+    <button onclick="testRedirectURI()">Test Redirect URI</button>
+    <button onclick="testOAuthFlow()">Test OAuth Flow</button>
+    <button onclick="clearLocalStorage()">Clear Local Storage</button>
+    <button onclick="window.location.href='index.html'">Go to Login</button>
+    
+    <script>
+        // Show current configuration
+        function showConfig() {
+            const config = {
+                origin: window.location.origin,
+                hostname: window.location.hostname,
+                port: window.location.port,
+                protocol: window.location.protocol,
+                fullURL: window.location.href,
+                clientId: '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com',
+                redirectURI: window.location.origin + '/auth/callback.html',
+                encodedRedirectURI: encodeURIComponent(window.location.origin + '/auth/callback.html')
+            };
+            
+            document.getElementById('currentConfig').innerHTML = `
+                <h3>Current Configuration:</h3>
+                <pre>${JSON.stringify(config, null, 2)}</pre>
+                <p><strong>IMPORTANT:</strong> Add this to Google Cloud Console:</p>
+                <p><strong>Authorized redirect URIs:</strong> ${config.redirectURI}</p>
+                <p><strong>Authorized JavaScript origins:</strong> ${window.location.origin}</p>
+            `;
+        }
+        
+        // Test redirect URI
+        function testRedirectURI() {
+            const redirectURI = window.location.origin + '/auth/callback.html';
+            const encoded = encodeURIComponent(redirectURI);
+            
+            document.getElementById('testResults').innerHTML = `
+                <h3>Redirect URI Test:</h3>
+                <p><strong>Plain:</strong> ${redirectURI}</p>
+                <p><strong>Encoded:</strong> ${encoded}</p>
+                <p><strong>Test URL:</strong> ${'https://accounts.google.com/o/oauth2/v2/auth?' +
+                    'client_id=381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com&' +
+                    'redirect_uri=' + encoded + '&' +
+                    'response_type=token&' +
+                    'scope=https://www.googleapis.com/auth/userinfo.email&' +
+                    'prompt=select_account'}</p>
+            `;
+        }
+        
+        // Test OAuth flow
+        function testOAuthFlow() {
+            const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
+            const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
+            const redirectURI = encodeURIComponent(window.location.origin + '/auth/callback.html');
+            
+            const authURL = `${googleAuthURL}?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${redirectURI}&` +
+                `response_type=token&` +
+                `scope=https://www.googleapis.com/auth/userinfo.email&` +
+                `prompt=select_account`;
+            
+            // Open in new window for testing
+            const testWindow = window.open(authURL, 'oauth-test', 'width=500,height=600');
+            
+            document.getElementById('testResults').innerHTML = `
+                <h3>OAuth Flow Test:</h3>
+                <p>Opened OAuth window. Check if Google shows redirect_uri_mismatch error.</p>
+                <p><strong>Test URL:</strong> <a href="${authURL}" target="_blank">${authURL.substring(0, 100)}...</a></p>
+            `;
+        }
+        
+        // Clear local storage
+        function clearLocalStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('testResults').innerHTML = `
+                <h3>Local Storage Cleared</h3>
+                <p>All authentication data has been removed.</p>
+            `;
+        }
+        
+        // Initialize
+        showConfig();
+    </script>
+</body>
+</html>
