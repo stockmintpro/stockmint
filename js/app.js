@@ -344,6 +344,65 @@ checkFirstTimeSetup() {
     // Default: perlu setup
     return true;
 } 
+
+  // Di app.js - TAMBAHKAN method ini setelah checkFirstTimeSetup()
+  async checkGoogleSheetsOnLogin() {
+    try {
+        const user = this.user;
+        if (!user || user.isDemo) return;
+        
+        const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+        
+        // Jika tidak ada spreadsheet ID, cari yang sudah ada
+        if (!spreadsheetId) {
+            console.log('🔍 No spreadsheet ID in localStorage, searching in Google Drive...');
+            
+            if (window.GoogleSheetsService) {
+                const sheetsService = window.GoogleSheetsService;
+                await sheetsService.init();
+                
+                // Cari spreadsheet yang sudah ada
+                const existingSheet = await sheetsService.findExistingSpreadsheet();
+                
+                if (existingSheet) {
+                    console.log('📊 Found existing spreadsheet:', existingSheet.name);
+                    
+                    // Simpan ke localStorage
+                    localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
+                    localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+                    localStorage.setItem('stockmint_setup_completed', 'true');
+                    
+                    // Load data dari spreadsheet
+                    await sheetsService.loadDataFromSheets();
+                    
+                    console.log('✅ Connected to existing spreadsheet');
+                    return true;
+                }
+            }
+        } else {
+            // Sudah ada spreadsheet ID, langsung connect
+            console.log('✅ Already have spreadsheet ID:', spreadsheetId);
+            
+            if (window.GoogleSheetsService) {
+                const sheetsService = window.GoogleSheetsService;
+                await sheetsService.init();
+                
+                // Test connection
+                const connection = await sheetsService.testConnection();
+                if (connection.success) {
+                    console.log('✅ Google Sheets connection successful');
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error checking Google Sheets on login:', error);
+        return false;
+    }
+}
+
   
   // ===== UPDATED METHOD =====
   // Load page content
