@@ -21,6 +21,44 @@ class StockMintApp {
     };
   }
   
+  // ===== METODE BARU: initializeAfterLogin() =====
+  async initializeAfterLogin() {
+    try {
+      const user = this.user;
+      if (!user || user.isDemo) return;
+      
+      console.log('🔍 Checking for existing Google Sheets after login...');
+      
+      // Inisialisasi Google Sheets service
+      if (window.GoogleSheetsService) {
+        const sheetsService = window.GoogleSheetsService;
+        await sheetsService.init();
+        
+        // Cari spreadsheet yang sudah ada
+        const existingSheet = await sheetsService.findExistingSpreadsheet();
+        
+        if (existingSheet) {
+          console.log('📊 Found existing spreadsheet:', existingSheet.name);
+          
+          // Simpan info spreadsheet
+          localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
+          localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+          localStorage.setItem('stockmint_setup_completed', 'true');
+          
+          // Load data dari spreadsheet
+          await sheetsService.loadDataFromSheets();
+          
+          console.log('✅ Connected to existing spreadsheet and loaded data');
+        } else {
+          console.log('📭 No existing spreadsheet found');
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing after login:', error);
+      // Jangan crash jika gagal
+    }
+  }
+  
   // ===== PERBAIKAN METODE initializeSyncServices() =====
   async initializeSyncServices() {
     try {
@@ -281,10 +319,9 @@ class StockMintApp {
       // Step 1: Load user data
       this.loadUserData();
       
-      // Step 1.5: Untuk user Google, cek koneksi Google Sheets
+      // Step 1.5: Untuk user Google, cari spreadsheet yang sudah ada
       if (this.user && !this.user.isDemo) {
-        console.log('🔗 Checking Google Sheets connection for Google user...');
-        await this.checkGoogleSheetsOnLogin();
+        await this.initializeAfterLogin();
       }
       
       // Step 2: Setup configuration
