@@ -263,10 +263,42 @@
         </div>
     </div>
 
+    <!-- Debug Button (only visible in development) -->
+    <button onclick="testOAuthConfig()" style="
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 1000;
+        display: none; /* Hidden by default, press Ctrl+Shift+D to show */
+    " id="debugBtn">🔧</button>
+
     <!-- Load auth.js -->
     <script src="js/auth.js?v=3.0"></script>
     
     <script>
+        // ===== VERIFICATION SCRIPT =====
+        // Verify OAuth configuration on page load
+        window.addEventListener('load', function() {
+            const currentURL = window.location.origin + window.location.pathname;
+            console.log('📋 OAuth Configuration Check:');
+            console.log('Current URL:', currentURL);
+            console.log('Full Origin:', window.location.origin);
+            console.log('Path:', window.location.pathname);
+            
+            // Check if we're on HTTPS (required for some OAuth flows)
+            if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
+                console.warn('⚠️ OAuth may require HTTPS in production');
+            }
+        });
+
         // ===== CHECK EXISTING LOGIN =====
         window.addEventListener('load', () => {
             // Cek apakah user sudah login
@@ -328,6 +360,34 @@
                 window.location.href = 'app.html';
             });
         });
+
+        // ===== DEBUG TOOL FUNCTIONS =====
+        // Show debug button with Ctrl+Shift+D
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                const debugBtn = document.getElementById('debugBtn');
+                debugBtn.style.display = 'block';
+                console.log('🔧 Debug button enabled');
+            }
+        });
+        
+        function testOAuthConfig() {
+            if (window.StockMintAuth && window.StockMintAuth.testOAuthConfig) {
+                const config = window.StockMintAuth.testOAuthConfig();
+                alert(`OAuth Configuration Test:\n\n` +
+                      `Client ID: ${config.clientId}\n` +
+                      `Redirect URI: ${config.redirectURI}\n` +
+                      `Encoded: ${config.encodedRedirectURI}\n\n` +
+                      `Please ensure this redirect URI is registered in Google Cloud Console!`);
+                
+                // Copy to clipboard for convenience
+                navigator.clipboard.writeText(config.redirectURI)
+                    .then(() => console.log('✅ Redirect URI copied to clipboard'))
+                    .catch(err => console.error('Failed to copy:', err));
+            } else {
+                alert('StockMintAuth not loaded or testOAuthConfig function not available');
+            }
+        }
     </script>
 </body>
 </html>
