@@ -91,25 +91,30 @@ const StockMintAuth = {
         window.location.href = 'index.html';
     },
     
-    // ===== GOOGLE LOGIN FUNCTIONS =====
-    loginWithGoogle: function() {
-        const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
-        const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
+        // ===== GOOGLE LOGIN FUNCTIONS =====
+        loginWithGoogle: function() {
+            const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
+            const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
+    
+            // 🔴 FIX: Gunakan scope yang minimal dan valid
+            const scopes = [
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/spreadsheets'
+            ].join(' ');
+    
+            // 🔴 FIX: Redirect ke index.html untuk handle callback
+            const redirectURI = encodeURIComponent(window.location.origin + '/index.html');
         
-        // TAMBAHKAN SCOPE DRIVE untuk bisa cari file
-        const scopes = [
-            'https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive.file',
-            'https://www.googleapis.com/auth/drive.readonly'  // BACA file di Google Drive
-        ].join(' ');
-        
-        const redirectURI = encodeURIComponent(window.location.origin + '/app.html');
-        const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&prompt=consent&access_type=offline`;
-        
-        window.location.href = authURL;
-    },
+            // 🔴 FIX: Tambahkan state parameter untuk security
+            const state = 'stockmint_' + Date.now();
+            localStorage.setItem('stockmint_oauth_state', state);
+    
+            const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&prompt=select_account&state=${state}`;
+    
+            console.log('🔗 Google OAuth URL:', authURL);
+            window.location.href = authURL;
+     },
     
     // ===== UPDATED: Handle OAuth Callback =====
     handleOAuthCallback: function() {
