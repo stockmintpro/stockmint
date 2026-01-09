@@ -98,7 +98,7 @@ const StockMintAuth = {
     try {
         const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
         
-        // Scope yang minimal dan sudah disetujui
+        // Scope yang minimal
         const scopes = [
             'https://www.googleapis.com/auth/userinfo.email',
             'https://www.googleapis.com/auth/userinfo.profile',
@@ -106,54 +106,42 @@ const StockMintAuth = {
             'https://www.googleapis.com/auth/drive.file'
         ].join(' ');
         
-        // 🚨 PERBAIKAN PENTING: Redirect URI untuk GitHub Pages
-        // Untuk GitHub Pages dengan repository name "stockmint"
-        const githubPagesBase = 'https://stockmintpro.github.io/stockmint';
-        const localBase = window.location.origin;
+        // 🚨 FIX: Gunakan URL yang benar untuk GitHub Pages
+        let redirectURI;
         
-        // Gunakan path yang sesuai dengan environment
-        let baseURL;
         if (window.location.hostname.includes('github.io')) {
-            baseURL = githubPagesBase;
+            // Untuk GitHub Pages
+            redirectURI = 'https://stockmintpro.github.io/stockmint/auth/callback.html';
         } else {
-            baseURL = localBase;
+            // Untuk localhost
+            redirectURI = window.location.origin + '/auth/callback.html';
         }
         
-        const redirectPath = '/auth/callback.html';
-        const redirectURI = encodeURIComponent(baseURL + redirectPath);
-        
-        console.log('🔗 Google OAuth Configuration:', {
-            hostname: window.location.hostname,
-            baseURL: baseURL,
-            redirectURI: baseURL + redirectPath,
-            isGithubPages: window.location.hostname.includes('github.io')
-        });
+        console.log('🔗 OAuth Redirect URI:', redirectURI);
         
         // State parameter untuk security
         const state = 'stockmint_' + Date.now();
         localStorage.setItem('stockmint_oauth_state', state);
         
-        // Build OAuth URL dengan parameter yang benar
+        // Build OAuth URL
         const authURL = `${googleAuthURL}?` +
             `client_id=${this.clientId}&` +
-            `redirect_uri=${redirectURI}&` +
+            `redirect_uri=${encodeURIComponent(redirectURI)}&` +
             `response_type=token&` +
             `scope=${encodeURIComponent(scopes)}&` +
             `state=${state}&` +
-            `prompt=select_account&` +
-            `include_granted_scopes=true`;
+            `prompt=select_account`;
         
         console.log('🔗 Redirecting to Google OAuth...');
-        console.log('Full URL (first 100 chars):', authURL.substring(0, 100) + '...');
         
         // Redirect ke Google OAuth
         window.location.href = authURL;
         
-        } catch (error) {
-            console.error('❌ Error in loginWithGoogle:', error);
-            alert('Failed to start Google login. Please check console for details.');
-        }
-    },
+    } catch (error) {
+        console.error('❌ Error in loginWithGoogle:', error);
+        alert('Failed to start Google login. Please check console for details.');
+    }
+},
     
     // ===== DEMO LOGIN FUNCTIONS =====
     loginAsDemo: function() {
