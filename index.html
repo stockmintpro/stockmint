@@ -264,44 +264,70 @@
     </div>
 
     <!-- Load auth.js -->
-    <script src="js/auth.js?v=2.0"></script>
+    <script src="js/auth.js?v=3.0"></script>
     
     <script>
-    // ===== CHECK EXISTING LOGIN =====
-    window.addEventListener('load', () => {
-        console.log('📄 index.html loaded');
-        
-        // 1. Cek apakah user sudah login
-        if (window.StockMintAuth && window.StockMintAuth.checkAuth()) {
-            console.log('✅ User already logged in, redirecting to app...');
-            window.location.href = 'app.html';
-            return;
-        }
-        
-        // 2. Cek apakah ada OAuth callback (token di hash)
-        const hash = window.location.hash;
-        console.log('🔗 Current hash:', hash);
-        
-        if (hash.includes('access_token')) {
-            console.log('🔄 Detected OAuth callback in index.html');
-            
-            // Clear URL hash untuk menghindari infinite loop
-            history.replaceState(null, null, window.location.pathname);
-            
-            // Jika StockMintAuth sudah dimuat, handle callback
-            if (window.StockMintAuth && window.StockMintAuth.handleOAuthCallback) {
-                window.StockMintAuth.handleOAuthCallback();
-            } else {
-                // Fallback: Tunggu module dimuat
-                const waitForAuth = setInterval(() => {
-                    if (window.StockMintAuth && window.StockMintAuth.handleOAuthCallback) {
-                        clearInterval(waitForAuth);
-                        window.StockMintAuth.handleOAuthCallback();
-                    }
-                }, 100);
+        // ===== CHECK EXISTING LOGIN =====
+        window.addEventListener('load', () => {
+            // Cek apakah user sudah login
+            if (window.StockMintAuth && window.StockMintAuth.checkAuth()) {
+                console.log('✅ User already logged in, redirecting to app...');
+                window.location.href = 'app.html';
             }
-        }
-    });
+            
+            // HAPUS callback handling di index.html karena sudah ditangani di auth/callback.html
+            // Hanya tampilkan pesan jika ada error di URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            if (error) {
+                alert('Login error: ' + error);
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+        
+        // ===== FALLBACK: Jika StockMintAuth belum dimuat =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const googleBtn = document.querySelector('.google-login-btn');
+            const demoBtn = document.querySelector('.demo-btn');
+            
+            // Fallback untuk Google login
+            googleBtn.addEventListener('click', function(e) {
+                if (window.StockMintAuth && window.StockMintAuth.loginWithGoogle) {
+                    return;
+                }
+                
+                e.preventDefault();
+                console.warn('⚠️ StockMintAuth not loaded, using fallback...');
+                alert('Authentication module is loading. Please try again in a moment.');
+            });
+            
+            // Fallback untuk Demo login
+            demoBtn.addEventListener('click', function(e) {
+                if (window.StockMintAuth && window.StockMintAuth.loginAsDemo) {
+                    return;
+                }
+                
+                e.preventDefault();
+                console.warn('⚠️ StockMintAuth not loaded, using fallback demo...');
+                
+                // Fallback demo login
+                const demoUser = {
+                    name: 'Demo User',
+                    email: 'demo@stockmint.app',
+                    picture: '',
+                    isDemo: true,
+                    timestamp: Date.now(),
+                    plan: 'demo'
+                };
+                
+                localStorage.setItem('stockmint_user', JSON.stringify(demoUser));
+                localStorage.setItem('stockmint_token', 'demo_token_' + Date.now());
+                localStorage.setItem('stockmint_plan', 'demo');
+                
+                window.location.href = 'app.html';
+            });
+        });
     </script>
 </body>
 </html>
