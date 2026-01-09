@@ -340,72 +340,80 @@ class GoogleSheetsPage {
     
     // ========== STATIC METHODS ==========
     
-    // Static method: Force sync to Google Sheets
+    // google-sheets-page.js - forceSync() - VERSI BARU
     static async forceSync() {
-        try {
-            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
-            if (user.isDemo) {
-                alert('This feature is not available in demo mode');
-                return;
-            }
+    try {
+        const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+        if (user.isDemo) {
+            alert('This feature is not available in demo mode');
+            return;
+        }
+        
+        const syncMessage = document.getElementById('syncMessage');
+        if (syncMessage) {
+            syncMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing sync...';
+            syncMessage.style.color = '#19BEBB';
+        }
+        
+        if (!window.GoogleSheetsService) {
+            throw new Error('Google Sheets service not available');
+        }
+        
+        const sheetsService = window.GoogleSheetsService;
+        await sheetsService.init();
+        
+        // 1. Cari atau buat spreadsheet
+        if (syncMessage) {
+            syncMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finding your spreadsheet...';
+        }
+        
+        const company = JSON.parse(localStorage.getItem('stockmint_company') || '{}');
+        const spreadsheetName = `StockMint - ${company.name || user.name || 'My Inventory'}`;
+        
+        const spreadsheetId = await sheetsService.getOrCreateSpreadsheet(spreadsheetName);
+        
+        if (syncMessage) {
+            syncMessage.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Connected to spreadsheet: ${spreadsheetName}`;
+        }
+        
+        // 2. Siapkan data
+        const setupData = {
+            company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
+            warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
+            suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
+            customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
+            categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
+            products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
+        };
+        
+        // 3. Simpan ke Google Sheets
+        if (syncMessage) {
+            syncMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving to Google Sheets...';
+        }
+        
+        const result = await sheetsService.saveSetupData(setupData);
+        
+        if (result) {
+            const now = new Date().toISOString();
+            localStorage.setItem('stockmint_last_sync', now);
+            localStorage.setItem('stockmint_setup_completed', 'true');
             
-            if (!window.GoogleSheetsService) {
-                alert('Google Sheets service not available');
-                return;
-            }
-            
-            const sheetsService = window.GoogleSheetsService;
-            const initialized = await sheetsService.init();
-            
-            if (!initialized) {
-                alert('Google Sheets service not initialized. Please check your Google login.');
-                return;
-            }
-            
-            // Show loading
-            const syncMessage = document.getElementById('syncMessage');
             if (syncMessage) {
-                syncMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing data to Google Sheets...';
-                syncMessage.style.color = '#19BEBB';
+                syncMessage.innerHTML = '<i class="fas fa-check-circle"></i> Sync completed successfully!';
+                syncMessage.style.color = '#10b981';
             }
             
-            // Prepare data
-            const setupData = {
-                company: JSON.parse(localStorage.getItem('stockmint_company') || '{}'),
-                warehouses: JSON.parse(localStorage.getItem('stockmint_warehouses') || '[]'),
-                suppliers: JSON.parse(localStorage.getItem('stockmint_suppliers') || '[]'),
-                customers: JSON.parse(localStorage.getItem('stockmint_customers') || '[]'),
-                categories: JSON.parse(localStorage.getItem('stockmint_categories') || '[]'),
-                products: JSON.parse(localStorage.getItem('stockmint_products') || '[]')
-            };
-            
-            // Save to Google Sheets
-            const result = await sheetsService.saveSetupData(setupData);
-            
-            if (result) {
-                // Update last sync time
-                const now = new Date().toISOString();
-                localStorage.setItem('stockmint_last_sync', now);
-                
-                if (syncMessage) {
-                    syncMessage.innerHTML = '<i class="fas fa-check-circle"></i> Sync completed successfully!';
-                    syncMessage.style.color = '#10b981';
-                }
-                
-                // Refresh the page after 2 seconds
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                throw new Error('Save operation failed');
-            }
-            
-        } catch (error) {
-            console.error('Sync error:', error);
-            const syncMessage = document.getElementById('syncMessage');
-            if (syncMessage) {
-                syncMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Sync failed: ${error.message}`;
-                syncMessage.style.color = '#ef4444';
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+        
+    } catch (error) {
+        console.error('Sync error:', error);
+        const syncMessage = document.getElementById('syncMessage');
+        if (syncMessage) {
+            syncMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Sync failed: ${error.message}`;
+            syncMessage.style.color = '#ef4444';
             }
         }
     }
