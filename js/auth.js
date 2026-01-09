@@ -116,117 +116,142 @@ const StockMintAuth = {
             window.location.href = authURL;
      },
     
-    // ===== UPDATED: Handle OAuth Callback =====
-    handleOAuthCallback: function() {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const accessToken = params.get('access_token');
-        
-        if (accessToken) {
-            console.log('🔑 Google OAuth token received');
-            localStorage.setItem('stockmint_token', accessToken);
-            
-            // Get user info from Google
-            fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            })
-            .then(response => response.json())
-            .then(async (userInfo) => {
-                console.log('👤 Google user info:', userInfo);
-                
-                // Save user data dengan unique identifier
-                const userData = {
-                    name: userInfo.name,
-                    email: userInfo.email,
-                    picture: userInfo.picture,
-                    isDemo: false,
-                    googleId: userInfo.id, // Google ID untuk identifikasi unik
-                    loginTime: new Date().toISOString()
-                };
-                
-                localStorage.setItem('stockmint_user', JSON.stringify(userData));
-                
-                // Cari spreadsheet yang sudah ada di Google Drive user
-                await this.findExistingSpreadsheet(accessToken, userInfo.email);
-                
-                // Redirect ke app
-                window.location.href = 'app.html';
-            })
-            .catch(error => {
-                console.error('Error fetching user info:', error);
-                alert('Failed to get user information. Please try again.');
-            });
-        }
-    },
+// ===== UPDATED: Handle OAuth Callback =====
+handleOAuthCallback: function() {
+    console.log('🔄 Handling OAuth callback...');
     
-    // ===== BARU: Cari spreadsheet yang sudah ada =====
-    findExistingSpreadsheet: async function(token, userEmail) {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    
+    // Validasi state untuk mencegah CSRF
+    const state = params.get('state');
+    const savedState = localStorage.getItem('stockmint_oauth_state');
+    
+    if (state !== savedState) {
+        console.error('❌ State mismatch, possible CSRF attack');
+        return;
+    }
+    
+    localStorage.removeItem('stockmint_oauth_state');
+    
+    const accessToken = params.get('access_token');
+    const error = params.get('error');
+    
+    if (error) {
+        console.error('❌ OAuth error:', error);
+        alert(`Google login failed: ${error}`);
+        return;
+    }
+    
+    if (!accessToken) {
+        console.log('ℹ️ No access token in hash');
+        return;
+    }
+    
+    console.log('🔑 Google OAuth token received');
+    localStorage.setItem('stockmint_token', accessToken);
+    
+    // Get user info from Google
+    this.fetchGoogleUserInfo(accessToken);
+},
+
+        // NEW: Fetch user info secara terpisah
+        fetchGoogleUserInfo: async function(accessToken) {
+            try {
+                console.log('👤 Fetching Google user info...');
+        
+                const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+        
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        
+            const userInfo = await response.json();
+            console.log('✅ Google user info:', userInfo);
+        
+            // Save user data
+            const userData = {
+                name: userInfo.name,
+                email: userInfo.email,
+                picture: userInfo.picture,
+                googleId: userInfo.id,
+                isDemo: false,
+                loginTime: new Date().toISOString()
+            };
+        
+            localStorage.setItem('stockmint_user', JSON.stringify(userData));
+            localStorage.setItem('stockmint_plan', 'basic');
+        
+            console.log('✅ User data saved');
+        
+            // Cari spreadsheet yang sudah ada di Google Drive user
+            await this.findExistingSpreadsheet(accessToken, userInfo.email);
+        
+            // Redirect ke app
+            console.log('➡️ Redirecting to app.html...');
+            window.location.href = 'app.html';
+        
+        } catch (error) {
+            console.error('❌ Error fetching user info:', error);
+            alert('Failed to get user information. Please try again.');
+            window.location.href = 'index.html';
+            }
+        },    
+  
+        // ===== BARU: Cari spreadsheet yang sudah ada =====
+        findExistingSpreadsheet: async function(token, userEmail) {
         try {
             console.log('🔍 Searching for existing spreadsheets in Google Drive...');
-            
-            // Query untuk mencari spreadsheet dengan pattern "StockMint"
-            const query = `name contains 'StockMint' and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`;
-            
+        
+            // Query yang lebih sederhana
+            const query = `name contains 'StockMint' and '${userEmail}' in owners and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`;
+        
             const response = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,owners,createdTime,modifiedTime)&orderBy=modifiedTime desc`,
+                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink)&orderBy=modifiedTime desc`,
                 {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }
-            );
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('📊 Found spreadsheets:', data.files?.length || 0);
-                
-                if (data.files && data.files.length > 0) {
-                    // Prioritaskan spreadsheet yang dimiliki oleh user ini
-                    let targetSheet = null;
-                    
-                    for (const file of data.files) {
-                        // Cek apakah user adalah owner
-                        const isOwner = file.owners?.some(owner => 
-                            owner.emailAddress === userEmail
-                        );
-                        
-                        if (isOwner) {
-                            targetSheet = file;
-                            break;
-                        }
-                    }
-                    
-                    // Jika tidak ada yang dimiliki user, ambil yang paling baru
-                    if (!targetSheet && data.files.length > 0) {
-                        targetSheet = data.files[0];
-                    }
-                    
-                    if (targetSheet) {
-                        console.log('✅ Found existing spreadsheet:', targetSheet.name);
-                        
-                        // Simpan info spreadsheet
-                        localStorage.setItem('stockmint_google_sheet_id', targetSheet.id);
-                        localStorage.setItem('stockmint_google_sheet_url', 
-                            targetSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${targetSheet.id}/edit`);
-                        localStorage.setItem('stockmint_google_sheet_name', targetSheet.name);
-                        localStorage.setItem('stockmint_spreadsheet_found', 'true');
-                        
-                        // Juga set plan ke basic untuk Google users
-                        localStorage.setItem('stockmint_plan', 'basic');
-                        
-                        return targetSheet;
-                    }
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
                 }
             }
-            
-            console.log('📭 No existing spreadsheet found');
-            localStorage.setItem('stockmint_spreadsheet_found', 'false');
-            return null;
-            
-        } catch (error) {
-            console.error('❌ Error searching for spreadsheets:', error);
-            localStorage.setItem('stockmint_spreadsheet_found', 'error');
+        );
+        
+        if (!response.ok) {
+            console.warn('⚠️ Drive API response not OK:', response.status);
             return null;
         }
-    },
+        
+        const data = await response.json();
+        console.log('📊 Found spreadsheets:', data.files?.length || 0);
+        
+        if (data.files && data.files.length > 0) {
+            // Ambil spreadsheet terbaru
+            const targetSheet = data.files[0];
+            
+            console.log('✅ Found existing spreadsheet:', targetSheet.name);
+            
+            // Simpan info spreadsheet
+            localStorage.setItem('stockmint_google_sheet_id', targetSheet.id);
+            localStorage.setItem('stockmint_google_sheet_url', 
+                targetSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${targetSheet.id}/edit`);
+            localStorage.setItem('stockmint_google_sheet_name', targetSheet.name);
+            localStorage.setItem('stockmint_spreadsheet_found', 'true');
+            
+            return targetSheet;
+        }
+        
+        console.log('📭 No existing spreadsheet found');
+        localStorage.setItem('stockmint_spreadsheet_found', 'false');
+        return null;
+        
+    } catch (error) {
+        console.error('❌ Error searching for spreadsheets:', error);
+        localStorage.setItem('stockmint_spreadsheet_found', 'error');
+        return null;
+    }
+},
     
     // ===== DEMO LOGIN FUNCTIONS =====
     loginAsDemo: function() {
