@@ -490,49 +490,51 @@ async getOrCreateSpreadsheet(title) {
         return await this.createSpreadsheet(spreadsheetName);
     }
 
-    // Save setup data to Google Sheets
+    // Di google-sheets.js - saveSetupData() - UPDATE bagian getSpreadsheet()
     async saveSetupData(setupData) {
-        try {
-            if (!this.isReady()) {
-                console.log('⚠️ Google Sheets not available, saving to localStorage only');
-                return false;
-            }
-
-            console.log('💾 Saving setup data to Google Sheets...');
-            
-            // Get or create spreadsheet
-            const spreadsheetId = await this.getSpreadsheet();
-            
-            if (!spreadsheetId) {
-                throw new Error('Failed to get spreadsheet');
-            }
-
-            // Prepare sheets structure
-            const sheets = [
-                { name: 'Company', data: setupData.company ? [setupData.company] : [] },
-                { name: 'Warehouses', data: setupData.warehouses || [] },
-                { name: 'Suppliers', data: setupData.suppliers || [] },
-                { name: 'Customers', data: setupData.customers || [] },
-                { name: 'Categories', data: setupData.categories || [] },
-                { name: 'Products', data: setupData.products || [] },
-                { name: 'Opening_Stocks', data: this.createOpeningStockData(setupData) }
-            ];
-
-            // Process each sheet
-            for (const sheet of sheets) {
-                if (sheet.data && sheet.data.length > 0) {
-                    await this.saveSheetData(spreadsheetId, sheet.name, sheet.data);
-                }
-            }
-
-            console.log('✅ All setup data saved to Google Sheets');
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error saving to Google Sheets:', error);
-            throw error;
+    try {
+        if (!this.isReady()) {
+            console.log('⚠️ Google Sheets not available, saving to localStorage only');
+            return false;
         }
+
+        console.log('💾 Saving setup data to Google Sheets...');
+        
+        // Gunakan getOrCreateSpreadsheet alih-alih getSpreadsheet
+        const spreadsheetId = await this.getOrCreateSpreadsheet(
+            `StockMint - ${setupData.company?.name || 'My Inventory'}`
+        );
+        
+        if (!spreadsheetId) {
+            throw new Error('Failed to get or create spreadsheet');
+        }
+
+        // Prepare sheets structure
+        const sheets = [
+            { name: 'Company', data: setupData.company ? [setupData.company] : [] },
+            { name: 'Warehouses', data: setupData.warehouses || [] },
+            { name: 'Suppliers', data: setupData.suppliers || [] },
+            { name: 'Customers', data: setupData.customers || [] },
+            { name: 'Categories', data: setupData.categories || [] },
+            { name: 'Products', data: setupData.products || [] },
+            { name: 'Opening_Stocks', data: this.createOpeningStockData(setupData) }
+        ];
+
+        // Process each sheet
+        for (const sheet of sheets) {
+            if (sheet.data && sheet.data.length > 0) {
+                await this.saveSheetData(spreadsheetId, sheet.name, sheet.data);
+            }
+        }
+
+        console.log('✅ All setup data saved to Google Sheets');
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error saving to Google Sheets:', error);
+        throw error;
     }
+}
 
     // Save data to specific sheet
     async saveSheetData(spreadsheetId, sheetName, data) {
