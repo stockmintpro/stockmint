@@ -112,86 +112,130 @@ class GoogleSheetsService {
     }
 
     // ===== NEW METHOD =====
-    // Cari spreadsheet yang sudah ada untuk user ini
-    async findExistingSpreadsheet() {
-        try {
-            const user = this.user;
-            if (user.isDemo || !user.email || !this.token) return null;
+// google-sheets.js - findExistingSpreadsheet() - LEBIH ROBUST
+async findExistingSpreadsheet() {
+    try {
+        const user = this.user;
+        if (user.isDemo || !user.email || !this.token) return null;
+        
+        console.log('🔍 Enhanced search for existing spreadsheets...');
+        
+        // Multiple search strategies
+        const searchStrategies = [
+            // Strategy 1: Cari berdasarkan email owner
+            `name contains 'StockMint' and '${user.email}' in owners and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`,
             
-            // Cari berdasarkan uniqueId atau email
-            const userIdentifier = user.uniqueId ? 
-                user.uniqueId.substring(0, 8) : 
-                user.email.split('@')[0];
+            // Strategy 2: Cari semua spreadsheet StockMint
+            `name contains 'StockMint' and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`,
             
-            if (!userIdentifier) return null;
-            
-            // Query untuk mencari spreadsheet dengan pola "StockMint" dan user identifier
-            const searchQuery = `name contains 'StockMint' and name contains '${userIdentifier}' and mimeType='application/vnd.google-apps.spreadsheet'`;
-            
-            const searchResponse = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,webViewLink,createdTime,modifiedTime)`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${this.token}`
+            // Strategy 3: Cari berdasarkan nama user/company
+            `name contains '${user.name?.split(' ')[0] || ''}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`
+        ];
+        
+        for (let i = 0; i < searchStrategies.length; i++) {
+            try {
+                const query = searchStrategies[i];
+                console.log(`🔎 Search strategy ${i + 1}: ${query}`);
+                
+                const response = await fetch(
+                    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,owners,createdTime,modifiedTime,shared)&orderBy=modifiedTime desc`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`📊 Found ${data.files?.length || 0} files with strategy ${i + 1}`);
+                    
+                    if (data.files && data.files.length > 0) {
+                        // Prioritaskan berdasarkan beberapa faktor
+                        const sortedFiles = data.files.sort((a, b) => {
+                            // 1. Prioritas: dimiliki oleh user ini
+                            const aIsOwner = a.owners?.some(owner => owner.emailAddress === user.email);
+                            const bIsOwner = b.owners?.some(owner => owner.emailAddress === user.email);
+                            
+                            if (aIsOwner && !bIsOwner) return -1;
+                            if (!aIsOwner && bIsOwner) return 1;
+                            
+                            // 2. Prioritas: yang paling baru dimodifikasi
+                            return new Date(b.modifiedTime) - new Date(a.modifiedTime);
+                        });
+                        
+                        const bestMatch = sortedFiles[0];
+                        console.log('✅ Best match:', bestMatch.name);
+                        
+                        return {
+                            id: bestMatch.id,
+                            name: bestMatch.name,
+                            url: bestMatch.webViewLink || `https://docs.google.com/spreadsheets/d/${bestMatch.id}/edit`,
+                            created: bestMatch.createdTime,
+                            modified: bestMatch.modifiedTime,
+                            owner: bestMatch.owners?.[0]?.emailAddress || 'unknown'
+                        };
                     }
                 }
-            );
-            
-            if (searchResponse.ok) {
-                const searchData = await searchResponse.json();
-                if (searchData.files && searchData.files.length > 0) {
-                    // Ambil spreadsheet yang paling baru dimodifikasi
-                    const latestSheet = searchData.files.sort((a, b) => 
-                        new Date(b.modifiedTime || b.createdTime || 0) - 
-                        new Date(a.modifiedTime || a.createdTime || 0)
-                    )[0];
-                    
-                    console.log('📊 Found existing user spreadsheet:', latestSheet.name);
-                    return {
-                        id: latestSheet.id,
-                        name: latestSheet.name,
-                        url: latestSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${latestSheet.id}/edit`,
-                        created: latestSheet.createdTime,
-                        modified: latestSheet.modifiedTime
-                    };
-                }
+            } catch (strategyError) {
+                console.log(`Strategy ${i + 1} failed:`, strategyError.message);
+                continue; // Coba strategy berikutnya
             }
-            
-            // Jika tidak ditemukan dengan pola, coba cari semua spreadsheet StockMint
-            const backupSearch = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=name contains 'StockMint' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
-                {
-                    headers: { 'Authorization': `Bearer ${this.token}` }
-                }
-            );
-            
-            if (backupSearch.ok) {
-                const backupData = await backupSearch.json();
-                if (backupData.files && backupData.files.length > 0) {
-                    // Ambil yang pertama
-                    const sheet = backupData.files[0];
-                    console.log('📊 Found StockMint spreadsheet:', sheet.name);
-                    return {
-                        id: sheet.id,
-                        name: sheet.name,
-                        url: sheet.webViewLink || `https://docs.google.com/spreadsheets/d/${sheet.id}/edit`
-                    };
-                }
-            }
-            
-            return null;
-            
-        } catch (searchError) {
-            console.log('🔍 Could not search for existing spreadsheet:', searchError.message);
-            return null;
         }
+        
+        console.log('📭 No existing spreadsheet found with any strategy');
+        return null;
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced spreadsheet search:', error);
+        return null;
     }
+}
 
-    // Check if service is ready
-    isReady() {
-        return this.initialized && this.token && !this.user?.isDemo;
+// Tambahkan method untuk mendapatkan atau membuat spreadsheet
+async getOrCreateSpreadsheet(title) {
+    try {
+        console.log('🔧 Getting or creating spreadsheet:', title);
+        
+        // 1. Coba gunakan yang sudah ada di memory
+        if (this.spreadsheetId) {
+            console.log('📊 Using existing spreadsheet from memory');
+            return this.spreadsheetId;
+        }
+        
+        // 2. Coba cari spreadsheet yang sudah ada
+        const existingSheet = await this.findExistingSpreadsheet();
+        if (existingSheet) {
+            this.spreadsheetId = existingSheet.id;
+            
+            // Simpan ke localStorage untuk cache
+            localStorage.setItem('stockmint_google_sheet_id', existingSheet.id);
+            localStorage.setItem('stockmint_google_sheet_url', existingSheet.url);
+            localStorage.setItem('stockmint_google_sheet_name', existingSheet.name);
+            
+            console.log('✅ Using existing spreadsheet:', existingSheet.name);
+            return existingSheet.id;
+        }
+        
+        // 3. Buat spreadsheet baru
+        console.log('📝 Creating new spreadsheet');
+        const newSpreadsheetId = await this.createSpreadsheet(title);
+        
+        // 4. Simpan ke localStorage
+        this.spreadsheetId = newSpreadsheetId;
+        localStorage.setItem('stockmint_google_sheet_id', newSpreadsheetId);
+        localStorage.setItem('stockmint_google_sheet_url', 
+            `https://docs.google.com/spreadsheets/d/${newSpreadsheetId}/edit`);
+        
+        console.log('✅ New spreadsheet created:', newSpreadsheetId);
+        return newSpreadsheetId;
+        
+    } catch (error) {
+        console.error('❌ Error in getOrCreateSpreadsheet:', error);
+        throw error;
     }
-
+}
+    
     // ===== PERBAIKAN METHOD createSpreadsheet() =====
     async createSpreadsheet(title) {
         try {
