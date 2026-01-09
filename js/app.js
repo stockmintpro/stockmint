@@ -147,8 +147,8 @@ class StockMintApp {
   }
   
   // ===== UPDATED METHOD =====
-  // Initialize application
-  async init() {
+  // Di app.js - init() method - UPDATE BAGIAN INI
+async init() {
     console.log('🚀 StockMintApp initializing...');
 
     // Tampilkan app container dulu, sembunyikan loading screen nanti
@@ -156,80 +156,68 @@ class StockMintApp {
     const appContainer = document.getElementById('appContainer');
     
     if (loadingScreen && appContainer) {
-      loadingScreen.classList.add('hidden');
-      appContainer.classList.remove('hidden');
+        loadingScreen.classList.add('hidden');
+        appContainer.classList.remove('hidden');
     }
     
     try {
-      // Step 1: Load user data
-      this.loadUserData();
-      
-      // Step 1.5: Cek dan restore koneksi Google Sheets jika sudah ada spreadsheet
-      await this.checkAndRestoreGoogleSheetsConnection();
-
-      // Step 1.75: Coba restore data jika user Google login ulang
-      if (this.user && !this.user.isDemo) {
-            const sheetId = localStorage.getItem('stockmint_google_sheet_id');
-            const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-            
-            if (sheetId && !setupCompleted) {
-                console.log('🔄 Attempting to restore data on login...');
-                if (window.SetupWizardMulti) {
-                    const wizard = new SetupWizardMulti();
-                    await wizard.handleRestoreOnLogin();
-                    return; // Keluar dari init, biarkan restore process handle
-                }
+        // Step 1: Load user data
+        this.loadUserData();
+        
+        // Step 1.5: Untuk user Google, cek koneksi Google Sheets
+        if (this.user && !this.user.isDemo) {
+            console.log('🔗 Checking Google Sheets connection for Google user...');
+            await this.checkGoogleSheetsOnLogin();
+        }
+        
+        // Step 2: Setup configuration
+        this.setupConfig();
+        
+        // Step 3: Initialize sync services (Google Sheets, Sync, Recovery)
+        await this.initializeSyncServices();
+        
+        // Step 4: Check if first-time setup is needed
+        const shouldSetup = this.checkFirstTimeSetup();
+        
+        if (shouldSetup) {
+            console.log('🔄 First-time setup required, showing welcome modal');
+            // Skip loading components for now, go directly to setup
+            this.showWelcomeModal();
+            return; // Keluar dari init sementara
+        }
+        
+        // Step 5: Load UI components (jika sudah setup)
+        this.loadComponents();
+        
+        // Step 6: Setup routing
+        this.setupRouting();
+        
+        // Step 7: Load initial page
+        this.loadInitialPage();
+        
+        // Step 8: Mark as initialized
+        this.initialized = true;
+        
+        console.log('✅ StockMintApp initialized successfully');
+        
+        // Hide loading screen
+        setTimeout(() => {
+            if (document.getElementById('loadingScreen')) {
+                document.getElementById('loadingScreen').classList.add('hidden');
             }
-        }
-      
-      // Step 2: Setup configuration
-      this.setupConfig();
-      
-      // Step 3: Initialize sync services (Google Sheets, Sync, Recovery)
-      await this.initializeSyncServices();
-      
-      // Step 4: Check if first-time setup is needed
-      const shouldSetup = this.checkFirstTimeSetup();
-      
-      if (shouldSetup) {
-        console.log('🔄 First-time setup required, showing welcome modal');
-        // Skip loading components for now, go directly to setup
-        this.showWelcomeModal();
-        return; // Keluar dari init sementara
-      }
-      
-      // Step 5: Load UI components (jika sudah setup)
-      this.loadComponents();
-      
-      // Step 6: Setup routing
-      this.setupRouting();
-      
-      // Step 7: Load initial page
-      this.loadInitialPage();
-      
-      // Step 8: Mark as initialized
-      this.initialized = true;
-      
-      console.log('✅ StockMintApp initialized successfully');
-      
-      // Hide loading screen
-      setTimeout(() => {
-        if (document.getElementById('loadingScreen')) {
-          document.getElementById('loadingScreen').classList.add('hidden');
-        }
-        if (document.getElementById('appContainer')) {
-          document.getElementById('appContainer').classList.remove('hidden');
-        }
-      }, 500);
-      
+            if (document.getElementById('appContainer')) {
+                document.getElementById('appContainer').classList.remove('hidden');
+            }
+        }, 500);
+        
     } catch (error) {
-      console.error('❌ Failed to initialize app:', error);
-      this.showCriticalError(error);
+        console.error('❌ Failed to initialize app:', error);
+        this.showCriticalError(error);
     }
-  }
+}
   
-// app.js - checkFirstTimeSetup() - VERSI BARU
-checkFirstTimeSetup() {
+    // app.js - checkFirstTimeSetup() - VERSI BARU
+    checkFirstTimeSetup() {
     const user = this.user;
     
     // Jika user adalah demo, langsung lanjut tanpa setup
