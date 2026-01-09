@@ -1,4 +1,4 @@
-// Authentication Module - UPDATED VERSION WITH GOOGLE SHEETS SEARCH
+// Authentication Module - FIXED VERSION FOR GOOGLE OAUTH
 const StockMintAuth = {
     // Validate Google token
     validateGoogleToken: async function() {
@@ -58,7 +58,7 @@ const StockMintAuth = {
         return userData ? JSON.parse(userData) : null;
     },
     
-    // ===== UPDATED LOGOUT FUNCTION =====
+    // ===== LOGOUT FUNCTION =====
     logout: function() {
         // Simpan spreadsheet ID sebelum logout
         const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
@@ -91,168 +91,32 @@ const StockMintAuth = {
         window.location.href = 'index.html';
     },
     
-   // ===== GOOGLE LOGIN FUNCTIONS =====
-loginWithGoogle: function() {
-    const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
-    const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
-    
-    // Scope yang minimal dan valid
-    const scopes = [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/spreadsheets'
-    ].join(' ');
-    
-    // 🔴 PERBAIKAN PENTING: Redirect ke auth/callback.html
-    const redirectURI = encodeURIComponent(window.location.origin + '/auth/callback.html');
-    
-    // State parameter untuk security
-    const state = 'stockmint_' + Date.now();
-    localStorage.setItem('stockmint_oauth_state', state);
-    
-    const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&state=${state}&prompt=select_account`;
-    
-    console.log('🔗 Redirecting to Google OAuth...');
-    console.log('Redirect URI:', redirectURI);
-    window.location.href = authURL;
-},
-    
-// ===== UPDATED: Handle OAuth Callback =====
-handleOAuthCallback: function() {
-    console.log('🔄 Handling OAuth callback...');
-    
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    
-    // Validasi state untuk mencegah CSRF
-    const state = params.get('state');
-    const savedState = localStorage.getItem('stockmint_oauth_state');
-    
-    if (state !== savedState) {
-        console.error('❌ State mismatch, possible CSRF attack');
-        return;
-    }
-    
-    localStorage.removeItem('stockmint_oauth_state');
-    
-    const accessToken = params.get('access_token');
-    const error = params.get('error');
-    
-    if (error) {
-        console.error('❌ OAuth error:', error);
-        alert(`Google login failed: ${error}`);
-        return;
-    }
-    
-    if (!accessToken) {
-        console.log('ℹ️ No access token in hash');
-        return;
-    }
-    
-    console.log('🔑 Google OAuth token received');
-    localStorage.setItem('stockmint_token', accessToken);
-    
-    // Get user info from Google
-    this.fetchGoogleUserInfo(accessToken);
-},
-
-        // NEW: Fetch user info secara terpisah
-        fetchGoogleUserInfo: async function(accessToken) {
-            try {
-                console.log('👤 Fetching Google user info...');
+    // ===== GOOGLE LOGIN FUNCTIONS =====
+    loginWithGoogle: function() {
+        const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth';
+        const clientId = '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com';
         
-                const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
+        // Scope yang disetujui Google
+        const scopes = [
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/spreadsheets'
+        ].join(' ');
         
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+        // Redirect ke auth/callback.html untuk handle OAuth response
+        const redirectURI = encodeURIComponent(window.location.origin + '/auth/callback.html');
         
-            const userInfo = await response.json();
-            console.log('✅ Google user info:', userInfo);
+        // State parameter untuk security
+        const state = 'stockmint_' + Date.now();
+        localStorage.setItem('stockmint_oauth_state', state);
         
-            // Save user data
-            const userData = {
-                name: userInfo.name,
-                email: userInfo.email,
-                picture: userInfo.picture,
-                googleId: userInfo.id,
-                isDemo: false,
-                loginTime: new Date().toISOString()
-            };
+        // Build OAuth URL
+        const authURL = `${googleAuthURL}?client_id=${clientId}&redirect_uri=${redirectURI}&response_type=token&scope=${encodeURIComponent(scopes)}&state=${state}&prompt=select_account`;
         
-            localStorage.setItem('stockmint_user', JSON.stringify(userData));
-            localStorage.setItem('stockmint_plan', 'basic');
-        
-            console.log('✅ User data saved');
-        
-            // Cari spreadsheet yang sudah ada di Google Drive user
-            await this.findExistingSpreadsheet(accessToken, userInfo.email);
-        
-            // Redirect ke app
-            console.log('➡️ Redirecting to app.html...');
-            window.location.href = 'app.html';
-        
-        } catch (error) {
-            console.error('❌ Error fetching user info:', error);
-            alert('Failed to get user information. Please try again.');
-            window.location.href = 'index.html';
-            }
-        },    
-  
-        // ===== BARU: Cari spreadsheet yang sudah ada =====
-        findExistingSpreadsheet: async function(token, userEmail) {
-        try {
-            console.log('🔍 Searching for existing spreadsheets in Google Drive...');
-        
-            // Query yang lebih sederhana
-            const query = `name contains 'StockMint' and '${userEmail}' in owners and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`;
-        
-            const response = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink)&orderBy=modifiedTime desc`,
-                {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            }
-        );
-        
-        if (!response.ok) {
-            console.warn('⚠️ Drive API response not OK:', response.status);
-            return null;
-        }
-        
-        const data = await response.json();
-        console.log('📊 Found spreadsheets:', data.files?.length || 0);
-        
-        if (data.files && data.files.length > 0) {
-            // Ambil spreadsheet terbaru
-            const targetSheet = data.files[0];
-            
-            console.log('✅ Found existing spreadsheet:', targetSheet.name);
-            
-            // Simpan info spreadsheet
-            localStorage.setItem('stockmint_google_sheet_id', targetSheet.id);
-            localStorage.setItem('stockmint_google_sheet_url', 
-                targetSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${targetSheet.id}/edit`);
-            localStorage.setItem('stockmint_google_sheet_name', targetSheet.name);
-            localStorage.setItem('stockmint_spreadsheet_found', 'true');
-            
-            return targetSheet;
-        }
-        
-        console.log('📭 No existing spreadsheet found');
-        localStorage.setItem('stockmint_spreadsheet_found', 'false');
-        return null;
-        
-    } catch (error) {
-        console.error('❌ Error searching for spreadsheets:', error);
-        localStorage.setItem('stockmint_spreadsheet_found', 'error');
-        return null;
-    }
-},
+        console.log('🔗 Redirecting to Google OAuth...');
+        console.log('Redirect URI:', redirectURI);
+        window.location.href = authURL;
+    },
     
     // ===== DEMO LOGIN FUNCTIONS =====
     loginAsDemo: function() {
@@ -272,7 +136,7 @@ handleOAuthCallback: function() {
         return true;
     },
     
-    // Clear authentication (maintained from original)
+    // Clear authentication
     clearAuth: function() {
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -288,15 +152,86 @@ handleOAuthCallback: function() {
         
         sessionStorage.clear();
         console.log('🚪 All authentication data cleared');
+    },
+    
+    // ===== BARU: Cek apakah user sudah punya spreadsheet =====
+    checkExistingUserSpreadsheet: async function() {
+        try {
+            const user = JSON.parse(localStorage.getItem('stockmint_user') || '{}');
+            if (user.isDemo || !user.email) return false;
+            
+            const token = localStorage.getItem('stockmint_token');
+            if (!token || token.startsWith('demo_token_')) return false;
+            
+            // Cari spreadsheet yang sudah ada
+            const existingSheet = await this.findExistingSpreadsheet(token, user.email);
+            
+            if (existingSheet) {
+                console.log('✅ User has existing spreadsheet');
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Error checking existing spreadsheet:', error);
+            return false;
+        }
+    },
+    
+    // ===== BARU: Cari spreadsheet yang sudah ada =====
+    findExistingSpreadsheet: async function(token, userEmail) {
+        try {
+            console.log('🔍 Searching for existing spreadsheets in Google Drive...');
+            
+            // Query sederhana untuk mencari spreadsheet StockMint
+            const query = `name contains 'StockMint' and '${userEmail}' in owners and mimeType='application/vnd.google-apps.spreadsheet' and trashed = false`;
+            
+            const response = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink)&orderBy=modifiedTime desc`,
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                console.warn('⚠️ Drive API response not OK:', response.status);
+                return null;
+            }
+            
+            const data = await response.json();
+            console.log('📊 Found spreadsheets:', data.files?.length || 0);
+            
+            if (data.files && data.files.length > 0) {
+                // Ambil spreadsheet terbaru
+                const targetSheet = data.files[0];
+                
+                console.log('✅ Found existing spreadsheet:', targetSheet.name);
+                
+                // Simpan info spreadsheet
+                localStorage.setItem('stockmint_google_sheet_id', targetSheet.id);
+                localStorage.setItem('stockmint_google_sheet_url', 
+                    targetSheet.webViewLink || `https://docs.google.com/spreadsheets/d/${targetSheet.id}/edit`);
+                localStorage.setItem('stockmint_google_sheet_name', targetSheet.name);
+                localStorage.setItem('stockmint_spreadsheet_found', 'true');
+                
+                return targetSheet;
+            }
+            
+            console.log('📭 No existing spreadsheet found');
+            localStorage.setItem('stockmint_spreadsheet_found', 'false');
+            return null;
+            
+        } catch (error) {
+            console.error('❌ Error searching for spreadsheets:', error);
+            localStorage.setItem('stockmint_spreadsheet_found', 'error');
+            return null;
+        }
     }
 };
 
-// Handle OAuth callback on page load
-if (window.location.hash.includes('access_token')) {
-    console.log('🔄 Detected OAuth callback, handling...');
-    StockMintAuth.handleOAuthCallback();
-}
-
 // Export
 window.StockMintAuth = StockMintAuth;
-console.log('✅ StockMintAuth module loaded - WITH GOOGLE SHEETS SEARCH');
+console.log('✅ StockMintAuth module loaded - FIXED FOR GOOGLE OAUTH');
