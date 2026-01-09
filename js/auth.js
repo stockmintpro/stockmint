@@ -1,6 +1,5 @@
 // Authentication Module - ULTIMATE FIXED VERSION
 const StockMintAuth = {
-    // Client ID - PASTIKAN INI SAMA DENGAN DI GOOGLE CLOUD CONSOLE
     clientId: '381159845906-0qpf642gg5uv4dhr8lapmr6dqgqepmnp.apps.googleusercontent.com',
     
     // Validate Google token
