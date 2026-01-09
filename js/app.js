@@ -228,119 +228,122 @@ class StockMintApp {
     }
   }
   
-  // ===== UPDATED METHOD: Check if first-time setup is needed =====
-  checkFirstTimeSetup() {
+// app.js - checkFirstTimeSetup() - VERSI BARU
+checkFirstTimeSetup() {
     const user = this.user;
-  
+    
     // Jika user adalah demo, langsung lanjut tanpa setup
     if (user?.isDemo) {
-      console.log('👤 Demo user detected, skipping setup');
-      return false;
-    }
-  
-  // CEK LEBIH DETAIL: 
-  // 1. Apakah sudah ada Google Sheet ID?
-  // 2. Apakah sudah setup sebelumnya?
-  // 3. Apakah data lokal masih ada?
-    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-    const setupCompleted = localStorage.getItem('stockmint_setup_completed') === 'true';
-    const hasCompanyData = localStorage.getItem('stockmint_company');
-    const hasProductsData = localStorage.getItem('stockmint_products');
-  
-    console.log('🔍 Setup Check:', {
-      spreadsheetId,
-      setupCompleted,
-      hasCompanyData: !!hasCompanyData,
-      hasProductsData: !!hasProductsData
-    });
-  
-  // KASUS 1: Sudah ada spreadsheet dan data lengkap
-  if (spreadsheetId && setupCompleted && hasCompanyData && hasProductsData) {
-    console.log('✅ Sudah setup lengkap, tidak perlu setup ulang');
-    return false;
-  }
-  
-  // KASUS 2: Ada spreadsheet tapi data lokal kosong (butuh recovery)
-  if (spreadsheetId && (!hasCompanyData || !hasProductsData)) {
-    console.log('🔄 Data recovery needed');
-    
-    // Tandai untuk recovery otomatis
-    if (window.GoogleSheetsService) {
-      setTimeout(async () => {
-        try {
-          const sheetsService = window.GoogleSheetsService;
-          await sheetsService.init();
-          await sheetsService.loadDataFromSheets();
-          console.log('✅ Data recovered from Google Sheets');
-          location.reload();
-        } catch (error) {
-          console.error('Recovery failed:', error);
-        }
-      }, 1000);
-    }
-    
-    return false; // Jangan tampilkan setup card, biarkan recovery handle
-  }
-  
-  // KASUS 3: Tidak ada spreadsheet sama sekali (first time)
-  if (!spreadsheetId) {
-    console.log('🆕 First-time setup required');
-    return true;
-  }
-  
-  // KASUS 4: Spreadsheet ada tapi setup belum completed
-  if (spreadsheetId && !setupCompleted) {
-    console.log('📊 Spreadsheet found but setup not completed');
-    localStorage.setItem('stockmint_setup_completed', 'true');
-    return false;
-  }
-  
-  return false;
-}
-  
-  // Initialize Google Sheets service - KEEP THIS METHOD
-  async initGoogleSheets() {
-    try {
-      console.log('🔄 Initializing Google Sheets service...');
-      
-      // Check if Google Sheets service is available
-      if (typeof window.GoogleSheetsService === 'undefined') {
-        console.warn('⚠️ Google Sheets service not available, using local storage only');
-        this.googleSheetsReady = false;
+        console.log('👤 Demo user detected, skipping setup');
         return false;
-      }
-      
-      // Initialize the service
-      const initialized = await window.GoogleSheetsService.init();
-      
-      if (initialized) {
-        console.log('✅ Google Sheets service initialized');
-        this.googleSheetsReady = true;
+    }
+    
+    console.log('🔍 Checking if setup is needed for Google user:', user.email);
+    
+    // CEK 1: Apakah sudah ada spreadsheet ID dari pencarian sebelumnya?
+    const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
+    const spreadsheetFound = localStorage.getItem('stockmint_spreadsheet_found') === 'true';
+    
+    // CEK 2: Apakah data setup sudah lengkap?
+    const hasCompanyData = localStorage.getItem('stockmint_company') !== null;
+    const hasProductsData = localStorage.getItem('stockmint_products') !== null;
+    
+    console.log('📊 Status:', {
+        spreadsheetId: spreadsheetId ? '✅' : '❌',
+        spreadsheetFound,
+        hasCompanyData,
+        hasProductsData
+    });
+    
+    // KASUS 1: Sudah ada spreadsheet dan data lengkap → LANGSUNG MASUK
+    if (spreadsheetId && hasCompanyData && hasProductsData) {
+        console.log('✅ Already setup with existing spreadsheet');
+        localStorage.setItem('stockmint_setup_completed', 'true');
+        return false;
+    }
+    
+    // KASUS 2: Ada spreadsheet tapi data lokal kosong → LOAD DATA DARI GOOGLE SHEETS
+    if (spreadsheetId && (!hasCompanyData || !hasProductsData)) {
+        console.log('🔄 Spreadsheet found but local data missing, loading from Google Sheets...');
         
-        // Check if we already have a spreadsheet
-        const spreadsheetId = localStorage.getItem('stockmint_google_sheet_id');
-        if (spreadsheetId) {
-          console.log(`📊 Using existing Google Sheet: ${spreadsheetId}`);
-          
-          // Update Google Sheets Service with existing ID
-          window.GoogleSheetsService.spreadsheetId = spreadsheetId;
-        } else {
-          console.log('📝 No Google Sheet found, will create during setup');
+        // Jalankan async load
+        setTimeout(async () => {
+            try {
+                if (window.GoogleSheetsService) {
+                    const sheetsService = window.GoogleSheetsService;
+                    await sheetsService.init();
+                    
+                    // Set spreadsheet ID
+                    sheetsService.spreadsheetId = spreadsheetId;
+                    
+                    // Load data
+                    const loaded = await sheetsService.loadDataFromSheets();
+                    
+                    if (loaded) {
+                        console.log('✅ Data loaded from Google Sheets');
+                        localStorage.setItem('stockmint_setup_completed', 'true');
+                        
+                        // Refresh untuk update UI
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load from Google Sheets:', error);
+            }
+        }, 500);
+        
+        return false; // Jangan tampilkan setup card
+    }
+    
+    // KASUS 3: Tidak ada spreadsheet sama sekali → PERLU SETUP BARU
+    if (!spreadsheetId) {
+        console.log('🆕 No spreadsheet found, need first-time setup');
+        
+        // Tandai pencarian spreadsheet sudah dilakukan
+        if (localStorage.getItem('stockmint_spreadsheet_found') === 'false') {
+            console.log('📭 Previous search found no spreadsheets');
+            return true; // Tampilkan setup card
+        }
+        
+        // Jika belum pernah mencari, coba cari dulu
+        if (!localStorage.getItem('stockmint_spreadsheet_found')) {
+            console.log('🔍 No spreadsheet search performed yet');
+            
+            // Coba cari spreadsheet dengan Google Sheets Service
+            setTimeout(async () => {
+                if (window.GoogleSheetsService) {
+                    try {
+                        const sheetsService = window.GoogleSheetsService;
+                        await sheetsService.init();
+                        
+                        const existingSheet = await sheetsService.findExistingSpreadsheet();
+                        
+                        if (existingSheet) {
+                            console.log('🎉 Found spreadsheet on delayed search!');
+                            localStorage.setItem('stockmint_setup_completed', 'true');
+                            location.reload();
+                        } else {
+                            localStorage.setItem('stockmint_spreadsheet_found', 'false');
+                            console.log('❌ No spreadsheet found in delayed search');
+                        }
+                    } catch (error) {
+                        console.error('Delayed search failed:', error);
+                    }
+                }
+            }, 1000);
+            
+            // Return true untuk sementara, akan diupdate setelah pencarian
+            return true;
         }
         
         return true;
-      } else {
-        console.warn('⚠️ Google Sheets service not ready, using local storage only');
-        this.googleSheetsReady = false;
-        return false;
-      }
-      
-    } catch (error) {
-      console.error('❌ Error initializing Google Sheets:', error);
-      this.googleSheetsReady = false;
-      return false;
     }
-  }
+    
+    // Default: perlu setup
+    return true;
+} 
   
   // ===== UPDATED METHOD =====
   // Load page content
